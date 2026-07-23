@@ -18,5 +18,6 @@ interface IPrivilegedAppOpsService {
         String operationName,
         String mode
     ) = 7;
+    ShellCommandResult getUidOps(int uid) = 8;
     void destroy() = 16777114;
 }

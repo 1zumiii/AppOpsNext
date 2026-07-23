@@ -48,22 +48,21 @@ be unit tested without Shizuku or a device.
 
 ## Safe write proof
 
-The temporary debug-only write card runs a bounded transaction against
-`dev.izumi.appopsnext.testtarget`:
+The production permission editor runs a bounded transaction:
 
 ```text
-read original package mode
-    -> set typed test mode
-    -> read and verify test mode
-    -> restore original mode
-    -> read and verify restored mode
+read and compare the original mode
+    -> set the requested typed mode
+    -> read and verify the requested mode
+    -> restore and verify the original mode after failure
 ```
 
-Once the original value has been read, every later failure path attempts
+Once the original value has been confirmed, every later failure path attempts
 restoration. Failure state distinguishes “no write occurred,” “restored,” and
-“restore could not be confirmed.” The confirmed package-mode editor below
-preserves the same contract; the temporary card remains only as a development
-diagnostic until its removal milestone is reached.
+“restore could not be confirmed.” The temporary in-app write-test card was
+removed after the production editor covered the same path. The separate
+`dev.izumi.appopsnext.testtarget` module remains available for console and
+physical-device validation.
 
 ## Application discovery
 
@@ -80,8 +79,8 @@ entries, attaches localized resource identifiers, applies a common-first
 priority, and supports matching the current label, English label, or raw system
 operation name. The UI displays exactly one current-locale title and keeps the
 raw operation name on a separate lower-emphasis line. Raw shell timing metadata
-stays in the snapshot, while the UI formatter rounds it to seconds and displays
-at most the two largest non-zero time units.
+stays in the snapshot, while the UI formatter displays one largest unit. Usage
+within the last minute is shown as “less than one minute.”
 
 The hide-system-apps preference is persisted with Preferences DataStore and
 combined with application search inside `AppListViewModel`. Filtering itself
@@ -90,10 +89,14 @@ remains a pure function.
 ## Confirmed package and UID writes
 
 Full `cmd appops get <PACKAGE>` output can contain a multi-line UID block where
-only its first row has the `Uid mode:` prefix. The repository therefore uses
-single-operation reads to resolve the scope of every discovered operation
-before exposing it for editing. When both scopes exist, the effective UID entry
-is preferred in the display catalog.
+only its first row has the `Uid mode:` prefix. The repository reads a second
+snapshot with `cmd appops get <UID>`, verifies that it matches the prefix of the
+package snapshot, and then splits the two scopes. An unexpected OEM layout or
+failed UID read falls back to single-operation reads instead of guessing. When
+both scopes exist, the effective UID entry is preferred in the display catalog.
+
+The loading state renders known package/UID metadata immediately and uses
+skeleton permission rows until the validated snapshot is ready.
 
 A requested change moves through a dedicated ViewModel state machine:
 
@@ -116,6 +119,12 @@ explicit `--uid` variant and show every package returned for that UID before
 confirmation. Android may normalize or reject a requested UID mode when it is
 coupled to a runtime permission; this is reported as a verification failure,
 and the repository restores and verifies the original mode.
+
+After a confirmed write, only the matching operation row enters a progress
+state. A verified result updates that scoped entry in the in-memory snapshot;
+the screen does not reload every operation or add a separate success card.
+Failures retain a detailed card with the failed phase, restoration status, and
+observed mode when available.
 
 ## Maintenance rules
 

@@ -9,6 +9,7 @@ import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
 import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
 import dev.izumi.appopsnext.appops.model.AppOpScope
+import dev.izumi.appopsnext.appops.model.AppOpsRestorationStatus
 import dev.izumi.appopsnext.appops.model.PackageOpsLoadResult
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
@@ -109,14 +110,14 @@ class AppDetailViewModel(
                 requestedMode = request.requestedMode,
             )
 
+            updateDisplayedMode(request, result)
             mutableModeChangeState.value = when (result) {
                 is AppOpModeChangeResult.Success ->
-                    AppOpModeChangeUiState.Success(request, result)
+                    AppOpModeChangeUiState.Idle
 
                 is AppOpModeChangeResult.Failure ->
                     AppOpModeChangeUiState.Failure(request, result)
             }
-            loadSelectedApp()
         }
     }
 
@@ -142,6 +143,36 @@ class AppDetailViewModel(
                     ?: listOf(app.packageName)
         }
 
+    private fun updateDisplayedMode(
+        request: AppOpModeChangeRequest,
+        result: AppOpModeChangeResult,
+    ) {
+        val mode = when (result) {
+            is AppOpModeChangeResult.Success -> result.appliedMode
+            is AppOpModeChangeResult.Failure ->
+                when (result.restorationStatus) {
+                    AppOpsRestorationStatus.NOT_REQUIRED ->
+                        result.observedMode ?: result.originalMode
+
+                    AppOpsRestorationStatus.SUCCEEDED -> result.originalMode
+                    AppOpsRestorationStatus.FAILED -> null
+                }
+        } ?: return
+
+        val readyState = mutableUiState.value as? AppDetailUiState.Ready
+            ?: return
+        if (readyState.app.packageName != request.packageName) return
+
+        mutableUiState.value = readyState.copy(
+            snapshot = AppOpSnapshotUpdater.updateMode(
+                snapshot = readyState.snapshot,
+                operationName = request.operationName,
+                scope = request.scope,
+                mode = mode,
+            ),
+        )
+    }
+
     private fun loadSelectedApp() {
         loadJob?.cancel()
         val app = selectedApp.value ?: run {
@@ -156,7 +187,10 @@ class AppDetailViewModel(
         mutableUiState.value = AppDetailUiState.Loading(app)
         loadJob = viewModelScope.launch {
             mutableUiState.value = when (
-                val result = repository.loadPackageOps(app.packageName)
+                val result = repository.loadPackageOps(
+                    packageName = app.packageName,
+                    uid = app.uid,
+                )
             ) {
                 is PackageOpsLoadResult.Success -> AppDetailUiState.Ready(
                     app = app,

@@ -85,9 +85,9 @@ internal object AppOpUsageDetailsFormatter {
         milliseconds: Long,
         stringResolver: (Int, List<Any>) -> String,
     ): String {
-        val elapsed = formatElapsed(milliseconds, stringResolver)
+        val elapsed = formatRelativeElapsed(milliseconds, stringResolver)
             ?: return stringResolver(
-                R.string.app_op_usage_just_now,
+                R.string.app_op_usage_less_than_minute,
                 emptyList(),
             )
         return stringResolver(R.string.app_op_usage_ago, listOf(elapsed))
@@ -97,7 +97,7 @@ internal object AppOpUsageDetailsFormatter {
         milliseconds: Long,
         stringResolver: (Int, List<Any>) -> String,
     ): String {
-        val elapsed = formatElapsed(milliseconds, stringResolver)
+        val elapsed = formatDurationElapsed(milliseconds, stringResolver)
             ?: return stringResolver(
                 R.string.app_op_usage_duration_less_than_second,
                 emptyList(),
@@ -109,9 +109,9 @@ internal object AppOpUsageDetailsFormatter {
         milliseconds: Long,
         stringResolver: (Int, List<Any>) -> String,
     ): String {
-        val elapsed = formatElapsed(milliseconds, stringResolver)
+        val elapsed = formatRelativeElapsed(milliseconds, stringResolver)
             ?: return stringResolver(
-                R.string.app_op_usage_rejected_just_now,
+                R.string.app_op_usage_rejected_less_than_minute,
                 emptyList(),
             )
         return stringResolver(
@@ -120,42 +120,39 @@ internal object AppOpUsageDetailsFormatter {
         )
     }
 
-    private fun formatElapsed(
+    private fun formatRelativeElapsed(
         milliseconds: Long,
         stringResolver: (Int, List<Any>) -> String,
-    ): String? {
-        var remainingSeconds = milliseconds / MILLIS_PER_SECOND
-        if (remainingSeconds == 0L) return null
-
-        val units = listOf(
-            ElapsedUnit(
-                seconds = SECONDS_PER_DAY,
-                labelRes = R.string.app_op_usage_days,
-            ),
-            ElapsedUnit(
-                seconds = SECONDS_PER_HOUR,
-                labelRes = R.string.app_op_usage_hours,
-            ),
-            ElapsedUnit(
-                seconds = SECONDS_PER_MINUTE,
-                labelRes = R.string.app_op_usage_minutes,
-            ),
-            ElapsedUnit(
-                seconds = 1L,
-                labelRes = R.string.app_op_usage_seconds,
-            ),
+    ): String? =
+        formatLargestUnit(
+            milliseconds = milliseconds,
+            minimumUnitSeconds = SECONDS_PER_MINUTE,
+            stringResolver = stringResolver,
         )
 
-        val parts = mutableListOf<String>()
-        units.forEach { unit ->
-            if (parts.size == MAX_DISPLAY_UNITS) return@forEach
-            val value = remainingSeconds / unit.seconds
-            if (value > 0) {
-                parts += stringResolver(unit.labelRes, listOf(value))
-                remainingSeconds %= unit.seconds
-            }
-        }
-        return parts.joinToString(separator = " ")
+    private fun formatDurationElapsed(
+        milliseconds: Long,
+        stringResolver: (Int, List<Any>) -> String,
+    ): String? =
+        formatLargestUnit(
+            milliseconds = milliseconds,
+            minimumUnitSeconds = 1L,
+            stringResolver = stringResolver,
+        )
+
+    private fun formatLargestUnit(
+        milliseconds: Long,
+        minimumUnitSeconds: Long,
+        stringResolver: (Int, List<Any>) -> String,
+    ): String? {
+        val seconds = milliseconds / MILLIS_PER_SECOND
+        val unit = elapsedUnits.firstOrNull {
+            it.seconds >= minimumUnitSeconds && seconds >= it.seconds
+        } ?: return null
+        return stringResolver(
+            unit.labelRes,
+            listOf(seconds / unit.seconds),
+        )
     }
 
     private data class ElapsedUnit(
@@ -169,7 +166,6 @@ internal object AppOpUsageDetailsFormatter {
     private const val LAST_USED_KEY = "time"
     private const val DURATION_KEY = "duration"
     private const val LAST_REJECTED_KEY = "rejectTime"
-    private const val MAX_DISPLAY_UNITS = 2
     private const val MILLIS_PER_SECOND = 1_000L
     private const val MILLIS_PER_MINUTE = 60 * MILLIS_PER_SECOND
     private const val MILLIS_PER_HOUR = 60 * MILLIS_PER_MINUTE
@@ -184,4 +180,10 @@ internal object AppOpUsageDetailsFormatter {
         LAST_REJECTED_KEY,
     )
     private val durationTokenPattern = Regex("""(\d+)(ms|d|h|m|s)""")
+    private val elapsedUnits = listOf(
+        ElapsedUnit(SECONDS_PER_DAY, R.string.app_op_usage_days),
+        ElapsedUnit(SECONDS_PER_HOUR, R.string.app_op_usage_hours),
+        ElapsedUnit(SECONDS_PER_MINUTE, R.string.app_op_usage_minutes),
+        ElapsedUnit(1L, R.string.app_op_usage_seconds),
+    )
 }

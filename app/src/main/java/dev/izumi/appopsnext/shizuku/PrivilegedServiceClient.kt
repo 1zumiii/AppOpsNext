@@ -124,6 +124,13 @@ class PrivilegedServiceClient(
             connectedService.getPackageOp(packageName, operationName)
         }
 
+    override suspend fun getUidOps(uid: Int): ShellCommandResult =
+        withContext(Dispatchers.IO) {
+            val connectedService = service
+                ?: throw IllegalStateException("Privileged service is unavailable")
+            connectedService.getUidOps(uid)
+        }
+
     override suspend fun setPackageOpMode(
         packageName: String,
         operationName: String,

@@ -22,6 +22,17 @@ class AppOpsCommandsTest {
     }
 
     @Test
+    fun `get uid ops uses a validated numeric uid`() {
+        assertEquals(
+            listOf("/system/bin/cmd", "appops", "get", "10277"),
+            AppOpsCommands.getUidOps(10277),
+        )
+        assertThrows(IllegalArgumentException::class.java) {
+            AppOpsCommands.getUidOps(-1)
+        }
+    }
+
+    @Test
     fun `get package ops rejects shell metacharacters`() {
         assertThrows(IllegalArgumentException::class.java) {
             AppOpsCommands.getPackageOps("dev.izumi.appopsnext;id")

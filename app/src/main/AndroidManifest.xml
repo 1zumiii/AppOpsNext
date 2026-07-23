@@ -10,13 +10,14 @@
 
     <queries>
         <package android:name="moe.shizuku.privileged.api" />
-        <package android:name="dev.izumi.appopsnext.testtarget" />
     </queries>
 
     <application
         android:name=".AppOpsNextApplication"
         android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.AppOpsNext">
         <activity

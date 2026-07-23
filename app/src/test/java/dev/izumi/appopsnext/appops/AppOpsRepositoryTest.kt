@@ -5,8 +5,6 @@ import dev.izumi.appopsnext.appops.model.AppOpIdentifier
 import dev.izumi.appopsnext.appops.model.AppOpModeChangePhase
 import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
 import dev.izumi.appopsnext.appops.model.AppOpsRestorationStatus
-import dev.izumi.appopsnext.appops.model.AppOpsWriteTestPhase
-import dev.izumi.appopsnext.appops.model.AppOpsWriteTestState
 import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.appops.model.PackageOpsLoadResult
 import dev.izumi.appopsnext.appops.model.ShellCommandResult
@@ -125,108 +123,129 @@ class AppOpsRepositoryTest {
         }
 
     @Test
-    fun `round trip applies verifies and restores the original package mode`() =
+    fun `package load resolves scopes with one uid snapshot`() =
         runBlocking {
-            val gateway = FakeGateway(
-                getResults = ArrayDeque(
-                    listOf(
-                        success("No operations.\nDefault mode: allow\n"),
-                        success("RUN_IN_BACKGROUND: ignore\n"),
-                        success("RUN_IN_BACKGROUND: default\n"),
-                    ),
-                ),
-                setResults = ArrayDeque(
-                    listOf(success(), success()),
-                ),
-            )
+            var singleOperationReadCount = 0
+            val gateway = object : PrivilegedAppOpsGateway {
+                override suspend fun getPackageOps(packageName: String) =
+                    success(
+                        """
+                        Uid mode: COARSE_LOCATION: ignore
+                        FINE_LOCATION: ignore
+                        CAMERA: foreground
+                        CAMERA: allow; time=+2h ago
+                        RUN_IN_BACKGROUND: allow
+                        """.trimIndent(),
+                    )
 
-            val result = AppOpsRepository(gateway).runModeRoundTrip(
+                override suspend fun getUidOps(uid: Int) =
+                    success(
+                        """
+                        Uid mode: COARSE_LOCATION: ignore
+                        FINE_LOCATION: ignore
+                        CAMERA: foreground
+                        """.trimIndent(),
+                    )
+
+                override suspend fun getPackageOp(
+                    packageName: String,
+                    operationName: String,
+                ): ShellCommandResult {
+                    singleOperationReadCount += 1
+                    return error("Fast UID resolution should avoid this call")
+                }
+
+                override suspend fun setPackageOpMode(
+                    packageName: String,
+                    operationName: String,
+                    mode: AppOpMode,
+                ): ShellCommandResult = error("Not used")
+
+                override suspend fun setUidOpMode(
+                    packageName: String,
+                    operationName: String,
+                    mode: AppOpMode,
+                ): ShellCommandResult = error("Not used")
+            }
+
+            val result = AppOpsRepository(gateway).loadPackageOps(
                 packageName = TEST_PACKAGE,
-                operation = runInBackground,
-                testMode = AppOpMode.IGNORE,
+                uid = 10277,
             )
 
+            assertTrue(result is PackageOpsLoadResult.Success)
+            result as PackageOpsLoadResult.Success
+            assertEquals(0, singleOperationReadCount)
             assertEquals(
-                AppOpsWriteTestState.Success(
-                    originalMode = AppOpMode.DEFAULT,
-                    testMode = AppOpMode.IGNORE,
-                    restoredMode = AppOpMode.DEFAULT,
+                listOf(
+                    AppOpScope.UID,
+                    AppOpScope.UID,
+                    AppOpScope.UID,
+                    AppOpScope.PACKAGE,
+                    AppOpScope.PACKAGE,
                 ),
-                result,
+                result.snapshot.entries.map { it.scope },
             )
             assertEquals(
-                listOf(AppOpMode.IGNORE, AppOpMode.DEFAULT),
-                gateway.requestedModes,
+                "time=+2h ago",
+                result.snapshot.entries[3].details,
             )
         }
 
     @Test
-    fun `verification failure still restores the original mode`() =
+    fun `uid snapshot mismatch falls back to single-operation reads`() =
         runBlocking {
-            val gateway = FakeGateway(
-                getResults = ArrayDeque(
-                    listOf(
-                        success("RUN_IN_BACKGROUND: allow\n"),
-                        success("RUN_IN_BACKGROUND: allow\n"),
-                        success("RUN_IN_BACKGROUND: allow\n"),
-                    ),
-                ),
-                setResults = ArrayDeque(
-                    listOf(success(), success()),
-                ),
-            )
+            var singleOperationReadCount = 0
+            val gateway = object : PrivilegedAppOpsGateway {
+                override suspend fun getPackageOps(packageName: String) =
+                    success(
+                        """
+                        Uid mode: CAMERA: ignore
+                        CAMERA: allow
+                        """.trimIndent(),
+                    )
 
-            val result = AppOpsRepository(gateway).runModeRoundTrip(
+                override suspend fun getUidOps(uid: Int) =
+                    success("Uid mode: CAMERA: foreground")
+
+                override suspend fun getPackageOp(
+                    packageName: String,
+                    operationName: String,
+                ): ShellCommandResult {
+                    singleOperationReadCount += 1
+                    return success(
+                        """
+                        Uid mode: CAMERA: ignore
+                        CAMERA: allow
+                        """.trimIndent(),
+                    )
+                }
+
+                override suspend fun setPackageOpMode(
+                    packageName: String,
+                    operationName: String,
+                    mode: AppOpMode,
+                ): ShellCommandResult = error("Not used")
+
+                override suspend fun setUidOpMode(
+                    packageName: String,
+                    operationName: String,
+                    mode: AppOpMode,
+                ): ShellCommandResult = error("Not used")
+            }
+
+            val result = AppOpsRepository(gateway).loadPackageOps(
                 packageName = TEST_PACKAGE,
-                operation = runInBackground,
-                testMode = AppOpMode.IGNORE,
+                uid = 10277,
             )
 
-            assertTrue(result is AppOpsWriteTestState.Failure)
-            result as AppOpsWriteTestState.Failure
-            assertEquals(AppOpsWriteTestPhase.VERIFY_TEST_MODE, result.phase)
-            assertEquals(AppOpMode.ALLOW, result.originalMode)
+            assertTrue(result is PackageOpsLoadResult.Success)
+            result as PackageOpsLoadResult.Success
+            assertEquals(1, singleOperationReadCount)
             assertEquals(
-                AppOpsRestorationStatus.SUCCEEDED,
-                result.restorationStatus,
+                listOf(AppOpScope.UID, AppOpScope.PACKAGE),
+                result.snapshot.entries.map { it.scope },
             )
-            assertEquals(
-                listOf(AppOpMode.IGNORE, AppOpMode.ALLOW),
-                gateway.requestedModes,
-            )
-        }
-
-    @Test
-    fun `read failure reports that no restoration was required`() =
-        runBlocking {
-            val gateway = FakeGateway(
-                getResults = ArrayDeque(
-                    listOf(
-                        ShellCommandResult(
-                            exitCode = 1,
-                            stdout = "",
-                            stderr = "package not found",
-                            timedOut = false,
-                        ),
-                    ),
-                ),
-                setResults = ArrayDeque(),
-            )
-
-            val result = AppOpsRepository(gateway).runModeRoundTrip(
-                packageName = TEST_PACKAGE,
-                operation = runInBackground,
-                testMode = AppOpMode.IGNORE,
-            )
-
-            assertTrue(result is AppOpsWriteTestState.Failure)
-            result as AppOpsWriteTestState.Failure
-            assertEquals(AppOpsWriteTestPhase.READ_ORIGINAL, result.phase)
-            assertEquals(
-                AppOpsRestorationStatus.NOT_REQUIRED,
-                result.restorationStatus,
-            )
-            assertTrue(gateway.requestedModes.isEmpty())
         }
 
     @Test

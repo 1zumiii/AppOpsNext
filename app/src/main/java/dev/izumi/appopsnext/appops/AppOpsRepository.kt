@@ -8,8 +8,6 @@ import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.appops.model.AppOpsReadFailureReason
 import dev.izumi.appopsnext.appops.model.AppOpsReadState
 import dev.izumi.appopsnext.appops.model.AppOpsRestorationStatus
-import dev.izumi.appopsnext.appops.model.AppOpsWriteTestPhase
-import dev.izumi.appopsnext.appops.model.AppOpsWriteTestState
 import dev.izumi.appopsnext.appops.model.PackageOpsLoadResult
 import dev.izumi.appopsnext.appops.model.PackageOpsSnapshot
 import dev.izumi.appopsnext.appops.model.ShellCommandResult
@@ -20,8 +18,11 @@ class AppOpsRepository(
     private val privilegedGateway: PrivilegedAppOpsGateway,
     private val parser: PackageOpsParser = PackageOpsParser(),
 ) {
-    suspend fun readPackageOps(packageName: String): AppOpsReadState {
-        return when (val result = loadPackageOps(packageName)) {
+    suspend fun readPackageOps(
+        packageName: String,
+        uid: Int? = null,
+    ): AppOpsReadState {
+        return when (val result = loadPackageOps(packageName, uid)) {
             is PackageOpsLoadResult.Success -> AppOpsReadState.Ready(
                 operationCount = result.snapshot.entries.size,
             )
@@ -32,7 +33,10 @@ class AppOpsRepository(
         }
     }
 
-    suspend fun loadPackageOps(packageName: String): PackageOpsLoadResult {
+    suspend fun loadPackageOps(
+        packageName: String,
+        uid: Int? = null,
+    ): PackageOpsLoadResult {
         val commandResult = runCatching {
             privilegedGateway.getPackageOps(packageName)
         }.getOrElse {
@@ -56,7 +60,7 @@ class AppOpsRepository(
         val snapshot = if (
             parsedSnapshot.entries.any { it.scope == AppOpScope.UID }
         ) {
-            resolveEntryScopes(parsedSnapshot)
+            resolveEntryScopes(parsedSnapshot, uid)
         } else {
             parsedSnapshot
         }
@@ -66,6 +70,53 @@ class AppOpsRepository(
     }
 
     private suspend fun resolveEntryScopes(
+        snapshot: PackageOpsSnapshot,
+        uid: Int?,
+    ): PackageOpsSnapshot {
+        val uidResolvedSnapshot = uid?.let {
+            resolveEntryScopesUsingUidSnapshot(snapshot, it)
+        }
+        return uidResolvedSnapshot ?: resolveEntryScopesIndividually(snapshot)
+    }
+
+    private suspend fun resolveEntryScopesUsingUidSnapshot(
+        snapshot: PackageOpsSnapshot,
+        uid: Int,
+    ): PackageOpsSnapshot? {
+        val result = runCatching {
+            privilegedGateway.getUidOps(uid)
+        }.getOrNull()
+        if (result?.isSuccessful != true) return null
+
+        val uidEntries = parser
+            .parse(snapshot.packageName, result.stdout)
+            .entries
+            .map { entry -> entry.copy(hasUidModePrefix = true) }
+        if (uidEntries.isEmpty()) return null
+
+        val fullEntries = snapshot.entries
+        val hasMatchingUidPrefix =
+            fullEntries.size >= uidEntries.size &&
+                fullEntries
+                    .take(uidEntries.size)
+                    .zip(uidEntries)
+                    .all { (fullEntry, uidEntry) ->
+                        fullEntry.name.equals(
+                            uidEntry.name,
+                            ignoreCase = true,
+                        ) && fullEntry.mode.equals(
+                            uidEntry.mode,
+                            ignoreCase = true,
+                        )
+                    }
+        if (!hasMatchingUidPrefix) return null
+
+        return snapshot.copy(
+            entries = uidEntries + fullEntries.drop(uidEntries.size),
+        )
+    }
+
+    private suspend fun resolveEntryScopesIndividually(
         snapshot: PackageOpsSnapshot,
     ): PackageOpsSnapshot {
         val resolvedEntries = snapshot.entries
@@ -101,61 +152,6 @@ class AppOpsRepository(
             }
 
         return snapshot.copy(entries = resolvedEntries)
-    }
-
-    suspend fun runModeRoundTrip(
-        packageName: String,
-        operation: AppOpIdentifier,
-        testMode: AppOpMode,
-    ): AppOpsWriteTestState {
-        val originalMode = readPackageMode(packageName, operation)
-            ?: return AppOpsWriteTestState.Failure(
-                phase = AppOpsWriteTestPhase.READ_ORIGINAL,
-                originalMode = null,
-                restorationStatus = AppOpsRestorationStatus.NOT_REQUIRED,
-            )
-
-        var primaryFailure: AppOpsWriteTestPhase? = null
-
-        if (!setPackageMode(packageName, operation, testMode)) {
-            primaryFailure = AppOpsWriteTestPhase.APPLY_TEST_MODE
-        } else {
-            val appliedMode = readPackageMode(packageName, operation)
-            if (appliedMode != testMode) {
-                primaryFailure = AppOpsWriteTestPhase.VERIFY_TEST_MODE
-            }
-        }
-
-        if (!setPackageMode(packageName, operation, originalMode)) {
-            return AppOpsWriteTestState.Failure(
-                phase = AppOpsWriteTestPhase.RESTORE_ORIGINAL,
-                originalMode = originalMode,
-                restorationStatus = AppOpsRestorationStatus.FAILED,
-            )
-        }
-
-        val restoredMode = readPackageMode(packageName, operation)
-        if (restoredMode != originalMode) {
-            return AppOpsWriteTestState.Failure(
-                phase = AppOpsWriteTestPhase.VERIFY_RESTORED,
-                originalMode = originalMode,
-                restorationStatus = AppOpsRestorationStatus.FAILED,
-            )
-        }
-
-        return if (primaryFailure == null) {
-            AppOpsWriteTestState.Success(
-                originalMode = originalMode,
-                testMode = testMode,
-                restoredMode = restoredMode,
-            )
-        } else {
-            AppOpsWriteTestState.Failure(
-                phase = primaryFailure,
-                originalMode = originalMode,
-                restorationStatus = AppOpsRestorationStatus.SUCCEEDED,
-            )
-        }
     }
 
     suspend fun changePackageMode(

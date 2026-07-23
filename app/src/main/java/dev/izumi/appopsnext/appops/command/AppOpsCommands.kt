@@ -28,6 +28,17 @@ object AppOpsCommands {
         )
     }
 
+    fun getUidOps(uid: Int): List<String> {
+        require(uid >= 0) { "Invalid Android UID" }
+
+        return listOf(
+            COMMAND_BINARY,
+            APP_OPS_SERVICE,
+            GET_COMMAND,
+            uid.toString(),
+        )
+    }
+
     fun setPackageOpMode(
         packageName: String,
         operationName: String,

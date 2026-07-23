@@ -1,28 +1,31 @@
 package dev.izumi.appopsnext.presentation.components
 
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import dev.izumi.appopsnext.R
 
 enum class MainDestination(
     @StringRes val labelRes: Int,
-    @StringRes val shortLabelRes: Int,
+    @DrawableRes val iconRes: Int,
 ) {
     APPS(
         labelRes = R.string.navigation_apps,
-        shortLabelRes = R.string.navigation_apps_short,
+        iconRes = R.drawable.ic_navigation_apps,
     ),
     DIAGNOSTICS(
         labelRes = R.string.navigation_diagnostics,
-        shortLabelRes = R.string.navigation_diagnostics_short,
+        iconRes = R.drawable.ic_navigation_diagnostics,
     ),
     SETTINGS(
         labelRes = R.string.navigation_settings,
-        shortLabelRes = R.string.navigation_settings_short,
+        iconRes = R.drawable.ic_navigation_settings,
     ),
 }
 
@@ -37,7 +40,12 @@ fun AppNavigationBar(
                 selected = destination == selectedDestination,
                 onClick = { onDestinationSelected(destination) },
                 icon = {
-                    Text(text = stringResource(destination.shortLabelRes))
+                    Icon(
+                        painter = painterResource(destination.iconRes),
+                        contentDescription = stringResource(
+                            destination.labelRes,
+                        ),
+                    )
                 },
                 label = {
                     Text(text = stringResource(destination.labelRes))
