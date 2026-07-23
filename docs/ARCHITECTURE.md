@@ -160,3 +160,13 @@ to AppOpsService. Every item uses the same read, typed write, independent
 verification, and failure-restoration path as a single edit. The final report
 retains every item in target order and is always presented in a modal result
 dialog, including when every item succeeds.
+
+## Localization
+
+All user-visible UI strings have Simplified Chinese and English resources.
+`ApplicationLanguageManager` uses Android 13+ per-app locales to switch between
+system language, `zh-Hans`, and `en`; Android persists the choice and recreates
+the activity. Permission labels remain resource identifiers, while stored
+templates and AppOps commands continue to use locale-independent stable names.
+The manifest locale configuration also exposes the two supported languages to
+Android system settings.

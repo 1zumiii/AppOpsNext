@@ -1,11 +1,4 @@
-<resources
-    xmlns:tools="http://schemas.android.com/tools"
-    tools:ignore="MissingTranslation">
-    <!--
-      TODO(full-localization): Remove the MissingTranslation suppression when
-      the complete UI is localized. English currently covers only the AppOp
-      name dictionary used for locale display and cross-language search.
-    -->
+<resources>
     <string name="app_name">AppOpsNext</string>
     <string name="home_title">Android 权限控制器</string>
     <string name="home_subtitle">当前阶段先验证 Android 15、Shizuku 与 AppOps 的完整权限链。</string>
@@ -106,6 +99,15 @@
     <string name="settings_title">设置</string>
     <string name="settings_hide_system_apps">隐藏系统应用</string>
     <string name="settings_hide_system_apps_detail">开启后，应用列表只显示用户安装的应用。</string>
+    <string name="settings_language">应用语言</string>
+    <string name="settings_language_system">跟随系统</string>
+    <string name="settings_language_chinese">简体中文</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_about">关于</string>
+    <string name="settings_developer">开发者</string>
+    <string name="settings_developer_name">1zumiii</string>
+    <string name="settings_github">GitHub</string>
+    <string name="settings_github_url" translatable="false">https://github.com/1zumiii/AppOpsNext</string>
     <string name="templates_title">权限模板</string>
     <string name="template_create">新建</string>
     <string name="template_create_title">新建权限模板</string>
