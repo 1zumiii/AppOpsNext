@@ -3,12 +3,8 @@ package dev.izumi.appopsnext.presentation.app_detail
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -237,68 +233,72 @@ internal fun ModeChangeDialog(
             },
         )
 
+        is AppOpModeChangeUiState.Failure -> ModeChangeFailureDialog(
+            state = state,
+            onDismiss = onDismiss,
+        )
+
         else -> Unit
     }
 }
 
 @Composable
-internal fun ModeChangeFailureCard(
+private fun ModeChangeFailureDialog(
     state: AppOpModeChangeUiState.Failure,
     onDismiss: () -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
             Text(
                 text = stringResource(
                     R.string.app_detail_mode_change_failure,
                 ),
+                color = MaterialTheme.colorScheme.error,
                 fontWeight = FontWeight.SemiBold,
             )
-            Text(
-                text = stringResource(
-                    R.string.app_detail_mode_change_failure_detail,
-                    modeChangePhaseLabel(state.result.phase),
-                    restorationStatusLabel(
-                        state.result.restorationStatus,
-                    ),
-                ),
-            )
-            if (
-                state.result.phase ==
-                AppOpModeChangePhase.VERIFY_REQUESTED
-            ) {
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     text = stringResource(
-                        R.string.app_detail_mode_change_rejected_hint,
-                    ),
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            state.result.observedMode?.let { observedMode ->
-                Text(
-                    text = stringResource(
-                        R.string.app_detail_mode_observed,
-                        modeLabel(observedMode),
+                        R.string.app_detail_mode_change_failure_detail,
+                        modeChangePhaseLabel(state.result.phase),
+                        restorationStatusLabel(
+                            state.result.restorationStatus,
+                        ),
                     ),
                 )
+                if (
+                    state.result.phase ==
+                    AppOpModeChangePhase.VERIFY_REQUESTED
+                ) {
+                    Text(
+                        text = stringResource(
+                            R.string.app_detail_mode_change_rejected_hint,
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                state.result.observedMode?.let { observedMode ->
+                    Text(
+                        text = stringResource(
+                            R.string.app_detail_mode_observed,
+                            modeLabel(observedMode),
+                        ),
+                    )
+                }
             }
+        },
+        confirmButton = {
             TextButton(
                 onClick = onDismiss,
-                modifier = Modifier.align(Alignment.End),
             ) {
                 Text(text = stringResource(R.string.action_dismiss))
             }
-        }
-    }
+        },
+    )
 }
 
 @Composable

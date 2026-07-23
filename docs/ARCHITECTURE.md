@@ -123,8 +123,8 @@ and the repository restores and verifies the original mode.
 After a confirmed write, only the matching operation row enters a progress
 state. A verified result updates that scoped entry in the in-memory snapshot;
 the screen does not reload every operation or add a separate success card.
-Failures retain a detailed card with the failed phase, restoration status, and
-observed mode when available.
+Failures open a modal dialog so the failed phase, restoration status, and
+observed mode remain visible regardless of the list's scroll position.
 
 ## Maintenance rules
 

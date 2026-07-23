@@ -22,6 +22,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -36,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -81,8 +84,13 @@ fun AppDetailScreen(
                     )
                 },
                 navigationIcon = {
-                    TextButton(onClick = onBack) {
-                        Text(text = stringResource(R.string.action_back))
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_arrow_back),
+                            contentDescription = stringResource(
+                                R.string.action_back,
+                            ),
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -119,7 +127,6 @@ fun AppDetailScreen(
                 searchQuery = searchQuery,
                 onSearchQueryChange = onSearchQueryChange,
                 onModeChangeRequested = onModeChangeRequested,
-                onModeChangeDismissed = onModeChangeDismissed,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(contentPadding),
@@ -155,7 +162,6 @@ private fun ReadyContent(
         AppOpMode,
         AppOpMode,
     ) -> Unit,
-    onModeChangeDismissed: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val applyingRequest =
@@ -217,16 +223,6 @@ private fun ReadyContent(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
-        when (modeChangeState) {
-            is AppOpModeChangeUiState.Failure -> item {
-                ModeChangeFailureCard(
-                    state = modeChangeState,
-                    onDismiss = onModeChangeDismissed,
-                )
-            }
-
-            else -> Unit
         }
         if (displayItems.isEmpty()) {
             item {
