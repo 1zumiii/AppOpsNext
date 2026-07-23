@@ -18,6 +18,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.izumi.appops.R
+import dev.izumi.appops.appops.model.AppOpsReadFailureReason
+import dev.izumi.appops.appops.model.AppOpsReadState
 import dev.izumi.appops.presentation.components.StatusCard
 import dev.izumi.appops.shizuku.model.PrivilegedServiceState
 import dev.izumi.appops.shizuku.model.PrivilegedServiceFailureReason
@@ -83,7 +85,8 @@ fun HomeScreen(
                 onAction = onShizukuAction,
             )
             PrivilegedServiceStatusCard(
-                state = uiState.privilegedServiceState,
+                serviceState = uiState.privilegedServiceState,
+                readState = uiState.appOpsReadState,
             )
         }
     }
@@ -164,9 +167,10 @@ private fun ShizukuStatusCard(
 
 @Composable
 private fun PrivilegedServiceStatusCard(
-    state: PrivilegedServiceState,
+    serviceState: PrivilegedServiceState,
+    readState: AppOpsReadState,
 ) {
-    val presentation = when (state) {
+    val presentation = when (serviceState) {
         PrivilegedServiceState.Disconnected -> StatusPresentation(
             value = stringResource(R.string.status_disconnected),
             detail = stringResource(R.string.status_appops_disconnected_detail),
@@ -177,20 +181,13 @@ private fun PrivilegedServiceStatusCard(
             detail = stringResource(R.string.status_user_service_connecting_detail),
         )
 
-        is PrivilegedServiceState.Connected -> StatusPresentation(
-            value = stringResource(R.string.status_connected),
-            detail = stringResource(
-                R.string.status_user_service_connected_detail,
-                state.info.uid,
-                state.info.pid,
-                state.info.apiLevel,
-            ),
-        )
+        is PrivilegedServiceState.Connected ->
+            appOpsReadPresentation(serviceState, readState)
 
         is PrivilegedServiceState.Failure -> StatusPresentation(
             value = stringResource(R.string.status_error),
             detail = stringResource(
-                when (state.reason) {
+                when (serviceState.reason) {
                     PrivilegedServiceFailureReason.EMPTY_BINDER ->
                         R.string.status_user_service_empty_binder_detail
 
@@ -210,6 +207,50 @@ private fun PrivilegedServiceStatusCard(
         detail = presentation.detail,
     )
 }
+
+@Composable
+private fun appOpsReadPresentation(
+    serviceState: PrivilegedServiceState.Connected,
+    readState: AppOpsReadState,
+): StatusPresentation =
+    when (readState) {
+        AppOpsReadState.WaitingForBackend,
+        AppOpsReadState.Reading,
+        -> StatusPresentation(
+            value = stringResource(R.string.status_appops_reading),
+            detail = stringResource(
+                R.string.status_user_service_connected_detail,
+                serviceState.info.uid,
+                serviceState.info.pid,
+                serviceState.info.apiLevel,
+            ),
+        )
+
+        is AppOpsReadState.Ready -> StatusPresentation(
+            value = stringResource(R.string.status_appops_read_success),
+            detail = stringResource(
+                R.string.status_appops_read_success_detail,
+                readState.operationCount,
+                serviceState.info.uid,
+            ),
+        )
+
+        is AppOpsReadState.Failure -> StatusPresentation(
+            value = stringResource(R.string.status_appops_read_failed),
+            detail = stringResource(
+                when (readState.reason) {
+                    AppOpsReadFailureReason.BACKEND_UNAVAILABLE ->
+                        R.string.status_appops_backend_unavailable_detail
+
+                    AppOpsReadFailureReason.COMMAND_FAILED ->
+                        R.string.status_appops_command_failed_detail
+
+                    AppOpsReadFailureReason.COMMAND_TIMED_OUT ->
+                        R.string.status_appops_command_timed_out_detail
+                },
+            ),
+        )
+    }
 
 private data class StatusPresentation(
     val value: String,
