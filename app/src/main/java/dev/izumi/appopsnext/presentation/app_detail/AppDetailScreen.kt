@@ -15,7 +15,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -30,7 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
-import dev.izumi.appopsnext.appops.model.AppOpEntry
+import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpsReadFailureReason
 import dev.izumi.appopsnext.apps.model.InstalledApp
 
@@ -38,8 +37,12 @@ import dev.izumi.appopsnext.apps.model.InstalledApp
 @Composable
 fun AppDetailScreen(
     uiState: AppDetailUiState,
+    modeChangeState: AppOpModeChangeUiState,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
+    onModeChangeRequested: (String, AppOpMode, AppOpMode) -> Unit,
+    onModeChangeConfirmed: () -> Unit,
+    onModeChangeDismissed: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val app = uiState.appOrNull()
@@ -90,6 +93,9 @@ fun AppDetailScreen(
 
             is AppDetailUiState.Ready -> ReadyContent(
                 state = uiState,
+                modeChangeState = modeChangeState,
+                onModeChangeRequested = onModeChangeRequested,
+                onModeChangeDismissed = onModeChangeDismissed,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(contentPadding),
@@ -105,13 +111,23 @@ fun AppDetailScreen(
             )
         }
     }
+
+    ModeChangeDialog(
+        state = modeChangeState,
+        onConfirm = onModeChangeConfirmed,
+        onDismiss = onModeChangeDismissed,
+    )
 }
 
 @Composable
 private fun ReadyContent(
     state: AppDetailUiState.Ready,
+    modeChangeState: AppOpModeChangeUiState,
+    onModeChangeRequested: (String, AppOpMode, AppOpMode) -> Unit,
+    onModeChangeDismissed: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isApplying = modeChangeState is AppOpModeChangeUiState.Applying
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(
@@ -128,6 +144,23 @@ private fun ReadyContent(
                 operationCount = state.snapshot.entries.size,
             )
         }
+        when (modeChangeState) {
+            is AppOpModeChangeUiState.Success -> item {
+                ModeChangeResultCard(
+                    state = modeChangeState,
+                    onDismiss = onModeChangeDismissed,
+                )
+            }
+
+            is AppOpModeChangeUiState.Failure -> item {
+                ModeChangeResultCard(
+                    state = modeChangeState,
+                    onDismiss = onModeChangeDismissed,
+                )
+            }
+
+            else -> Unit
+        }
         if (state.snapshot.entries.isEmpty()) {
             item {
                 Text(
@@ -143,7 +176,17 @@ private fun ReadyContent(
                     "$index:${entry.hasUidModePrefix}:${entry.name}"
                 },
             ) { _, entry ->
-                AppOpListItem(entry)
+                AppOpListItem(
+                    entry = entry,
+                    editEnabled = !isApplying,
+                    onModeSelected = { originalMode, requestedMode ->
+                        onModeChangeRequested(
+                            entry.name,
+                            originalMode,
+                            requestedMode,
+                        )
+                    },
+                )
                 HorizontalDivider()
             }
         }
@@ -187,47 +230,16 @@ private fun AppSummaryCard(
                 ),
                 fontWeight = FontWeight.SemiBold,
             )
+            // TODO(uid-mode-edit): Enable UID writes only after shared-UID
+            // detection and impact confirmation are implemented.
+            Text(
+                text = stringResource(R.string.app_detail_uid_edit_unavailable),
+                modifier = Modifier.padding(top = 6.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
     }
-}
-
-@Composable
-private fun AppOpListItem(entry: AppOpEntry) {
-    ListItem(
-        headlineContent = {
-            Text(
-                text = entry.name,
-                fontWeight = FontWeight.Medium,
-            )
-        },
-        supportingContent = entry.details?.let { details ->
-            {
-                Text(
-                    text = details,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        },
-        overlineContent = {
-            Text(
-                text = stringResource(
-                    if (entry.hasUidModePrefix) {
-                        R.string.app_detail_scope_uid
-                    } else {
-                        R.string.app_detail_scope_package
-                    },
-                ),
-            )
-        },
-        trailingContent = {
-            Text(
-                text = entry.mode,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold,
-            )
-        },
-    )
 }
 
 @Composable

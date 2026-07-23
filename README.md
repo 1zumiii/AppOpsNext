@@ -43,4 +43,8 @@ behavior verified on the first supported device.
   `android:run_in_background`
 - complete current-user application discovery with system/user and UID metadata
 - app-name and package-name search across 455 apps on the Android 15 test device
-- per-app read-only AppOps details with package/UID scope and recorded metadata
+- per-app AppOps details with package/UID scope and recorded metadata
+- confirmed package-scope mode editing with stale-state detection, independent
+  read-back verification, and automatic restoration after a failed change
+- physical-device UI verification of `default -> ignore -> default` for
+  `RUN_IN_BACKGROUND`

@@ -34,6 +34,12 @@ RUN_IN_BACKGROUND: ignore
 RUN_IN_BACKGROUND: default
 ```
 
+The production package-mode editor was also exercised end to end through its
+Compose UI. The confirmation flow persisted `default -> ignore`, an independent
+ADB read returned `RUN_IN_BACKGROUND: ignore`, and a second confirmed edit
+restored `ignore -> default`. The final independent read returned
+`RUN_IN_BACKGROUND: default`.
+
 Camera, microphone, and location must later be tested through their real APIs
 and evaluated with both runtime-permission state and UID/package AppOps state.
 

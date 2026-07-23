@@ -2,6 +2,8 @@ package dev.izumi.appopsnext.appops
 
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
+import dev.izumi.appopsnext.appops.model.AppOpModeChangePhase
+import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
 import dev.izumi.appopsnext.appops.model.AppOpsReadFailureReason
 import dev.izumi.appopsnext.appops.model.AppOpsReadState
 import dev.izumi.appopsnext.appops.model.AppOpsRestorationStatus
@@ -106,6 +108,97 @@ class AppOpsRepository(
                 restorationStatus = AppOpsRestorationStatus.SUCCEEDED,
             )
         }
+    }
+
+    suspend fun changePackageMode(
+        packageName: String,
+        operation: AppOpIdentifier,
+        expectedOriginalMode: AppOpMode,
+        requestedMode: AppOpMode,
+    ): AppOpModeChangeResult {
+        val originalMode = readPackageMode(packageName, operation)
+            ?: return AppOpModeChangeResult.Failure(
+                phase = AppOpModeChangePhase.READ_ORIGINAL,
+                originalMode = null,
+                observedMode = null,
+                restorationStatus = AppOpsRestorationStatus.NOT_REQUIRED,
+            )
+
+        if (originalMode != expectedOriginalMode) {
+            return AppOpModeChangeResult.Failure(
+                phase = AppOpModeChangePhase.CHECK_ORIGINAL,
+                originalMode = originalMode,
+                observedMode = originalMode,
+                restorationStatus = AppOpsRestorationStatus.NOT_REQUIRED,
+            )
+        }
+
+        if (originalMode == requestedMode) {
+            return AppOpModeChangeResult.Success(
+                originalMode = originalMode,
+                appliedMode = requestedMode,
+            )
+        }
+
+        if (!setPackageMode(packageName, operation, requestedMode)) {
+            return restoreAfterFailedChange(
+                packageName = packageName,
+                operation = operation,
+                originalMode = originalMode,
+                primaryFailure = AppOpModeChangePhase.APPLY_REQUESTED,
+                observedMode = null,
+            )
+        }
+
+        val observedMode = readPackageMode(packageName, operation)
+        if (observedMode != requestedMode) {
+            return restoreAfterFailedChange(
+                packageName = packageName,
+                operation = operation,
+                originalMode = originalMode,
+                primaryFailure = AppOpModeChangePhase.VERIFY_REQUESTED,
+                observedMode = observedMode,
+            )
+        }
+
+        return AppOpModeChangeResult.Success(
+            originalMode = originalMode,
+            appliedMode = observedMode,
+        )
+    }
+
+    private suspend fun restoreAfterFailedChange(
+        packageName: String,
+        operation: AppOpIdentifier,
+        originalMode: AppOpMode,
+        primaryFailure: AppOpModeChangePhase,
+        observedMode: AppOpMode?,
+    ): AppOpModeChangeResult {
+        if (!setPackageMode(packageName, operation, originalMode)) {
+            return AppOpModeChangeResult.Failure(
+                phase = AppOpModeChangePhase.RESTORE_ORIGINAL,
+                originalMode = originalMode,
+                observedMode = observedMode,
+                restorationStatus = AppOpsRestorationStatus.FAILED,
+            )
+        }
+
+        val restoredMode = readPackageMode(packageName, operation)
+        if (restoredMode != originalMode) {
+            return AppOpModeChangeResult.Failure(
+                phase = AppOpModeChangePhase.VERIFY_RESTORED,
+                originalMode = originalMode,
+                observedMode = restoredMode,
+                restorationStatus = AppOpsRestorationStatus.FAILED,
+            )
+        }
+
+        return AppOpModeChangeResult.Failure(
+            phase = primaryFailure,
+            originalMode = originalMode,
+            observedMode = observedMode,
+            restorationStatus = AppOpsRestorationStatus.SUCCEEDED,
+        )
     }
 
     private suspend fun readPackageMode(

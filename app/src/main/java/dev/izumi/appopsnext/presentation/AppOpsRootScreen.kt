@@ -7,8 +7,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import dev.izumi.appopsnext.apps.model.InstalledApp
+import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.presentation.app_detail.AppDetailScreen
 import dev.izumi.appopsnext.presentation.app_detail.AppDetailUiState
+import dev.izumi.appopsnext.presentation.app_detail.AppOpModeChangeUiState
 import dev.izumi.appopsnext.presentation.app_list.AppListScreen
 import dev.izumi.appopsnext.presentation.app_list.AppListUiState
 import dev.izumi.appopsnext.presentation.components.AppNavigationBar
@@ -21,12 +23,16 @@ fun AppOpsRootScreen(
     homeUiState: HomeUiState,
     appListUiState: AppListUiState,
     appDetailUiState: AppDetailUiState,
+    appOpModeChangeUiState: AppOpModeChangeUiState,
     onShizukuAction: () -> Unit,
     onAppOpsWriteTest: () -> Unit,
     onAppSearchQueryChange: (String) -> Unit,
     onRefreshApps: () -> Unit,
     onAppSelected: (InstalledApp) -> Unit,
     onRefreshAppDetail: () -> Unit,
+    onAppOpModeChangeRequested: (String, AppOpMode, AppOpMode) -> Unit,
+    onAppOpModeChangeConfirmed: () -> Unit,
+    onAppOpModeChangeDismissed: () -> Unit,
 ) {
     var selectedDestination by rememberSaveable {
         mutableStateOf(MainDestination.APPS)
@@ -45,8 +51,15 @@ fun AppOpsRootScreen(
     if (selectedApp != null) {
         AppDetailScreen(
             uiState = appDetailUiState,
-            onBack = { selectedApp = null },
+            modeChangeState = appOpModeChangeUiState,
+            onBack = {
+                onAppOpModeChangeDismissed()
+                selectedApp = null
+            },
             onRefresh = onRefreshAppDetail,
+            onModeChangeRequested = onAppOpModeChangeRequested,
+            onModeChangeConfirmed = onAppOpModeChangeConfirmed,
+            onModeChangeDismissed = onAppOpModeChangeDismissed,
         )
     } else {
         when (selectedDestination) {

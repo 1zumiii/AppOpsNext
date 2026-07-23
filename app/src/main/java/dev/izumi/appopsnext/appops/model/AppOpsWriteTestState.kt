@@ -10,12 +10,6 @@ enum class AppOpsWriteTestPhase {
     VERIFY_RESTORED,
 }
 
-enum class AppOpsRestorationStatus {
-    NOT_REQUIRED,
-    SUCCEEDED,
-    FAILED,
-}
-
 sealed interface AppOpsWriteTestState {
     data object NotRun : AppOpsWriteTestState
 
