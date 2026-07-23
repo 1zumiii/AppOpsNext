@@ -1,4 +1,4 @@
-# AppOps Next
+# AppOpsNext
 
 A modern AppOps manager for Android 15+, powered by Shizuku.
 

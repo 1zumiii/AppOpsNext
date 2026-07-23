@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">AppOps Next</string>
+    <string name="app_name">AppOpsNext</string>
     <string name="home_title">Android 权限控制器</string>
     <string name="home_subtitle">当前阶段先验证 Android 15、Shizuku 与 AppOps 的完整权限链。</string>
     <string name="status_device_title">设备</string>
