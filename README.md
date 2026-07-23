@@ -1,14 +1,35 @@
 # AppOpsNext
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 A modern, clean-room AppOps manager for Android 15+, powered by
 [Shizuku](https://shizuku.rikka.app/).
 
-AppOpsNext reads and changes Android's built-in AppOps state. It does **not**
-connect to, migrate from, or depend on the legacy `rikka.appops` application.
+AppOpsNext reads and changes Android's built-in AppOps state.
 
 > [!IMPORTANT]
 > Version 1.0.0 is developed and verified for one ASUS AI2302 running Android
 > 15 (API 35). Other Android versions and OEM ROMs are not yet supported.
+
+## Relationship to the legacy App Ops
+
+AppOpsNext is an independent clean-room reimplementation inspired by the
+general product idea and workflows of the historical App Ops application
+(`rikka.appops`). It is not a fork, port, patched build, or official successor.
+
+- No source code, decompiled code, assets, branding, or configuration data from
+  the legacy application is included.
+- AppOpsNext does not connect to, migrate from, interoperate with, or require
+  the legacy application.
+- AppOpsNext is not developed, endorsed, maintained, or supported by RikkaApps
+  or the original App Ops author.
+- AppOpsNext uses Shizuku as an independently published privilege bridge. That
+  technical dependency does not imply affiliation with or endorsement by the
+  Shizuku or legacy App Ops maintainers.
+
+Names of third-party projects are used only to explain compatibility and
+project history. “AppOps” in this project's name refers to Android's built-in
+AppOps system service, not an interface or technology owned by the legacy app.
 
 ## Features
 
