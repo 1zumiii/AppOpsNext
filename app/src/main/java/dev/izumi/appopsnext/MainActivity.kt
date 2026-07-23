@@ -45,7 +45,6 @@ class MainActivity : ComponentActivity() {
                     settingsUiState = settingsUiState.value,
                     appOpSearchQuery = appOpSearchQuery.value,
                     onShizukuAction = homeViewModel::performShizukuAction,
-                    onAppOpsWriteTest = homeViewModel::performAppOpsWriteTest,
                     onAppSearchQueryChange = appListViewModel::updateSearchQuery,
                     onRefreshApps = appListViewModel::refresh,
                     onAppSelected = appDetailViewModel::selectApp,

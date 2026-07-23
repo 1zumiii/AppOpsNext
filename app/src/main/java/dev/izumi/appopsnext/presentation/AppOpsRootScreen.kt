@@ -6,6 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpScope
@@ -30,7 +32,6 @@ fun AppOpsRootScreen(
     settingsUiState: SettingsUiState,
     appOpSearchQuery: String,
     onShizukuAction: () -> Unit,
-    onAppOpsWriteTest: () -> Unit,
     onAppSearchQueryChange: (String) -> Unit,
     onRefreshApps: () -> Unit,
     onAppSelected: (InstalledApp) -> Unit,
@@ -50,10 +51,14 @@ fun AppOpsRootScreen(
         mutableStateOf(MainDestination.APPS)
     }
     var selectedApp by remember { mutableStateOf<InstalledApp?>(null) }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val navigationBar: @Composable () -> Unit = {
         AppNavigationBar(
             selectedDestination = selectedDestination,
             onDestinationSelected = {
+                focusManager.clearFocus()
+                keyboardController?.hide()
                 selectedApp = null
                 selectedDestination = it
             },
@@ -66,6 +71,8 @@ fun AppOpsRootScreen(
             modeChangeState = appOpModeChangeUiState,
             searchQuery = appOpSearchQuery,
             onBack = {
+                focusManager.clearFocus()
+                keyboardController?.hide()
                 onAppOpModeChangeDismissed()
                 selectedApp = null
             },
@@ -82,6 +89,8 @@ fun AppOpsRootScreen(
                 onSearchQueryChange = onAppSearchQueryChange,
                 onRefresh = onRefreshApps,
                 onAppSelected = { app ->
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
                     selectedApp = app
                     onAppSelected(app)
                 },
@@ -91,7 +100,6 @@ fun AppOpsRootScreen(
             MainDestination.DIAGNOSTICS -> HomeScreen(
                 uiState = homeUiState,
                 onShizukuAction = onShizukuAction,
-                onAppOpsWriteTest = onAppOpsWriteTest,
                 bottomBar = navigationBar,
             )
 

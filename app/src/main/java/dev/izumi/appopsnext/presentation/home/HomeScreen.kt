@@ -19,13 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import dev.izumi.appopsnext.BuildConfig
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.appops.model.AppOpsReadFailureReason
 import dev.izumi.appopsnext.appops.model.AppOpsReadState
-import dev.izumi.appopsnext.appops.model.AppOpsRestorationStatus
-import dev.izumi.appopsnext.appops.model.AppOpsWriteTestPhase
-import dev.izumi.appopsnext.appops.model.AppOpsWriteTestState
 import dev.izumi.appopsnext.presentation.components.StatusCard
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceFailureReason
@@ -37,7 +33,6 @@ import dev.izumi.appopsnext.shizuku.model.ShizukuState
 fun HomeScreen(
     uiState: HomeUiState,
     onShizukuAction: () -> Unit,
-    onAppOpsWriteTest: () -> Unit,
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
 ) {
@@ -98,18 +93,6 @@ fun HomeScreen(
                 serviceState = uiState.privilegedServiceState,
                 readState = uiState.appOpsReadState,
             )
-            // TODO(remove-debug-write-test): Remove this temporary card after
-            // the production permission-detail write flow covers the same path.
-            if (BuildConfig.DEBUG) {
-                AppOpsWriteTestCard(
-                    state = uiState.appOpsWriteTestState,
-                    isTestTargetInstalled = uiState.isTestTargetInstalled,
-                    isBackendConnected =
-                        uiState.privilegedServiceState is
-                            PrivilegedServiceState.Connected,
-                    onAction = onAppOpsWriteTest,
-                )
-            }
         }
     }
 }
@@ -273,100 +256,6 @@ private fun appOpsReadPresentation(
             ),
         )
     }
-
-@Composable
-private fun AppOpsWriteTestCard(
-    state: AppOpsWriteTestState,
-    isTestTargetInstalled: Boolean,
-    isBackendConnected: Boolean,
-    onAction: () -> Unit,
-) {
-    val presentation = when {
-        !isTestTargetInstalled -> StatusPresentation(
-            value = stringResource(R.string.status_write_test_target_missing),
-            detail = stringResource(R.string.status_write_test_target_missing_detail),
-            actionLabel = stringResource(R.string.action_check_test_target),
-        )
-
-        state is AppOpsWriteTestState.NotRun -> StatusPresentation(
-            value = stringResource(R.string.status_write_test_not_run),
-            detail = stringResource(R.string.status_write_test_not_run_detail),
-            actionLabel = stringResource(R.string.action_run_write_test),
-        )
-
-        state is AppOpsWriteTestState.Running -> StatusPresentation(
-            value = stringResource(R.string.status_write_test_running),
-            detail = stringResource(R.string.status_write_test_running_detail),
-        )
-
-        state is AppOpsWriteTestState.Success -> StatusPresentation(
-            value = stringResource(R.string.status_write_test_success),
-            detail = stringResource(
-                R.string.status_write_test_success_detail,
-                state.originalMode.shellValue,
-                state.testMode.shellValue,
-                state.restoredMode.shellValue,
-            ),
-            actionLabel = stringResource(R.string.action_run_again),
-        )
-
-        state is AppOpsWriteTestState.Failure -> StatusPresentation(
-            value = stringResource(R.string.status_write_test_failed),
-            detail = stringResource(
-                R.string.status_write_test_failed_detail,
-                writeTestPhaseLabel(state.phase),
-                restorationStatusLabel(state.restorationStatus),
-            ),
-            actionLabel = stringResource(R.string.action_run_again),
-        )
-
-        else -> error("Unhandled AppOps write-test state")
-    }
-
-    StatusCard(
-        title = stringResource(R.string.status_write_test_title),
-        value = presentation.value,
-        detail = presentation.detail,
-        actionLabel = presentation.actionLabel,
-        onAction = if (isBackendConnected) onAction else null,
-    )
-}
-
-@Composable
-private fun writeTestPhaseLabel(phase: AppOpsWriteTestPhase): String =
-    stringResource(
-        when (phase) {
-            AppOpsWriteTestPhase.READ_ORIGINAL ->
-                R.string.status_write_test_phase_read_original
-
-            AppOpsWriteTestPhase.APPLY_TEST_MODE ->
-                R.string.status_write_test_phase_apply
-
-            AppOpsWriteTestPhase.VERIFY_TEST_MODE ->
-                R.string.status_write_test_phase_verify
-
-            AppOpsWriteTestPhase.RESTORE_ORIGINAL ->
-                R.string.status_write_test_phase_restore
-
-            AppOpsWriteTestPhase.VERIFY_RESTORED ->
-                R.string.status_write_test_phase_verify_restored
-        },
-    )
-
-@Composable
-private fun restorationStatusLabel(status: AppOpsRestorationStatus): String =
-    stringResource(
-        when (status) {
-            AppOpsRestorationStatus.NOT_REQUIRED ->
-                R.string.status_write_test_restore_not_required
-
-            AppOpsRestorationStatus.SUCCEEDED ->
-                R.string.status_write_test_restored
-
-            AppOpsRestorationStatus.FAILED ->
-                R.string.status_write_test_restore_failed
-        },
-    )
 
 private data class StatusPresentation(
     val value: String,

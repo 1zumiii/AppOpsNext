@@ -1,14 +1,20 @@
 package dev.izumi.appopsnext.presentation.app_detail
 
 import android.content.res.Configuration
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -16,6 +22,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -99,7 +106,8 @@ fun AppDetailScreen(
                     .padding(contentPadding),
             )
 
-            is AppDetailUiState.Loading -> LoadingContent(
+            is AppDetailUiState.Loading -> DetailLoadingContent(
+                app = uiState.app,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(contentPadding),
@@ -150,7 +158,8 @@ private fun ReadyContent(
     onModeChangeDismissed: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val isApplying = modeChangeState is AppOpModeChangeUiState.Applying
+    val applyingRequest =
+        (modeChangeState as? AppOpModeChangeUiState.Applying)?.request
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val englishContext = remember(context, configuration) {
@@ -174,12 +183,7 @@ private fun ReadyContent(
     ).size
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(
-            start = 20.dp,
-            top = 12.dp,
-            end = 20.dp,
-            bottom = 24.dp,
-        ),
+        contentPadding = DetailContentPadding,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
@@ -215,15 +219,8 @@ private fun ReadyContent(
             )
         }
         when (modeChangeState) {
-            is AppOpModeChangeUiState.Success -> item {
-                ModeChangeResultCard(
-                    state = modeChangeState,
-                    onDismiss = onModeChangeDismissed,
-                )
-            }
-
             is AppOpModeChangeUiState.Failure -> item {
-                ModeChangeResultCard(
+                ModeChangeFailureCard(
                     state = modeChangeState,
                     onDismiss = onModeChangeDismissed,
                 )
@@ -254,7 +251,9 @@ private fun ReadyContent(
             ) { _, item ->
                 AppOpListItem(
                     item = item,
-                    editEnabled = !isApplying,
+                    isApplying =
+                        applyingRequest?.matches(item) == true,
+                    editEnabled = applyingRequest == null,
                     onModeSelected = { originalMode, requestedMode ->
                         onModeChangeRequested(
                             item.operationName,
@@ -273,7 +272,7 @@ private fun ReadyContent(
 @Composable
 private fun AppSummaryCard(
     app: InstalledApp,
-    operationCount: Int,
+    operationCount: Int?,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -301,9 +300,13 @@ private fun AppSummaryCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = stringResource(
-                    R.string.app_detail_operation_count,
-                    operationCount,
+                text = operationCount?.let {
+                    stringResource(
+                        R.string.app_detail_operation_count,
+                        it,
+                    )
+                } ?: stringResource(
+                    R.string.app_detail_loading_operations,
                 ),
                 fontWeight = FontWeight.SemiBold,
             )
@@ -315,6 +318,88 @@ private fun AppSummaryCard(
             )
         }
     }
+}
+
+@Composable
+private fun DetailLoadingContent(
+    app: InstalledApp,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = DetailContentPadding,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            AppSummaryCard(
+                app = app,
+                operationCount = null,
+            )
+        }
+        item {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+        item {
+            SkeletonBlock(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+            )
+        }
+        items(SKELETON_ROW_COUNT) {
+            AppOpSkeletonItem()
+            HorizontalDivider()
+        }
+    }
+}
+
+@Composable
+private fun AppOpSkeletonItem() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(20.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(9.dp),
+        ) {
+            SkeletonBlock(
+                modifier = Modifier
+                    .width(92.dp)
+                    .height(12.dp),
+            )
+            SkeletonBlock(
+                modifier = Modifier
+                    .width(168.dp)
+                    .height(20.dp),
+            )
+            SkeletonBlock(
+                modifier = Modifier
+                    .width(132.dp)
+                    .height(14.dp),
+            )
+        }
+        SkeletonBlock(
+            modifier = Modifier
+                .width(88.dp)
+                .height(40.dp),
+        )
+    }
+}
+
+@Composable
+private fun SkeletonBlock(modifier: Modifier) {
+    Box(
+        modifier = modifier.background(
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(
+                alpha = SKELETON_ALPHA,
+            ),
+            shape = RoundedCornerShape(6.dp),
+        ),
+    )
 }
 
 @Composable
@@ -398,3 +483,16 @@ private fun AppDetailUiState.appOrNull(): InstalledApp? =
         is AppDetailUiState.Ready -> app
         is AppDetailUiState.Failure -> app
     }
+
+private fun AppOpModeChangeRequest.matches(item: AppOpDisplayItem): Boolean =
+    scope == item.scope &&
+        operationName.equals(item.operationName, ignoreCase = true)
+
+private val DetailContentPadding = PaddingValues(
+    start = 20.dp,
+    top = 12.dp,
+    end = 20.dp,
+    bottom = 24.dp,
+)
+private const val SKELETON_ROW_COUNT = 5
+private const val SKELETON_ALPHA = 0.55f

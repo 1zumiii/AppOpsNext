@@ -55,3 +55,12 @@ behavior verified on the first supported device.
 - package/UID scope resolution and shared-UID impact confirmation
 - physical-device UI verification of `foreground -> ignore -> foreground` for
   ChatGPT's UID-scoped `CAMERA` operation
+- two-snapshot package/UID scope loading with validated compatibility fallback
+- app-aware skeleton loading and per-operation write progress
+- compact relative usage times using one unit (`13 天前`, `23 小时前`,
+  `59 分前`, or `少于 1 分钟`)
+- verified writes update only the affected row; only failures show a detailed
+  result card
+- the temporary in-app write-test card has been removed now that the production
+  permission editor covers its verification and restoration path
+- vector navigation symbols and an adaptive AppOpsNext shield/sliders icon

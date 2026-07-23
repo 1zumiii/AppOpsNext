@@ -60,8 +60,11 @@ prefix. Actual package-scoped entries can appear later with the same operation
 names. Treating every unprefixed row as package-scoped caused AppOpsNext to
 write the wrong scope and then correctly report a read-back mismatch.
 
-Single-operation reads make the boundary explicit, so the repository now uses
-them to enrich the initial package snapshot before editing.
+A numeric UID read returns only the UID block on this device. AppOpsNext now
+uses one package read and one UID read, verifies their common prefix, and then
+splits the scopes. The normal ChatGPT detail load was complete by the
+one-second device capture instead of taking four to five seconds. The previous
+single-operation path remains as a compatibility fallback.
 
 ## Verified UID write
 
@@ -76,6 +79,14 @@ Through the AppOpsNext Compose UI, its effective UID mode was changed from
 `foreground` to `ignore`. An independent ADB read returned `CAMERA: ignore`.
 The same UI then restored it to `foreground`, and a final independent read
 confirmed that state. The package-scoped `CAMERA: allow` entry was not changed.
+Both changes completed without reloading the full detail snapshot; only the
+camera row showed progress and its verified mode was updated locally.
+
+On this device, the same effective camera row can be switched reliably between
+`foreground` and `ignore`. Requests for `allow` or `default` are not retained by
+the system and therefore fail AppOpsNext's independent read-back verification.
+That behavior is treated as a device/runtime-permission constraint rather than
+as a successful write.
 
 By contrast, attempting to promote a UID operation whose runtime permission is
 denied can be normalized or rejected by Android. AppOps can further restrict a

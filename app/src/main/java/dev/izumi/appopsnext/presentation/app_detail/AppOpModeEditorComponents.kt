@@ -3,9 +3,9 @@ package dev.izumi.appopsnext.presentation.app_detail
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -37,6 +37,7 @@ import dev.izumi.appopsnext.appops.model.AppOpScope
 @Composable
 internal fun AppOpListItem(
     item: AppOpDisplayItem,
+    isApplying: Boolean,
     editEnabled: Boolean,
     onModeSelected: (AppOpMode, AppOpMode) -> Unit,
 ) {
@@ -89,7 +90,24 @@ internal fun AppOpListItem(
             )
         },
         trailingContent = {
-            if (currentMode != null) {
+            if (isApplying) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.app_detail_mode_item_applying,
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+            } else if (currentMode != null) {
                 EditableModeMenu(
                     currentMode = currentMode,
                     enabled = editEnabled,
@@ -219,108 +237,59 @@ internal fun ModeChangeDialog(
             },
         )
 
-        is AppOpModeChangeUiState.Applying -> AlertDialog(
-            onDismissRequest = {},
-            title = {
-                Text(text = stringResource(R.string.app_detail_mode_applying_title))
-            },
-            text = {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    CircularProgressIndicator()
-                    Text(
-                        text = stringResource(
-                            R.string.app_detail_mode_applying_detail,
-                            state.request.operationName,
-                        ),
-                    )
-                }
-            },
-            confirmButton = {},
-        )
-
         else -> Unit
     }
 }
 
 @Composable
-internal fun ModeChangeResultCard(
-    state: AppOpModeChangeUiState,
+internal fun ModeChangeFailureCard(
+    state: AppOpModeChangeUiState.Failure,
     onDismiss: () -> Unit,
 ) {
-    val isSuccess = state is AppOpModeChangeUiState.Success
-    val containerColor = if (isSuccess) {
-        MaterialTheme.colorScheme.tertiaryContainer
-    } else {
-        MaterialTheme.colorScheme.errorContainer
-    }
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+        ),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            when (state) {
-                is AppOpModeChangeUiState.Success -> {
-                    Text(
-                        text = stringResource(
-                            R.string.app_detail_mode_change_success,
-                        ),
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.app_detail_mode_change_success_detail,
-                            state.request.operationName,
-                            modeLabel(state.result.originalMode),
-                            modeLabel(state.result.appliedMode),
-                        ),
-                    )
-                }
-
-                is AppOpModeChangeUiState.Failure -> {
-                    Text(
-                        text = stringResource(
-                            R.string.app_detail_mode_change_failure,
-                        ),
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.app_detail_mode_change_failure_detail,
-                            modeChangePhaseLabel(state.result.phase),
-                            restorationStatusLabel(
-                                state.result.restorationStatus,
-                            ),
-                        ),
-                    )
-                    if (
-                        state.result.phase ==
-                        AppOpModeChangePhase.VERIFY_REQUESTED
-                    ) {
-                        Text(
-                            text = stringResource(
-                                R.string.app_detail_mode_change_rejected_hint,
-                            ),
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                    state.result.observedMode?.let { observedMode ->
-                        Text(
-                            text = stringResource(
-                                R.string.app_detail_mode_observed,
-                                modeLabel(observedMode),
-                            ),
-                        )
-                    }
-                }
-
-                else -> Unit
+            Text(
+                text = stringResource(
+                    R.string.app_detail_mode_change_failure,
+                ),
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = stringResource(
+                    R.string.app_detail_mode_change_failure_detail,
+                    modeChangePhaseLabel(state.result.phase),
+                    restorationStatusLabel(
+                        state.result.restorationStatus,
+                    ),
+                ),
+            )
+            if (
+                state.result.phase ==
+                AppOpModeChangePhase.VERIFY_REQUESTED
+            ) {
+                Text(
+                    text = stringResource(
+                        R.string.app_detail_mode_change_rejected_hint,
+                    ),
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            state.result.observedMode?.let { observedMode ->
+                Text(
+                    text = stringResource(
+                        R.string.app_detail_mode_observed,
+                        modeLabel(observedMode),
+                    ),
+                )
             }
             TextButton(
                 onClick = onDismiss,

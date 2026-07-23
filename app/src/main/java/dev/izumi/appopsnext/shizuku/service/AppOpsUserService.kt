@@ -38,6 +38,9 @@ class AppOpsUserService : IPrivilegedAppOpsService.Stub {
             AppOpsCommands.getPackageOp(packageName, operationName),
         )
 
+    override fun getUidOps(uid: Int): ShellCommandResult =
+        commandExecutor.execute(AppOpsCommands.getUidOps(uid))
+
     override fun setPackageOpMode(
         packageName: String,
         operationName: String,
