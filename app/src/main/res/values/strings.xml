@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">AppOps Next</string>
+    <string name="home_title">Android 权限控制器</string>
+    <string name="home_subtitle">当前阶段先验证 Android 15、Shizuku 与 AppOps 的完整权限链。</string>
+    <string name="status_device_title">设备</string>
+    <string name="status_device_value">%1$s %2$s</string>
+    <string name="status_device_detail">Android %1$s · API %2$d</string>
+    <string name="status_shizuku_title">Shizuku</string>
+    <string name="status_appops_title">AppOps</string>
+    <string name="status_waiting">等待接入</string>
+    <string name="status_disconnected">尚未连接</string>
+    <string name="status_shizuku_pending_detail">下一模块将加入授权和 UserService 状态检测。</string>
+    <string name="status_appops_disconnected_detail">读取和修改功能会在连接成功后启用。</string>
+</resources>
