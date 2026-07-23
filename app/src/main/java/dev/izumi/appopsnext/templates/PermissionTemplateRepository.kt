@@ -69,11 +69,31 @@ class PermissionTemplateRepository(
                 mode = mode,
                 scope = scope,
             )
+            val existingRuleIndex = template.rules.indexOfFirst {
+                it.stableOperationName == normalizedName
+            }
             template.copy(
-                rules = template.rules
-                    .filterNot {
-                        it.stableOperationName == normalizedName
-                    } + updatedRule,
+                rules = if (existingRuleIndex >= 0) {
+                    template.rules.toMutableList().apply {
+                        this[existingRuleIndex] = updatedRule
+                    }
+                } else {
+                    template.rules + updatedRule
+                },
+            )
+        }
+    }
+
+    suspend fun reorderRules(
+        templateId: String,
+        orderedOperationNames: List<String>,
+    ) {
+        updateTemplate(templateId) { template ->
+            template.copy(
+                rules = PermissionTemplateRuleOrder.apply(
+                    currentRules = template.rules,
+                    orderedOperationNames = orderedOperationNames,
+                ),
             )
         }
     }

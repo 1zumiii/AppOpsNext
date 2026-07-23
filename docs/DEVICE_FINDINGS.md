@@ -21,10 +21,10 @@ are never persisted.
 ## Runtime-permission coupling
 
 `CAMERA` was not suitable for the first package-mode round-trip test. After the
-test target received the camera runtime permission, Android reported a UID mode
-of `foreground`, and package writes were normalized back to `allow`. This is
-consistent with runtime permissions and AppOps being coupled for protected
-APIs, but the exact normalization timing is device-specific.
+disposable fixture app received the camera runtime permission, Android reported
+a UID mode of `foreground`, and package writes were normalized back to `allow`.
+This is consistent with runtime permissions and AppOps being coupled for
+protected APIs, but the exact normalization timing is device-specific.
 
 The first deterministic write proof therefore uses `RUN_IN_BACKGROUND`, which
 was verified on this device as:

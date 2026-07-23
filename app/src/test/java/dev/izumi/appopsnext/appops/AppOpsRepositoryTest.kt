@@ -508,7 +508,7 @@ class AppOpsRepositoryTest {
     }
 
     private companion object {
-        const val TEST_PACKAGE = "dev.izumi.appopsnext.testtarget"
+        const val TEST_PACKAGE = "com.example.target"
 
         fun success(stdout: String = "") = ShellCommandResult(
             exitCode = 0,

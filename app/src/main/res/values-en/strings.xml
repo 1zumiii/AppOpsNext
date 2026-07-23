@@ -116,6 +116,13 @@
     <string name="templates_empty_detail">New templates include common camera, microphone, location, clipboard, notification, and contacts rules in the system-default mode.</string>
     <string name="template_rule_count">%1$d permission rules</string>
     <string name="template_editor_detail">Rules are stored with stable system operation names. Targets and scopes will be confirmed before a template is applied.</string>
+    <string name="template_reorder_hint">Long-press and drag a permission to change its order.</string>
+    <string name="template_reorder_action">Long-press and drag to reorder</string>
+    <string name="template_mode_title">Permission mode</string>
+    <string name="template_mode_detail">AppOps state applied by this rule</string>
+    <string name="template_scope_title">Target scope</string>
+    <string name="template_scope_detail">Write by UID or individual app package</string>
+    <string name="template_dropdown_button">%1$s ▾</string>
     <string name="template_add_permission">Add another permission</string>
     <string name="template_permission_search">Search system permission names</string>
     <string name="template_delete_title">Delete template?</string>
@@ -139,7 +146,7 @@
     <string name="batch_cancel_selection">Cancel batch</string>
     <string name="batch_selected_count">%1$d selected</string>
     <string name="batch_apply_template">Apply template</string>
-    <string name="batch_apply_mode">Set selected to</string>
+    <string name="batch_apply_mode_value">Set selected to: %1$s</string>
     <string name="app_detail_search_label">Search localized or system permission name</string>
     <string name="app_detail_filtered_count">Showing %1$d of %2$d permissions</string>
     <string name="app_detail_no_matching_operations">No matching permissions.</string>

@@ -65,6 +65,7 @@ fun AppOpsRootScreen(
     onTemplateRuleScopeChange: (String, AppOpScope) -> Unit,
     onAddTemplateRule: (String) -> Unit,
     onRemoveTemplateRule: (String) -> Unit,
+    onTemplateRuleOrderChange: (List<String>) -> Unit,
     onTemplateApplyRequested:
         (PermissionTemplate, List<InstalledApp>) -> Unit,
     onPermissionBatchRequested: (
@@ -147,6 +148,7 @@ fun AppOpsRootScreen(
                 onRuleScopeChange = onTemplateRuleScopeChange,
                 onAddRule = onAddTemplateRule,
                 onRemoveRule = onRemoveTemplateRule,
+                onRuleOrderChange = onTemplateRuleOrderChange,
                 bottomBar = navigationBar,
             )
 

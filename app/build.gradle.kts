@@ -5,6 +5,18 @@ plugins {
     id("kotlin-parcelize")
 }
 
+val releaseKeystore = rootProject.file(
+    ".signing/appopsnext-release.keystore",
+)
+val releaseStorePassword =
+    providers.environmentVariable("APPOPSNEXT_STORE_PASSWORD")
+val releaseKeyPassword =
+    providers.environmentVariable("APPOPSNEXT_KEY_PASSWORD")
+val releaseSigningConfigured =
+    releaseKeystore.isFile &&
+        releaseStorePassword.isPresent &&
+        releaseKeyPassword.isPresent
+
 android {
     namespace = "dev.izumi.appopsnext"
     compileSdk = 36
@@ -13,15 +25,25 @@ android {
         applicationId = "dev.izumi.appopsnext"
         minSdk = 35
         targetSdk = 35
-        versionCode = 13
-        versionName = "0.10.0"
+        versionCode = 15
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = releaseKeystore
+            storePassword = releaseStorePassword.orNull
+            keyAlias = "appopsnext"
+            keyPassword = releaseKeyPassword.orNull
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -47,6 +69,21 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+}
+
+tasks.configureEach {
+    if (name == "validateSigningRelease") {
+        doFirst {
+            if (!releaseSigningConfigured) {
+                throw GradleException(
+                    "Release signing requires " +
+                        ".signing/appopsnext-release.keystore, " +
+                        "APPOPSNEXT_STORE_PASSWORD, and " +
+                        "APPOPSNEXT_KEY_PASSWORD.",
+                )
+            }
         }
     }
 }

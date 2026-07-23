@@ -81,6 +81,8 @@ class MainActivity : ComponentActivity() {
                         templatesViewModel::setRuleScope,
                     onAddTemplateRule = templatesViewModel::addRule,
                     onRemoveTemplateRule = templatesViewModel::removeRule,
+                    onTemplateRuleOrderChange =
+                        templatesViewModel::setRuleOrder,
                     onTemplateApplyRequested =
                         batchOperationsViewModel::requestTemplateApplication,
                     onPermissionBatchRequested =

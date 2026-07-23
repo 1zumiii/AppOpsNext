@@ -1,74 +1,118 @@
 # AppOpsNext
 
-A modern AppOps manager for Android 15+, powered by Shizuku.
+A modern, clean-room AppOps manager for Android 15+, powered by
+[Shizuku](https://shizuku.rikka.app/).
 
-The first supported device is an ASUS AI2302 running Android 15 (API 35).
-The project intentionally uses only clean-room implementations based on public
-Android and Shizuku behavior.
+AppOpsNext reads and changes Android's built-in AppOps state. It does **not**
+connect to, migrate from, or depend on the legacy `rikka.appops` application.
 
-It does not connect to or depend on the legacy `rikka.appops` application.
-“System AppOps” in the UI refers to Android's built-in AppOps system service.
+> [!IMPORTANT]
+> Version 1.0.0 is developed and verified for one ASUS AI2302 running Android
+> 15 (API 35). Other Android versions and OEM ROMs are not yet supported.
+
+## Features
+
+- Browse current-user applications with package, UID, and system-app metadata
+- Hide system applications by default, with a persistent Settings toggle
+- Search applications and permissions by localized or raw system names
+- Read package-scoped and UID-scoped AppOps independently
+- Change AppOps modes with stale-state checks and independent read-back
+- Restore the original mode automatically when a write cannot be verified
+- Show per-operation progress without reloading the complete detail screen
+- Display compact, localized recent-use timestamps
+- Create reusable permission templates with editable modes and scopes
+- Add, remove, and long-press drag template rules into a persistent custom order
+- Apply one template to an app or batch-apply it to multiple applications
+- Change several permissions in one app as a verified batch operation
+- Report every batch success and failure in a persistent result dialog
+- Switch between system language, Simplified Chinese, and English
+
+## Requirements
+
+- Android 15 (API 35)
+- Shizuku 13 or newer
+- ADB or wireless debugging to start Shizuku on a non-rooted device
+
+AppOpsNext uses the shell identity supplied by Shizuku. If Shizuku stops after
+a reboot or the authorization is revoked, privileged reads and writes remain
+unavailable until the connection is restored.
+
+## Installation
+
+1. Install and start Shizuku.
+2. Download `AppOpsNext-v1.0.0.apk` from
+   [GitHub Releases](https://github.com/1zumiii/AppOpsNext/releases).
+3. Install the APK and grant AppOpsNext access when Shizuku asks.
+4. Open an application, inspect its package/UID scope, and confirm every
+   requested change before applying it.
+
+Android runtime permissions and AppOps are separate layers. AppOps can further
+restrict an already granted capability, but it cannot grant a runtime
+permission denied by Android or an OEM policy. Some modes may therefore be
+normalized or rejected by the system; AppOpsNext reports this as a failed
+verification instead of claiming success.
+
+## Safety model
+
+Every single or batched write follows the same bounded transaction:
+
+```text
+read current value
+  -> confirm it has not changed
+  -> write the requested typed mode
+  -> read back and verify
+  -> restore and verify the original value after failure
+```
+
+UID-scoped changes can affect several packages sharing one UID. The
+confirmation UI shows that scope before a write. Batch operations run
+sequentially and retain a result for every target.
 
 ## Development
 
-- JDK 17
-- Android SDK
-- A physical Android 15 device with USB debugging
-- Shizuku 13+
+The project requires JDK 17 and an Android SDK. A physical Android 15 device
+with USB debugging is the primary test environment.
 
-Build the debug APK:
+Build the debug app:
 
 ```shell
-./gradlew :app:assembleDebug :test-target:assembleDebug
+./gradlew :app:assembleDebug
 ```
 
-Debug builds keep the screen awake while the app is in the foreground to
-support long-running physical-device tests. Release builds do not change the
-system screen timeout.
+Run local verification:
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for package boundaries and
-maintenance rules and [docs/DEVICE_FINDINGS.md](docs/DEVICE_FINDINGS.md) for
-behavior verified on the first supported device.
+```shell
+./gradlew :app:testDebugUnitTest :app:lintDebug \
+  :app:assembleDebug
+```
 
-## Verified milestone
+Debug builds keep the screen awake only while AppOpsNext is in the foreground.
+Release builds do not change the system screen timeout.
 
-- Shizuku permission lifecycle
-- shell UID 2000 UserService over AIDL
-- automatic UserService reconnection after the frontend process restarts
-- typed system AppOps reads through the privileged backend
-- isolated command construction and unit-tested output parsing
-- 41 AppOps entries read from the development app on the Android 15 test device
-- isolated `test-target` APK for write verification
-- verified `default -> ignore -> default` mode restoration for
-  `android:run_in_background`
-- complete current-user application discovery with system/user and UID metadata
-- app-name and package-name search across 455 apps on the Android 15 test device
-- per-app AppOps details with package/UID scope and recorded metadata
-- confirmed package-scope mode editing with stale-state detection, independent
-  read-back verification, and automatic restoration after a failed change
-- physical-device UI verification of `default -> ignore -> default` for
-  `RUN_IN_BACKGROUND`
-- persistent setting to hide system applications
-- common-first AppOp sorting and Chinese/English/raw-name search
-- localized permission titles with the raw system operation on a separate,
-  lower-emphasis line
-- package/UID scope resolution and shared-UID impact confirmation
-- physical-device UI verification of `foreground -> ignore -> foreground` for
-  ChatGPT's UID-scoped `CAMERA` operation
-- two-snapshot package/UID scope loading with validated compatibility fallback
-- app-aware skeleton loading and per-operation write progress
-- compact relative usage times using one unit (`13 天前`, `23 小时前`,
-  `59 分前`, or `少于 1 分钟`)
-- verified writes update only the affected row; failures open a detailed modal
-  result dialog from any scroll position
-- the temporary in-app write-test card has been removed now that the production
-  permission editor covers its verification and restoration path
-- vector navigation symbols and an adaptive AppOpsNext shield/sliders icon
-- detail-page back gestures return to the app list, with a standard back-arrow
-  navigation icon replacing the text button
-- persistent user-defined permission templates with neutral common-permission
-  defaults, editable modes/scopes, and a searchable known-AppOp picker
-- per-app multi-permission changes and multi-app template application, executed
-  sequentially with verified writes and an always-visible detailed result dialog
-- complete Simplified Chinese and English UI resources with Android per-app
-  language switching, plus developer and GitHub information in Settings
+### Release signing
+
+The release keystore is intentionally excluded from Git. Release builds require
+`.signing/appopsnext-release.keystore` and these environment variables:
+
+```shell
+export APPOPSNEXT_STORE_PASSWORD="<keystore password>"
+export APPOPSNEXT_KEY_PASSWORD="<key password>"
+./gradlew :app:assembleRelease
+```
+
+Keep an offline backup of the keystore and its passwords. Losing the signing
+key makes it impossible to publish updates that install over existing releases.
+
+## Project structure
+
+- `presentation`: Compose screens, state, and reusable UI
+- `appops`: command adapters, parsing, repositories, and verified writes
+- `shizuku`: authorization, Binder lifecycle, and privileged UserService
+- `apps`: application discovery and pure filtering
+- `settings`: typed Preferences DataStore settings
+- `templates`: versioned template persistence and ordering
+
+See [Architecture](docs/ARCHITECTURE.md) for package boundaries and maintenance
+rules, and [Android 15 device findings](docs/DEVICE_FINDINGS.md) for behavior
+verified on the reference device. Maintainers should also follow the
+[release checklist](docs/RELEASE.md) before publishing an APK.
