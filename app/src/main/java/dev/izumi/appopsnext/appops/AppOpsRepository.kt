@@ -193,6 +193,44 @@ class AppOpsRepository(
             )
         }
 
+        return applyRequestedMode(
+            packageName = packageName,
+            operation = operation,
+            scope = scope,
+            originalMode = originalMode,
+            requestedMode = requestedMode,
+        )
+    }
+
+    suspend fun applyMode(
+        packageName: String,
+        operation: AppOpIdentifier,
+        scope: AppOpScope,
+        requestedMode: AppOpMode,
+    ): AppOpModeChangeResult {
+        val originalMode = readMode(packageName, operation, scope)
+            ?: return AppOpModeChangeResult.Failure(
+                phase = AppOpModeChangePhase.READ_ORIGINAL,
+                originalMode = null,
+                observedMode = null,
+                restorationStatus = AppOpsRestorationStatus.NOT_REQUIRED,
+            )
+        return applyRequestedMode(
+            packageName = packageName,
+            operation = operation,
+            scope = scope,
+            originalMode = originalMode,
+            requestedMode = requestedMode,
+        )
+    }
+
+    private suspend fun applyRequestedMode(
+        packageName: String,
+        operation: AppOpIdentifier,
+        scope: AppOpScope,
+        originalMode: AppOpMode,
+        requestedMode: AppOpMode,
+    ): AppOpModeChangeResult {
         if (originalMode == requestedMode) {
             return AppOpModeChangeResult.Success(
                 originalMode = originalMode,

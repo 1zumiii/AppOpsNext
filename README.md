@@ -68,3 +68,5 @@ behavior verified on the first supported device.
   navigation icon replacing the text button
 - persistent user-defined permission templates with neutral common-permission
   defaults, editable modes/scopes, and a searchable known-AppOp picker
+- per-app multi-permission changes and multi-app template application, executed
+  sequentially with verified writes and an always-visible detailed result dialog

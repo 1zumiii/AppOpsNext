@@ -9,6 +9,7 @@ import dev.izumi.appopsnext.development.DevelopmentWindowPolicy
 import dev.izumi.appopsnext.presentation.AppOpsRootScreen
 import dev.izumi.appopsnext.presentation.app_detail.AppDetailViewModel
 import dev.izumi.appopsnext.presentation.app_list.AppListViewModel
+import dev.izumi.appopsnext.presentation.batch.BatchOperationsViewModel
 import dev.izumi.appopsnext.presentation.home.HomeViewModel
 import dev.izumi.appopsnext.presentation.settings.SettingsViewModel
 import dev.izumi.appopsnext.presentation.templates.TemplatesViewModel
@@ -20,6 +21,7 @@ class MainActivity : ComponentActivity() {
     private val appDetailViewModel: AppDetailViewModel by viewModels()
     private val settingsViewModel: SettingsViewModel by viewModels()
     private val templatesViewModel: TemplatesViewModel by viewModels()
+    private val batchOperationsViewModel: BatchOperationsViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,6 +39,8 @@ class MainActivity : ComponentActivity() {
                 settingsViewModel.uiState.collectAsStateWithLifecycle()
             val templatesUiState =
                 templatesViewModel.uiState.collectAsStateWithLifecycle()
+            val batchOperationUiState =
+                batchOperationsViewModel.uiState.collectAsStateWithLifecycle()
             val appOpSearchQuery =
                 appDetailViewModel.searchQuery.collectAsStateWithLifecycle()
 
@@ -48,6 +52,7 @@ class MainActivity : ComponentActivity() {
                     appOpModeChangeUiState = appOpModeChangeUiState.value,
                     settingsUiState = settingsUiState.value,
                     templatesUiState = templatesUiState.value,
+                    batchOperationUiState = batchOperationUiState.value,
                     appOpSearchQuery = appOpSearchQuery.value,
                     onShizukuAction = homeViewModel::performShizukuAction,
                     onAppSearchQueryChange = appListViewModel::updateSearchQuery,
@@ -74,6 +79,16 @@ class MainActivity : ComponentActivity() {
                         templatesViewModel::setRuleScope,
                     onAddTemplateRule = templatesViewModel::addRule,
                     onRemoveTemplateRule = templatesViewModel::removeRule,
+                    onTemplateApplyRequested =
+                        batchOperationsViewModel::requestTemplateApplication,
+                    onPermissionBatchRequested =
+                        batchOperationsViewModel::requestPermissionBatch,
+                    onBatchOperationConfirm =
+                        batchOperationsViewModel::confirm,
+                    onBatchOperationDismiss = {
+                        batchOperationsViewModel.dismiss()
+                        appDetailViewModel.refresh()
+                    },
                 )
             }
         }

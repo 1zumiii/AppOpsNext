@@ -279,6 +279,36 @@ class AppOpsRepositoryTest {
         }
 
     @Test
+    fun `batch mode application discovers original and verifies requested mode`() =
+        runBlocking {
+            val gateway = FakeGateway(
+                getResults = ArrayDeque(
+                    listOf(
+                        success("RUN_IN_BACKGROUND: default\n"),
+                        success("RUN_IN_BACKGROUND: ignore\n"),
+                    ),
+                ),
+                setResults = ArrayDeque(listOf(success())),
+            )
+
+            val result = AppOpsRepository(gateway).applyMode(
+                packageName = TEST_PACKAGE,
+                operation = runInBackground,
+                scope = AppOpScope.PACKAGE,
+                requestedMode = AppOpMode.IGNORE,
+            )
+
+            assertEquals(
+                AppOpModeChangeResult.Success(
+                    originalMode = AppOpMode.DEFAULT,
+                    appliedMode = AppOpMode.IGNORE,
+                ),
+                result,
+            )
+            assertEquals(listOf(AppOpMode.IGNORE), gateway.requestedModes)
+        }
+
+    @Test
     fun `changed original mode prevents a stale confirmed write`() =
         runBlocking {
             val gateway = FakeGateway(

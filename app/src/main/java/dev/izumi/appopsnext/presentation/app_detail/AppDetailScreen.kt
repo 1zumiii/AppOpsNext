@@ -26,6 +26,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -33,7 +36,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -48,6 +54,9 @@ import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpsReadFailureReason
 import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.apps.model.InstalledApp
+import dev.izumi.appopsnext.presentation.batch.PermissionBatchSelection
+import dev.izumi.appopsnext.presentation.batch.TemplatePickerDialog
+import dev.izumi.appopsnext.templates.model.PermissionTemplate
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,9 +76,29 @@ fun AppDetailScreen(
     ) -> Unit,
     onModeChangeConfirmed: () -> Unit,
     onModeChangeDismissed: () -> Unit,
+    templates: List<PermissionTemplate>,
+    onTemplateApplyRequested:
+        (PermissionTemplate, InstalledApp) -> Unit,
+    onPermissionBatchRequested: (
+        InstalledApp,
+        List<PermissionBatchSelection>,
+        AppOpMode,
+    ) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val app = uiState.appOrNull()
+    var batchSelectionMode by remember(app?.packageName) {
+        mutableStateOf(false)
+    }
+    var selectedBatchKeys by remember(app?.packageName) {
+        mutableStateOf(emptySet<String>())
+    }
+    var selectedBatchMode by remember(app?.packageName) {
+        mutableStateOf(AppOpMode.IGNORE)
+    }
+    var showTemplatePicker by remember(app?.packageName) {
+        mutableStateOf(false)
+    }
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -91,6 +120,33 @@ fun AppDetailScreen(
                                 R.string.action_back,
                             ),
                         )
+                    }
+                },
+                actions = {
+                    if (uiState is AppDetailUiState.Ready) {
+                        TextButton(onClick = { showTemplatePicker = true }) {
+                            Text(
+                                text = stringResource(
+                                    R.string.batch_apply_template,
+                                ),
+                            )
+                        }
+                        TextButton(
+                            onClick = {
+                                batchSelectionMode = !batchSelectionMode
+                                selectedBatchKeys = emptySet()
+                            },
+                        ) {
+                            Text(
+                                text = stringResource(
+                                    if (batchSelectionMode) {
+                                        R.string.batch_cancel_selection
+                                    } else {
+                                        R.string.batch_action
+                                    },
+                                ),
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -125,7 +181,27 @@ fun AppDetailScreen(
                 state = uiState,
                 modeChangeState = modeChangeState,
                 searchQuery = searchQuery,
+                batchSelectionMode = batchSelectionMode,
+                selectedBatchKeys = selectedBatchKeys,
+                selectedBatchMode = selectedBatchMode,
                 onSearchQueryChange = onSearchQueryChange,
+                onBatchSelectionChange = { key, selected ->
+                    selectedBatchKeys = if (selected) {
+                        selectedBatchKeys + key
+                    } else {
+                        selectedBatchKeys - key
+                    }
+                },
+                onBatchModeChange = { selectedBatchMode = it },
+                onApplyPermissionBatch = { selections ->
+                    onPermissionBatchRequested(
+                        uiState.app,
+                        selections,
+                        selectedBatchMode,
+                    )
+                    batchSelectionMode = false
+                    selectedBatchKeys = emptySet()
+                },
                 onModeChangeRequested = onModeChangeRequested,
                 modifier = Modifier
                     .fillMaxSize()
@@ -148,6 +224,17 @@ fun AppDetailScreen(
         onConfirm = onModeChangeConfirmed,
         onDismiss = onModeChangeDismissed,
     )
+
+    if (showTemplatePicker && app != null) {
+        TemplatePickerDialog(
+            templates = templates,
+            onSelect = { template ->
+                showTemplatePicker = false
+                onTemplateApplyRequested(template, app)
+            },
+            onDismiss = { showTemplatePicker = false },
+        )
+    }
 }
 
 @Composable
@@ -155,7 +242,13 @@ private fun ReadyContent(
     state: AppDetailUiState.Ready,
     modeChangeState: AppOpModeChangeUiState,
     searchQuery: String,
+    batchSelectionMode: Boolean,
+    selectedBatchKeys: Set<String>,
+    selectedBatchMode: AppOpMode,
     onSearchQueryChange: (String) -> Unit,
+    onBatchSelectionChange: (String, Boolean) -> Unit,
+    onBatchModeChange: (AppOpMode) -> Unit,
+    onApplyPermissionBatch: (List<PermissionBatchSelection>) -> Unit,
     onModeChangeRequested: (
         String,
         AppOpScope,
@@ -224,6 +317,30 @@ private fun ReadyContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        if (batchSelectionMode) {
+            item {
+                BatchPermissionControls(
+                    selectedCount = selectedBatchKeys.size,
+                    selectedMode = selectedBatchMode,
+                    onModeChange = onBatchModeChange,
+                    onApply = {
+                        onApplyPermissionBatch(
+                            displayItems
+                                .filter {
+                                    it.batchSelectionKey() in
+                                        selectedBatchKeys
+                                }
+                                .map {
+                                    PermissionBatchSelection(
+                                        operationName = it.operationName,
+                                        scope = it.scope,
+                                    )
+                                },
+                        )
+                    },
+                )
+            }
+        }
         if (displayItems.isEmpty()) {
             item {
                 Text(
@@ -249,7 +366,19 @@ private fun ReadyContent(
                     item = item,
                     isApplying =
                         applyingRequest?.matches(item) == true,
-                    editEnabled = applyingRequest == null,
+                    editEnabled =
+                        applyingRequest == null && !batchSelectionMode,
+                    selectedForBatch = if (batchSelectionMode) {
+                        item.batchSelectionKey() in selectedBatchKeys
+                    } else {
+                        null
+                    },
+                    onBatchSelectionChange = { selected ->
+                        onBatchSelectionChange(
+                            item.batchSelectionKey(),
+                            selected,
+                        )
+                    },
                     onModeSelected = { originalMode, requestedMode ->
                         onModeChangeRequested(
                             item.operationName,
@@ -264,6 +393,74 @@ private fun ReadyContent(
         }
     }
 }
+
+@Composable
+private fun BatchPermissionControls(
+    selectedCount: Int,
+    selectedMode: AppOpMode,
+    onModeChange: (AppOpMode) -> Unit,
+    onApply: () -> Unit,
+) {
+    var modeMenuExpanded by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(
+                R.string.batch_selected_count,
+                selectedCount,
+            ),
+            modifier = Modifier.weight(1f),
+        )
+        Box {
+            OutlinedButton(onClick = { modeMenuExpanded = true }) {
+                Text(
+                    text = stringResource(
+                        R.string.batch_apply_mode,
+                    ) + " " + batchModeLabel(selectedMode),
+                )
+            }
+            DropdownMenu(
+                expanded = modeMenuExpanded,
+                onDismissRequest = { modeMenuExpanded = false },
+            ) {
+                AppOpMode.entries.forEach { mode ->
+                    DropdownMenuItem(
+                        text = { Text(text = batchModeLabel(mode)) },
+                        enabled = mode != selectedMode,
+                        onClick = {
+                            modeMenuExpanded = false
+                            onModeChange(mode)
+                        },
+                    )
+                }
+            }
+        }
+        FilledTonalButton(
+            onClick = onApply,
+            enabled = selectedCount > 0,
+        ) {
+            Text(text = stringResource(R.string.action_apply))
+        }
+    }
+}
+
+private fun AppOpDisplayItem.batchSelectionKey(): String =
+    "${scope.name}:$operationName"
+
+@Composable
+private fun batchModeLabel(mode: AppOpMode): String =
+    stringResource(
+        when (mode) {
+            AppOpMode.ALLOW -> R.string.app_op_mode_allow
+            AppOpMode.IGNORE -> R.string.app_op_mode_ignore
+            AppOpMode.DENY -> R.string.app_op_mode_deny
+            AppOpMode.DEFAULT -> R.string.app_op_mode_default
+            AppOpMode.FOREGROUND -> R.string.app_op_mode_foreground
+        },
+    )
 
 @Composable
 private fun AppSummaryCard(
