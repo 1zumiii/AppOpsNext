@@ -17,6 +17,9 @@ import dev.izumi.appopsnext.presentation.app_detail.AppDetailUiState
 import dev.izumi.appopsnext.presentation.app_detail.AppOpModeChangeUiState
 import dev.izumi.appopsnext.presentation.app_list.AppListScreen
 import dev.izumi.appopsnext.presentation.app_list.AppListUiState
+import dev.izumi.appopsnext.presentation.batch.BatchOperationDialog
+import dev.izumi.appopsnext.presentation.batch.BatchOperationUiState
+import dev.izumi.appopsnext.presentation.batch.PermissionBatchSelection
 import dev.izumi.appopsnext.presentation.components.AppNavigationBar
 import dev.izumi.appopsnext.presentation.components.MainDestination
 import dev.izumi.appopsnext.presentation.home.HomeScreen
@@ -25,6 +28,7 @@ import dev.izumi.appopsnext.presentation.settings.SettingsScreen
 import dev.izumi.appopsnext.presentation.settings.SettingsUiState
 import dev.izumi.appopsnext.presentation.templates.TemplatesScreen
 import dev.izumi.appopsnext.presentation.templates.TemplatesUiState
+import dev.izumi.appopsnext.templates.model.PermissionTemplate
 
 @Composable
 fun AppOpsRootScreen(
@@ -34,6 +38,7 @@ fun AppOpsRootScreen(
     appOpModeChangeUiState: AppOpModeChangeUiState,
     settingsUiState: SettingsUiState,
     templatesUiState: TemplatesUiState,
+    batchOperationUiState: BatchOperationUiState,
     appOpSearchQuery: String,
     onShizukuAction: () -> Unit,
     onAppSearchQueryChange: (String) -> Unit,
@@ -58,6 +63,15 @@ fun AppOpsRootScreen(
     onTemplateRuleScopeChange: (String, AppOpScope) -> Unit,
     onAddTemplateRule: (String) -> Unit,
     onRemoveTemplateRule: (String) -> Unit,
+    onTemplateApplyRequested:
+        (PermissionTemplate, List<InstalledApp>) -> Unit,
+    onPermissionBatchRequested: (
+        InstalledApp,
+        List<PermissionBatchSelection>,
+        AppOpMode,
+    ) -> Unit,
+    onBatchOperationConfirm: () -> Unit,
+    onBatchOperationDismiss: () -> Unit,
 ) {
     var selectedDestination by rememberSaveable {
         mutableStateOf(MainDestination.APPS)
@@ -98,6 +112,11 @@ fun AppOpsRootScreen(
             onModeChangeRequested = onAppOpModeChangeRequested,
             onModeChangeConfirmed = onAppOpModeChangeConfirmed,
             onModeChangeDismissed = onAppOpModeChangeDismissed,
+            templates = templatesUiState.templates,
+            onTemplateApplyRequested = { template, app ->
+                onTemplateApplyRequested(template, listOf(app))
+            },
+            onPermissionBatchRequested = onPermissionBatchRequested,
         )
     } else {
         when (selectedDestination) {
@@ -111,6 +130,8 @@ fun AppOpsRootScreen(
                     selectedApp = app
                     onAppSelected(app)
                 },
+                templates = templatesUiState.templates,
+                onTemplateApplyRequested = onTemplateApplyRequested,
                 bottomBar = navigationBar,
             )
 
@@ -140,4 +161,10 @@ fun AppOpsRootScreen(
             )
         }
     }
+
+    BatchOperationDialog(
+        state = batchOperationUiState,
+        onConfirm = onBatchOperationConfirm,
+        onDismiss = onBatchOperationDismiss,
+    )
 }

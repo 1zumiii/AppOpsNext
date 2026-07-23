@@ -150,3 +150,13 @@ start with a neutral `default` mode for common privacy operations so creation
 does not silently impose a policy. The template editor can then change modes,
 change scopes, remove defaults, or add another operation from the centralized
 AppOp catalog.
+
+## Batch operations
+
+`BatchOperationsViewModel` converts either a selected permission set or a
+template/application selection into typed `BatchOperationTarget` values.
+`BatchAppOpsExecutor` processes targets sequentially to avoid competing writes
+to AppOpsService. Every item uses the same read, typed write, independent
+verification, and failure-restoration path as a single edit. The final report
+retains every item in target order and is always presented in a modal result
+dialog, including when every item succeeds.

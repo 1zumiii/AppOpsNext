@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -35,6 +36,8 @@ internal fun AppOpListItem(
     item: AppOpDisplayItem,
     isApplying: Boolean,
     editEnabled: Boolean,
+    selectedForBatch: Boolean? = null,
+    onBatchSelectionChange: (Boolean) -> Unit = {},
     onModeSelected: (AppOpMode, AppOpMode) -> Unit,
 ) {
     val currentMode = AppOpMode.fromShellValue(item.mode)
@@ -46,6 +49,14 @@ internal fun AppOpListItem(
         },
     )
     ListItem(
+        leadingContent = selectedForBatch?.let { selected ->
+            {
+                Checkbox(
+                    checked = selected,
+                    onCheckedChange = onBatchSelectionChange,
+                )
+            }
+        },
         headlineContent = {
             Text(
                 text = item.labelRes?.let { stringResource(it) }
@@ -103,19 +114,25 @@ internal fun AppOpListItem(
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
-            } else if (currentMode != null) {
+            } else if (currentMode != null && selectedForBatch == null) {
                 EditableModeMenu(
                     currentMode = currentMode,
                     enabled = editEnabled,
                     onModeSelected = onModeSelected,
                 )
-            } else {
+            } else if (selectedForBatch == null) {
                 Text(
                     text = item.mode,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
+                )
+            } else {
+                Text(
+                    text = currentMode?.let { modeLabel(it) } ?: item.mode,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
         },
