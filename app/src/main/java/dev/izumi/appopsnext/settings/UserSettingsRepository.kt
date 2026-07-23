@@ -31,7 +31,8 @@ class UserSettingsRepository(
         .map { preferences ->
             UserSettings(
                 hideSystemApps =
-                    preferences[Keys.HIDE_SYSTEM_APPS] ?: false,
+                    preferences[Keys.HIDE_SYSTEM_APPS]
+                        ?: UserSettingsDefaults.HIDE_SYSTEM_APPS,
             )
         }
 

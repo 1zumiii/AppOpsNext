@@ -116,6 +116,13 @@
     <string name="templates_empty_detail">新模板会预置相机、麦克风、位置、剪贴板、通知和联系人等常用权限，初始模式为系统默认。</string>
     <string name="template_rule_count">%1$d 项权限规则</string>
     <string name="template_editor_detail">模板使用稳定的系统权限名称保存规则。应用模板前会再次确认目标和修改范围。</string>
+    <string name="template_reorder_hint">长按权限条目并拖动可调整顺序。</string>
+    <string name="template_reorder_action">长按拖动排序</string>
+    <string name="template_mode_title">权限模式</string>
+    <string name="template_mode_detail">套用模板时设置的 AppOps 状态</string>
+    <string name="template_scope_title">作用范围</string>
+    <string name="template_scope_detail">选择按 UID 或单个应用包写入</string>
+    <string name="template_dropdown_button">%1$s ▾</string>
     <string name="template_add_permission">添加其他权限</string>
     <string name="template_permission_search">搜索系统权限名称</string>
     <string name="template_delete_title">删除模板？</string>
@@ -139,7 +146,7 @@
     <string name="batch_cancel_selection">取消批量</string>
     <string name="batch_selected_count">已选择 %1$d 项</string>
     <string name="batch_apply_template">套用模板</string>
-    <string name="batch_apply_mode">批量设为</string>
+    <string name="batch_apply_mode_value">批量设为：%1$s</string>
     <string name="app_detail_search_label">搜索权限中文名、英文名或系统名称</string>
     <string name="app_detail_filtered_count">显示 %1$d 项，共 %2$d 项权限</string>
     <string name="app_detail_no_matching_operations">没有匹配的权限。</string>

@@ -25,10 +25,6 @@ state and repository gateway rather than starting competing privileged
 services. The settings repository owns the only `user_settings` DataStore
 instance.
 
-The separate `test-target` application is disposable and contains no user
-data. Privileged write development must target this package until production
-write safeguards and confirmation UI are complete.
-
 ## Privileged read path
 
 ```text
@@ -60,9 +56,9 @@ read and compare the original mode
 Once the original value has been confirmed, every later failure path attempts
 restoration. Failure state distinguishes “no write occurred,” “restored,” and
 “restore could not be confirmed.” The temporary in-app write-test card was
-removed after the production editor covered the same path. The separate
-`dev.izumi.appopsnext.testtarget` module remains available for console and
-physical-device validation.
+removed after the production editor covered the same path. Subsequent write
+validation uses explicitly selected applications on the physical reference
+device and independently confirms their state through ADB.
 
 ## Application discovery
 
@@ -82,9 +78,9 @@ raw operation name on a separate lower-emphasis line. Raw shell timing metadata
 stays in the snapshot, while the UI formatter displays one largest unit. Usage
 within the last minute is shown as “less than one minute.”
 
-The hide-system-apps preference is persisted with Preferences DataStore and
-combined with application search inside `AppListViewModel`. Filtering itself
-remains a pure function.
+The hide-system-apps preference is persisted with Preferences DataStore,
+defaults to enabled for new installations, and is combined with application
+search inside `AppListViewModel`. Filtering itself remains a pure function.
 
 ## Confirmed package and UID writes
 
@@ -149,7 +145,9 @@ operation codes and localized labels never enter persistence. New templates
 start with a neutral `default` mode for common privacy operations so creation
 does not silently impose a policy. The template editor can then change modes,
 change scopes, remove defaults, or add another operation from the centralized
-AppOp catalog.
+AppOp catalog. Rule order is persisted exactly as the user arranged it; editing
+a mode or scope preserves the existing index, new rules append, and long-press
+drag-and-drop writes a new order only when the gesture finishes.
 
 ## Batch operations
 

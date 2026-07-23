@@ -108,4 +108,11 @@ class TemplatesViewModel(
             repository.removeRule(templateId, stableOperationName)
         }
     }
+
+    fun setRuleOrder(orderedOperationNames: List<String>) {
+        val templateId = uiState.value.selectedTemplate?.id ?: return
+        viewModelScope.launch {
+            repository.reorderRules(templateId, orderedOperationNames)
+        }
+    }
 }

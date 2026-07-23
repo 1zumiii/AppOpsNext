@@ -16,4 +16,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "AppOpsNext"
 include(":app")
-include(":test-target")

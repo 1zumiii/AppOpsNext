@@ -11,8 +11,8 @@ class AppListFilterTest {
             packageName = "dev.izumi.appopsnext",
         ),
         installedApp(
-            label = "测试目标",
-            packageName = "dev.izumi.appopsnext.testtarget",
+            label = "Example target",
+            packageName = "com.example.target",
         ),
         installedApp(
             label = "Camera",
@@ -37,8 +37,8 @@ class AppListFilterTest {
     @Test
     fun `filters package names and trims the query`() {
         assertEquals(
-            apps.take(2),
-            AppListFilter.apply(apps, " izumi.appops "),
+            listOf(apps[1]),
+            AppListFilter.apply(apps, " example.target "),
         )
     }
 

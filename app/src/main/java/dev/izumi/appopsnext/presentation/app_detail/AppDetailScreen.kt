@@ -32,7 +32,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -124,21 +123,31 @@ fun AppDetailScreen(
                 },
                 actions = {
                     if (uiState is AppDetailUiState.Ready) {
-                        TextButton(onClick = { showTemplatePicker = true }) {
-                            Text(
-                                text = stringResource(
+                        IconButton(onClick = { showTemplatePicker = true }) {
+                            Icon(
+                                painter = painterResource(
+                                    R.drawable.ic_navigation_templates,
+                                ),
+                                contentDescription = stringResource(
                                     R.string.batch_apply_template,
                                 ),
                             )
                         }
-                        TextButton(
+                        IconButton(
                             onClick = {
                                 batchSelectionMode = !batchSelectionMode
                                 selectedBatchKeys = emptySet()
                             },
                         ) {
-                            Text(
-                                text = stringResource(
+                            Icon(
+                                painter = painterResource(
+                                    if (batchSelectionMode) {
+                                        R.drawable.ic_action_close
+                                    } else {
+                                        R.drawable.ic_action_batch
+                                    },
+                                ),
+                                contentDescription = stringResource(
                                     if (batchSelectionMode) {
                                         R.string.batch_cancel_selection
                                     } else {
@@ -409,24 +418,26 @@ private fun BatchPermissionControls(
     onApply: () -> Unit,
 ) {
     var modeMenuExpanded by remember { mutableStateOf(false) }
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
             text = stringResource(
                 R.string.batch_selected_count,
                 selectedCount,
             ),
-            modifier = Modifier.weight(1f),
         )
-        Box {
-            OutlinedButton(onClick = { modeMenuExpanded = true }) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = { modeMenuExpanded = true },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Text(
                     text = stringResource(
-                        R.string.batch_apply_mode,
-                    ) + " " + batchModeLabel(selectedMode),
+                        R.string.batch_apply_mode_value,
+                        batchModeLabel(selectedMode),
+                    ),
                 )
             }
             DropdownMenu(
@@ -448,6 +459,7 @@ private fun BatchPermissionControls(
         FilledTonalButton(
             onClick = onApply,
             enabled = selectedCount > 0,
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Text(text = stringResource(R.string.action_apply))
         }
