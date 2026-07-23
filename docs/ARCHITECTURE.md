@@ -17,6 +17,11 @@ package owns command construction, execution results, parsing, and repository
 state. The `apps` package owns installed-application discovery and pure search
 filtering. Persistence packages are introduced as their feature modules land.
 
+`AppOpsApplication` owns the single `PrivilegedServiceClient` instance shared
+by diagnostics and per-app detail ViewModels. The diagnostics ViewModel manages
+the Shizuku binding lifecycle; feature ViewModels consume the shared state and
+repository gateway rather than starting competing privileged services.
+
 The separate `test-target` application is disposable and contains no user
 data. Privileged write development must target this package until production
 write safeguards and confirmation UI are complete.
@@ -65,9 +70,9 @@ and records the reason inline; no general lint baseline is used.
 
 `InstalledAppsRepository` performs package and label loading off the main
 thread. Search is a pure function in `AppListFilter`, which keeps filtering
-testable without Android framework mocks. App rows remain intentionally
-non-interactive until the real per-app detail screen is implemented; the source
-contains `TODO(app-details)` at that boundary.
+testable without Android framework mocks. Selecting a row loads a structured
+`PackageOpsSnapshot` and displays operation name, raw mode, UID/package scope,
+and recorded timing details.
 
 ## Maintenance rules
 

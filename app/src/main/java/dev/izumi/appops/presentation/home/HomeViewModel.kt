@@ -5,13 +5,13 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import dev.izumi.appops.AppOpsApplication
 import dev.izumi.appops.appops.AppOpsRepository
 import dev.izumi.appops.appops.command.AppOpMode
 import dev.izumi.appops.appops.model.AppOpsReadState
 import dev.izumi.appops.appops.model.AppOpsWriteTestState
 import dev.izumi.appops.appops.testing.AppOpsTestTarget
 import dev.izumi.appops.model.DeviceSummary
-import dev.izumi.appops.shizuku.PrivilegedServiceClient
 import dev.izumi.appops.shizuku.ShizukuController
 import dev.izumi.appops.shizuku.model.PrivilegedServiceState
 import dev.izumi.appops.shizuku.model.ShizukuState
@@ -25,7 +25,8 @@ class HomeViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
     private val shizukuController = ShizukuController(application)
-    private val privilegedServiceClient = PrivilegedServiceClient(application)
+    private val privilegedServiceClient =
+        getApplication<AppOpsApplication>().privilegedServiceClient
     private val appOpsRepository = AppOpsRepository(privilegedServiceClient)
     private val appOpsReadState =
         MutableStateFlow<AppOpsReadState>(AppOpsReadState.WaitingForBackend)

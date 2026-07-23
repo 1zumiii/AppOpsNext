@@ -1,5 +1,6 @@
 package dev.izumi.appops.presentation.app_list
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,7 @@ fun AppListScreen(
     uiState: AppListUiState,
     onSearchQueryChange: (String) -> Unit,
     onRefresh: () -> Unit,
+    onAppSelected: (InstalledApp) -> Unit,
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
 ) {
@@ -72,6 +74,7 @@ fun AppListScreen(
             else -> AppListContent(
                 uiState = uiState,
                 onSearchQueryChange = onSearchQueryChange,
+                onAppSelected = onAppSelected,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(contentPadding),
@@ -84,6 +87,7 @@ fun AppListScreen(
 private fun AppListContent(
     uiState: AppListUiState,
     onSearchQueryChange: (String) -> Unit,
+    onAppSelected: (InstalledApp) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -121,13 +125,14 @@ private fun AppListContent(
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(vertical = 8.dp),
             ) {
-                // TODO(app-details): Make rows interactive only when the real
-                // per-app AppOps detail screen is implemented.
                 items(
                     items = uiState.visibleApps,
                     key = InstalledApp::packageName,
                 ) { app ->
-                    InstalledAppListItem(app)
+                    InstalledAppListItem(
+                        app = app,
+                        onClick = { onAppSelected(app) },
+                    )
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 20.dp),
                     )
@@ -138,8 +143,12 @@ private fun AppListContent(
 }
 
 @Composable
-private fun InstalledAppListItem(app: InstalledApp) {
+private fun InstalledAppListItem(
+    app: InstalledApp,
+    onClick: () -> Unit,
+) {
     ListItem(
+        modifier = Modifier.clickable(onClick = onClick),
         headlineContent = {
             Text(
                 text = app.label,
