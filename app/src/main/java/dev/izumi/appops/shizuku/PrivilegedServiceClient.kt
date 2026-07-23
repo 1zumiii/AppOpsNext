@@ -6,6 +6,8 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import android.util.Log
 import dev.izumi.appops.BuildConfig
+import dev.izumi.appops.appops.PrivilegedAppOpsGateway
+import dev.izumi.appops.appops.command.AppOpMode
 import dev.izumi.appops.appops.model.ShellCommandResult
 import dev.izumi.appops.shizuku.model.PrivilegedServiceInfo
 import dev.izumi.appops.shizuku.model.PrivilegedServiceFailureReason
@@ -20,7 +22,7 @@ import rikka.shizuku.Shizuku
 
 class PrivilegedServiceClient(
     context: Context,
-) {
+) : PrivilegedAppOpsGateway {
     private val mutableState =
         MutableStateFlow<PrivilegedServiceState>(PrivilegedServiceState.Disconnected)
     val state: StateFlow<PrivilegedServiceState> = mutableState.asStateFlow()
@@ -105,11 +107,36 @@ class PrivilegedServiceClient(
         mutableState.value = PrivilegedServiceState.Disconnected
     }
 
-    suspend fun getPackageOps(packageName: String): ShellCommandResult =
+    override suspend fun getPackageOps(packageName: String): ShellCommandResult =
         withContext(Dispatchers.IO) {
             val connectedService = service
                 ?: throw IllegalStateException("Privileged service is unavailable")
             connectedService.getPackageOps(packageName)
+        }
+
+    override suspend fun getPackageOp(
+        packageName: String,
+        operationName: String,
+    ): ShellCommandResult =
+        withContext(Dispatchers.IO) {
+            val connectedService = service
+                ?: throw IllegalStateException("Privileged service is unavailable")
+            connectedService.getPackageOp(packageName, operationName)
+        }
+
+    override suspend fun setPackageOpMode(
+        packageName: String,
+        operationName: String,
+        mode: AppOpMode,
+    ): ShellCommandResult =
+        withContext(Dispatchers.IO) {
+            val connectedService = service
+                ?: throw IllegalStateException("Privileged service is unavailable")
+            connectedService.setPackageOpMode(
+                packageName,
+                operationName,
+                mode.shellValue,
+            )
         }
 
     private companion object {

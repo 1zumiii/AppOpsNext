@@ -2,9 +2,7 @@ package dev.izumi.appops.appops.command
 
 object AppOpsCommands {
     fun getPackageOps(packageName: String): List<String> {
-        require(PackageNameValidator.isValid(packageName)) {
-            "Invalid Android package name"
-        }
+        validatePackageName(packageName)
 
         return listOf(
             COMMAND_BINARY,
@@ -14,9 +12,72 @@ object AppOpsCommands {
         )
     }
 
+    fun getPackageOp(
+        packageName: String,
+        operationName: String,
+    ): List<String> {
+        validatePackageName(packageName)
+        validateOperationName(operationName)
+
+        return listOf(
+            COMMAND_BINARY,
+            APP_OPS_SERVICE,
+            GET_COMMAND,
+            packageName,
+            operationName,
+        )
+    }
+
+    fun setPackageOpMode(
+        packageName: String,
+        operationName: String,
+        mode: AppOpMode,
+    ): List<String> {
+        validatePackageName(packageName)
+        validateOperationName(operationName)
+
+        return listOf(
+            COMMAND_BINARY,
+            APP_OPS_SERVICE,
+            SET_COMMAND,
+            packageName,
+            operationName,
+            mode.shellValue,
+        )
+    }
+
+    private fun validatePackageName(packageName: String) {
+        require(PackageNameValidator.isValid(packageName)) {
+            "Invalid Android package name"
+        }
+    }
+
+    private fun validateOperationName(operationName: String) {
+        require(OperationNameValidator.isValid(operationName)) {
+            "Invalid AppOps operation name"
+        }
+    }
+
     private const val COMMAND_BINARY = "/system/bin/cmd"
     private const val APP_OPS_SERVICE = "appops"
     private const val GET_COMMAND = "get"
+    private const val SET_COMMAND = "set"
+}
+
+enum class AppOpMode(
+    val shellValue: String,
+) {
+    ALLOW("allow"),
+    IGNORE("ignore"),
+    DENY("deny"),
+    DEFAULT("default"),
+    FOREGROUND("foreground"),
+    ;
+
+    companion object {
+        fun fromShellValue(value: String): AppOpMode? =
+            entries.firstOrNull { it.shellValue == value }
+    }
 }
 
 internal object PackageNameValidator {
@@ -28,4 +89,14 @@ internal object PackageNameValidator {
             packageNamePattern.matches(value)
 
     private const val MAX_PACKAGE_NAME_LENGTH = 255
+}
+
+internal object OperationNameValidator {
+    private val operationNamePattern = Regex("""[A-Za-z0-9_.:-]+""")
+
+    fun isValid(value: String): Boolean =
+        value.length in 1..MAX_OPERATION_NAME_LENGTH &&
+            operationNamePattern.matches(value)
+
+    private const val MAX_OPERATION_NAME_LENGTH = 128
 }

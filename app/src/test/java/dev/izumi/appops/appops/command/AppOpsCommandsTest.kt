@@ -27,4 +27,50 @@ class AppOpsCommandsTest {
             AppOpsCommands.getPackageOps("dev.izumi.appops;id")
         }
     }
+
+    @Test
+    fun `get one operation uses a validated argument list`() {
+        assertEquals(
+            listOf(
+                "/system/bin/cmd",
+                "appops",
+                "get",
+                "dev.izumi.appops.testtarget",
+                "RUN_IN_BACKGROUND",
+            ),
+            AppOpsCommands.getPackageOp(
+                packageName = "dev.izumi.appops.testtarget",
+                operationName = "RUN_IN_BACKGROUND",
+            ),
+        )
+    }
+
+    @Test
+    fun `set mode only accepts a typed mode`() {
+        assertEquals(
+            listOf(
+                "/system/bin/cmd",
+                "appops",
+                "set",
+                "dev.izumi.appops.testtarget",
+                "RUN_IN_BACKGROUND",
+                "ignore",
+            ),
+            AppOpsCommands.setPackageOpMode(
+                packageName = "dev.izumi.appops.testtarget",
+                operationName = "RUN_IN_BACKGROUND",
+                mode = AppOpMode.IGNORE,
+            ),
+        )
+    }
+
+    @Test
+    fun `operation rejects shell metacharacters`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            AppOpsCommands.getPackageOp(
+                packageName = "dev.izumi.appops",
+                operationName = "CAMERA;id",
+            )
+        }
+    }
 }

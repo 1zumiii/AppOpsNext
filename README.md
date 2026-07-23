@@ -19,7 +19,7 @@ It does not connect to or depend on the legacy `rikka.appops` application.
 Build the debug APK:
 
 ```shell
-./gradlew :app:assembleDebug
+./gradlew :app:assembleDebug :test-target:assembleDebug
 ```
 
 Debug builds keep the screen awake while the app is in the foreground to
@@ -27,7 +27,8 @@ support long-running physical-device tests. Release builds do not change the
 system screen timeout.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for package boundaries and
-maintenance rules.
+maintenance rules and [docs/DEVICE_FINDINGS.md](docs/DEVICE_FINDINGS.md) for
+behavior verified on the first supported device.
 
 ## Verified milestone
 
@@ -37,3 +38,6 @@ maintenance rules.
 - typed system AppOps reads through the privileged backend
 - isolated command construction and unit-tested output parsing
 - 41 AppOps entries read from the development app on the Android 15 test device
+- isolated `test-target` APK for write verification
+- verified `default -> ignore -> default` mode restoration for
+  `android:run_in_background`
