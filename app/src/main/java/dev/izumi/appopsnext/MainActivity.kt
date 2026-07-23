@@ -69,6 +69,8 @@ class MainActivity : ComponentActivity() {
                         appDetailViewModel::dismissModeChange,
                     onHideSystemAppsChange =
                         settingsViewModel::setHideSystemApps,
+                    onAppLanguageChange =
+                        settingsViewModel::setAppLanguage,
                     onCreateTemplate = templatesViewModel::createTemplate,
                     onSelectTemplate = templatesViewModel::selectTemplate,
                     onCloseTemplateEditor = templatesViewModel::closeEditor,

@@ -37,6 +37,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -475,10 +476,15 @@ private fun PermissionPickerDialog(
     onDismiss: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
+    val context = LocalContext.current
     val filteredOperations = operations.filter { operation ->
         query.isBlank() ||
             operation.shellName.contains(query, ignoreCase = true) ||
-            operation.stableName.contains(query, ignoreCase = true)
+            operation.stableName.contains(query, ignoreCase = true) ||
+            context.getString(operation.labelRes).contains(
+                query,
+                ignoreCase = true,
+            )
     }
     AlertDialog(
         onDismissRequest = onDismiss,

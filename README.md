@@ -70,3 +70,5 @@ behavior verified on the first supported device.
   defaults, editable modes/scopes, and a searchable known-AppOp picker
 - per-app multi-permission changes and multi-app template application, executed
   sequentially with verified writes and an always-visible detailed result dialog
+- complete Simplified Chinese and English UI resources with Android per-app
+  language switching, plus developer and GitHub information in Settings

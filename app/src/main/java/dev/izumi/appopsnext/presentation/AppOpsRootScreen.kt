@@ -26,6 +26,7 @@ import dev.izumi.appopsnext.presentation.home.HomeScreen
 import dev.izumi.appopsnext.presentation.home.HomeUiState
 import dev.izumi.appopsnext.presentation.settings.SettingsScreen
 import dev.izumi.appopsnext.presentation.settings.SettingsUiState
+import dev.izumi.appopsnext.settings.AppLanguage
 import dev.izumi.appopsnext.presentation.templates.TemplatesScreen
 import dev.izumi.appopsnext.presentation.templates.TemplatesUiState
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
@@ -55,6 +56,7 @@ fun AppOpsRootScreen(
     onAppOpModeChangeConfirmed: () -> Unit,
     onAppOpModeChangeDismissed: () -> Unit,
     onHideSystemAppsChange: (Boolean) -> Unit,
+    onAppLanguageChange: (AppLanguage) -> Unit,
     onCreateTemplate: (String) -> Unit,
     onSelectTemplate: (String) -> Unit,
     onCloseTemplateEditor: () -> Unit,
@@ -157,6 +159,7 @@ fun AppOpsRootScreen(
             MainDestination.SETTINGS -> SettingsScreen(
                 uiState = settingsUiState,
                 onHideSystemAppsChange = onHideSystemAppsChange,
+                onAppLanguageChange = onAppLanguageChange,
                 bottomBar = navigationBar,
             )
         }

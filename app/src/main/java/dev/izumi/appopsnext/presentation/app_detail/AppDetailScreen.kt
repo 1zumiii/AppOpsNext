@@ -261,10 +261,17 @@ private fun ReadyContent(
         (modeChangeState as? AppOpModeChangeUiState.Applying)?.request
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
-    val englishContext = remember(context, configuration) {
+    val alternateLocale = remember(configuration) {
+        if (configuration.locales[0]?.language == Locale.ENGLISH.language) {
+            Locale.SIMPLIFIED_CHINESE
+        } else {
+            Locale.ENGLISH
+        }
+    }
+    val alternateContext = remember(context, configuration, alternateLocale) {
         context.createConfigurationContext(
             Configuration(configuration).apply {
-                setLocale(Locale.ENGLISH)
+                setLocale(alternateLocale)
             },
         )
     }
@@ -272,13 +279,13 @@ private fun ReadyContent(
         entries = state.snapshot.entries,
         query = searchQuery,
         labelResolver = context::getString,
-        alternateLabelResolver = englishContext::getString,
+        alternateLabelResolver = alternateContext::getString,
     )
     val totalOperationCount = AppOpDisplayCatalog.build(
         entries = state.snapshot.entries,
         query = "",
         labelResolver = context::getString,
-        alternateLabelResolver = englishContext::getString,
+        alternateLabelResolver = alternateContext::getString,
     ).size
     LazyColumn(
         modifier = modifier,
