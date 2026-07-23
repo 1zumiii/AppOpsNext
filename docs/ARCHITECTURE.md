@@ -14,8 +14,8 @@ behavior stays isolated from UI code.
 
 The `shizuku` package owns privileged-process lifecycle only. The `appops`
 package owns command construction, execution results, parsing, and repository
-state. App discovery and persistence packages are introduced as their feature
-modules land.
+state. The `apps` package owns installed-application discovery and pure search
+filtering. Persistence packages are introduced as their feature modules land.
 
 The separate `test-target` application is disposable and contains no user
 data. Privileged write development must target this package until production
@@ -55,6 +55,19 @@ Once the original value has been read, every later failure path attempts
 restoration. Failure state distinguishes “no write occurred,” “restored,” and
 “restore could not be confirmed.” The production write flow must preserve this
 contract when the temporary card is removed.
+
+## Application discovery
+
+The app list uses the regular current-user `PackageManager` API and declares
+`QUERY_ALL_PACKAGES` because an AppOps manager cannot know target package names
+at build time. The manifest suppresses only the dedicated lint policy warning
+and records the reason inline; no general lint baseline is used.
+
+`InstalledAppsRepository` performs package and label loading off the main
+thread. Search is a pure function in `AppListFilter`, which keeps filtering
+testable without Android framework mocks. App rows remain intentionally
+non-interactive until the real per-app detail screen is implemented; the source
+contains `TODO(app-details)` at that boundary.
 
 ## Maintenance rules
 

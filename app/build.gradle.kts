@@ -13,8 +13,8 @@ android {
         applicationId = "dev.izumi.appops"
         minSdk = 35
         targetSdk = 35
-        versionCode = 6
-        versionName = "0.4.0"
+        versionCode = 7
+        versionName = "0.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

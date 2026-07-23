@@ -64,4 +64,15 @@
     <string name="action_check_test_target">重新检测测试应用</string>
     <string name="action_run_write_test">运行安全写入测试</string>
     <string name="action_run_again">再次运行</string>
+    <string name="navigation_apps">应用</string>
+    <string name="navigation_apps_short">应</string>
+    <string name="navigation_diagnostics">诊断</string>
+    <string name="navigation_diagnostics_short">诊</string>
+    <string name="app_list_title">应用权限</string>
+    <string name="app_list_search_label">搜索应用名称或包名</string>
+    <string name="app_list_count">显示 %1$d 个，共 %2$d 个应用</string>
+    <string name="app_list_load_failed">无法读取已安装应用</string>
+    <string name="app_list_empty_search">没有匹配的应用</string>
+    <string name="app_type_system">系统应用 · UID %1$d</string>
+    <string name="app_type_user">用户应用 · UID %1$d</string>
 </resources>
