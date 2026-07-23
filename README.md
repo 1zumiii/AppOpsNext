@@ -59,8 +59,10 @@ behavior verified on the first supported device.
 - app-aware skeleton loading and per-operation write progress
 - compact relative usage times using one unit (`13 天前`, `23 小时前`,
   `59 分前`, or `少于 1 分钟`)
-- verified writes update only the affected row; only failures show a detailed
-  result card
+- verified writes update only the affected row; failures open a detailed modal
+  result dialog from any scroll position
 - the temporary in-app write-test card has been removed now that the production
   permission editor covers its verification and restoration path
 - vector navigation symbols and an adaptive AppOpsNext shield/sliders icon
+- detail-page back gestures return to the app list, with a standard back-arrow
+  navigation icon replacing the text button

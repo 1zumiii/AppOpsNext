@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +54,12 @@ fun AppOpsRootScreen(
     var selectedApp by remember { mutableStateOf<InstalledApp?>(null) }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val navigateBackFromDetail = {
+        focusManager.clearFocus()
+        keyboardController?.hide()
+        onAppOpModeChangeDismissed()
+        selectedApp = null
+    }
     val navigationBar: @Composable () -> Unit = {
         AppNavigationBar(
             selectedDestination = selectedDestination,
@@ -65,17 +72,16 @@ fun AppOpsRootScreen(
         )
     }
 
+    BackHandler(enabled = selectedApp != null) {
+        navigateBackFromDetail()
+    }
+
     if (selectedApp != null) {
         AppDetailScreen(
             uiState = appDetailUiState,
             modeChangeState = appOpModeChangeUiState,
             searchQuery = appOpSearchQuery,
-            onBack = {
-                focusManager.clearFocus()
-                keyboardController?.hide()
-                onAppOpModeChangeDismissed()
-                selectedApp = null
-            },
+            onBack = navigateBackFromDetail,
             onRefresh = onRefreshAppDetail,
             onSearchQueryChange = onAppOpSearchQueryChange,
             onModeChangeRequested = onAppOpModeChangeRequested,
