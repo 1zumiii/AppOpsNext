@@ -39,9 +39,11 @@ fun HomeScreen(
     onShizukuAction: () -> Unit,
     onAppOpsWriteTest: () -> Unit,
     modifier: Modifier = Modifier,
+    bottomBar: @Composable () -> Unit = {},
 ) {
     Scaffold(
         modifier = modifier,
+        bottomBar = bottomBar,
         topBar = {
             TopAppBar(
                 title = {

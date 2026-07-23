@@ -41,3 +41,5 @@ behavior verified on the first supported device.
 - isolated `test-target` APK for write verification
 - verified `default -> ignore -> default` mode restoration for
   `android:run_in_background`
+- complete current-user application discovery with system/user and UID metadata
+- app-name and package-name search across 455 apps on the Android 15 test device
