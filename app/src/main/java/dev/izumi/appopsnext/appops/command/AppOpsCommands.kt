@@ -46,6 +46,25 @@ object AppOpsCommands {
         )
     }
 
+    fun setUidOpMode(
+        packageName: String,
+        operationName: String,
+        mode: AppOpMode,
+    ): List<String> {
+        validatePackageName(packageName)
+        validateOperationName(operationName)
+
+        return listOf(
+            COMMAND_BINARY,
+            APP_OPS_SERVICE,
+            SET_COMMAND,
+            UID_OPTION,
+            packageName,
+            operationName,
+            mode.shellValue,
+        )
+    }
+
     private fun validatePackageName(packageName: String) {
         require(PackageNameValidator.isValid(packageName)) {
             "Invalid Android package name"
@@ -62,6 +81,7 @@ object AppOpsCommands {
     private const val APP_OPS_SERVICE = "appops"
     private const val GET_COMMAND = "get"
     private const val SET_COMMAND = "set"
+    private const val UID_OPTION = "--uid"
 }
 
 enum class AppOpMode(

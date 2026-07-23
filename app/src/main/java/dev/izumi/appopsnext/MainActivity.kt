@@ -10,12 +10,14 @@ import dev.izumi.appopsnext.presentation.AppOpsRootScreen
 import dev.izumi.appopsnext.presentation.app_detail.AppDetailViewModel
 import dev.izumi.appopsnext.presentation.app_list.AppListViewModel
 import dev.izumi.appopsnext.presentation.home.HomeViewModel
+import dev.izumi.appopsnext.presentation.settings.SettingsViewModel
 import dev.izumi.appopsnext.ui.theme.AppOpsNextTheme
 
 class MainActivity : ComponentActivity() {
     private val homeViewModel: HomeViewModel by viewModels()
     private val appListViewModel: AppListViewModel by viewModels()
     private val appDetailViewModel: AppDetailViewModel by viewModels()
+    private val settingsViewModel: SettingsViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,6 +31,10 @@ class MainActivity : ComponentActivity() {
                 appDetailViewModel.uiState.collectAsStateWithLifecycle()
             val appOpModeChangeUiState =
                 appDetailViewModel.modeChangeState.collectAsStateWithLifecycle()
+            val settingsUiState =
+                settingsViewModel.uiState.collectAsStateWithLifecycle()
+            val appOpSearchQuery =
+                appDetailViewModel.searchQuery.collectAsStateWithLifecycle()
 
             AppOpsNextTheme {
                 AppOpsRootScreen(
@@ -36,18 +42,24 @@ class MainActivity : ComponentActivity() {
                     appListUiState = appListUiState.value,
                     appDetailUiState = appDetailUiState.value,
                     appOpModeChangeUiState = appOpModeChangeUiState.value,
+                    settingsUiState = settingsUiState.value,
+                    appOpSearchQuery = appOpSearchQuery.value,
                     onShizukuAction = homeViewModel::performShizukuAction,
                     onAppOpsWriteTest = homeViewModel::performAppOpsWriteTest,
                     onAppSearchQueryChange = appListViewModel::updateSearchQuery,
                     onRefreshApps = appListViewModel::refresh,
                     onAppSelected = appDetailViewModel::selectApp,
                     onRefreshAppDetail = appDetailViewModel::refresh,
+                    onAppOpSearchQueryChange =
+                        appDetailViewModel::updateSearchQuery,
                     onAppOpModeChangeRequested =
-                        appDetailViewModel::requestPackageModeChange,
+                        appDetailViewModel::requestModeChange,
                     onAppOpModeChangeConfirmed =
-                        appDetailViewModel::confirmPackageModeChange,
+                        appDetailViewModel::confirmModeChange,
                     onAppOpModeChangeDismissed =
                         appDetailViewModel::dismissModeChange,
+                    onHideSystemAppsChange =
+                        settingsViewModel::setHideSystemApps,
                 )
             }
         }

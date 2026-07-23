@@ -23,52 +23,73 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.appops.command.AppOpMode
-import dev.izumi.appopsnext.appops.model.AppOpEntry
 import dev.izumi.appopsnext.appops.model.AppOpModeChangePhase
 import dev.izumi.appopsnext.appops.model.AppOpsRestorationStatus
+import dev.izumi.appopsnext.appops.model.AppOpScope
 
 @Composable
 internal fun AppOpListItem(
-    entry: AppOpEntry,
+    item: AppOpDisplayItem,
     editEnabled: Boolean,
     onModeSelected: (AppOpMode, AppOpMode) -> Unit,
 ) {
-    val currentMode = AppOpMode.fromShellValue(entry.mode)
+    val currentMode = AppOpMode.fromShellValue(item.mode)
+    val context = LocalContext.current
+    val usageDetails = AppOpUsageDetailsFormatter.format(
+        rawDetails = item.details,
+        stringResolver = { resourceId, arguments ->
+            context.getString(resourceId, *arguments.toTypedArray())
+        },
+    )
     ListItem(
         headlineContent = {
             Text(
-                text = entry.name,
+                text = item.labelRes?.let { stringResource(it) }
+                    ?: item.operationName,
                 fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.titleMedium,
             )
         },
-        supportingContent = entry.details?.let { details ->
-            {
+        supportingContent = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
                 Text(
-                    text = details,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+                    text = item.operationName,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
                 )
+                usageDetails?.let { details ->
+                    Text(
+                        text = details,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         },
         overlineContent = {
             Text(
                 text = stringResource(
-                    if (entry.hasUidModePrefix) {
-                        R.string.app_detail_scope_uid
-                    } else {
-                        R.string.app_detail_scope_package
+                    when (item.scope) {
+                        AppOpScope.UID -> R.string.app_detail_scope_uid
+                        AppOpScope.PACKAGE ->
+                            R.string.app_detail_scope_package
                     },
                 ),
             )
         },
         trailingContent = {
-            if (!entry.hasUidModePrefix && currentMode != null) {
+            if (currentMode != null) {
                 EditableModeMenu(
                     currentMode = currentMode,
                     enabled = editEnabled,
@@ -76,13 +97,11 @@ internal fun AppOpListItem(
                 )
             } else {
                 Text(
-                    text = modeLabelOrRaw(entry.mode),
-                    color = if (entry.hasUidModePrefix) {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    } else {
-                        MaterialTheme.colorScheme.primary
-                    },
+                    text = item.mode,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         },
@@ -147,6 +166,31 @@ internal fun ModeChangeDialog(
                             state.request.operationName,
                         ),
                     )
+                    Text(
+                        text = stringResource(
+                            when (state.request.scope) {
+                                AppOpScope.UID ->
+                                    R.string.app_detail_mode_scope_uid
+
+                                AppOpScope.PACKAGE ->
+                                    R.string.app_detail_mode_scope_package
+                            },
+                        ),
+                    )
+                    if (
+                        state.request.scope == AppOpScope.UID &&
+                        state.request.affectedPackages.size > 1
+                    ) {
+                        Text(
+                            text = stringResource(
+                                R.string.app_detail_mode_shared_uid_warning,
+                                state.request.affectedPackages.joinToString(
+                                    separator = "\n",
+                                ),
+                            ),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
                     Text(
                         text = stringResource(
                             R.string.app_detail_mode_transition,
@@ -254,6 +298,18 @@ internal fun ModeChangeResultCard(
                             ),
                         ),
                     )
+                    if (
+                        state.result.phase ==
+                        AppOpModeChangePhase.VERIFY_REQUESTED
+                    ) {
+                        Text(
+                            text = stringResource(
+                                R.string.app_detail_mode_change_rejected_hint,
+                            ),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                     state.result.observedMode?.let { observedMode ->
                         Text(
                             text = stringResource(
@@ -275,10 +331,6 @@ internal fun ModeChangeResultCard(
         }
     }
 }
-
-@Composable
-private fun modeLabelOrRaw(rawMode: String): String =
-    AppOpMode.fromShellValue(rawMode)?.let { modeLabel(it) } ?: rawMode
 
 @Composable
 private fun modeLabel(mode: AppOpMode): String =

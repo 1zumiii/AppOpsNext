@@ -17,6 +17,7 @@ class AppListFilterTest {
         installedApp(
             label = "Camera",
             packageName = "com.android.camera",
+            isSystemApp = true,
         ),
     )
 
@@ -41,13 +42,26 @@ class AppListFilterTest {
         )
     }
 
+    @Test
+    fun `hides system applications when requested`() {
+        assertEquals(
+            apps.take(2),
+            AppListFilter.apply(
+                apps = apps,
+                query = "",
+                hideSystemApps = true,
+            ),
+        )
+    }
+
     private fun installedApp(
         label: String,
         packageName: String,
+        isSystemApp: Boolean = false,
     ) = InstalledApp(
         label = label,
         packageName = packageName,
         uid = 10_000,
-        isSystemApp = false,
+        isSystemApp = isSystemApp,
     )
 }

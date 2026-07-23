@@ -48,3 +48,10 @@ behavior verified on the first supported device.
   read-back verification, and automatic restoration after a failed change
 - physical-device UI verification of `default -> ignore -> default` for
   `RUN_IN_BACKGROUND`
+- persistent setting to hide system applications
+- common-first AppOp sorting and Chinese/English/raw-name search
+- localized permission titles with the raw system operation on a separate,
+  lower-emphasis line
+- package/UID scope resolution and shared-UID impact confirmation
+- physical-device UI verification of `foreground -> ignore -> foreground` for
+  ChatGPT's UID-scoped `CAMERA` operation

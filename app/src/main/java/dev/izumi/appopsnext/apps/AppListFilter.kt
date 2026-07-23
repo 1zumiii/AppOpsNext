@@ -6,13 +6,20 @@ object AppListFilter {
     fun apply(
         apps: List<InstalledApp>,
         query: String,
+        hideSystemApps: Boolean = false,
     ): List<InstalledApp> {
         val normalizedQuery = query.trim()
-        if (normalizedQuery.isEmpty()) return apps
 
         return apps.filter { app ->
-            app.label.contains(normalizedQuery, ignoreCase = true) ||
-                app.packageName.contains(normalizedQuery, ignoreCase = true)
+            (!hideSystemApps || !app.isSystemApp) &&
+                (
+                    normalizedQuery.isEmpty() ||
+                        app.label.contains(normalizedQuery, ignoreCase = true) ||
+                        app.packageName.contains(
+                            normalizedQuery,
+                            ignoreCase = true,
+                        )
+                    )
         }
     }
 }

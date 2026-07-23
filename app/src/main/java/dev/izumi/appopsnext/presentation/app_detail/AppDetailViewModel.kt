@@ -8,6 +8,7 @@ import dev.izumi.appopsnext.appops.AppOpsRepository
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
 import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
+import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.appops.model.PackageOpsLoadResult
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
@@ -32,6 +33,8 @@ class AppDetailViewModel(
         MutableStateFlow<AppOpModeChangeUiState>(AppOpModeChangeUiState.Idle)
     val modeChangeState: StateFlow<AppOpModeChangeUiState> =
         mutableModeChangeState.asStateFlow()
+    private val mutableSearchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = mutableSearchQuery.asStateFlow()
     private var loadJob: Job? = null
     private var modeChangeJob: Job? = null
 
@@ -50,6 +53,7 @@ class AppDetailViewModel(
         if (selectedApp.value != app) {
             modeChangeJob?.cancel()
             mutableModeChangeState.value = AppOpModeChangeUiState.Idle
+            mutableSearchQuery.value = ""
         }
         selectedApp.value = app
         loadSelectedApp()
@@ -59,8 +63,9 @@ class AppDetailViewModel(
         loadSelectedApp()
     }
 
-    fun requestPackageModeChange(
+    fun requestModeChange(
         operationName: String,
+        scope: AppOpScope,
         originalMode: AppOpMode,
         requestedMode: AppOpMode,
     ) {
@@ -72,13 +77,19 @@ class AppDetailViewModel(
             AppOpModeChangeRequest(
                 packageName = app.packageName,
                 operationName = operationName,
+                scope = scope,
                 originalMode = originalMode,
                 requestedMode = requestedMode,
+                affectedPackages = affectedPackages(app, scope),
             ),
         )
     }
 
-    fun confirmPackageModeChange() {
+    fun updateSearchQuery(query: String) {
+        mutableSearchQuery.value = query
+    }
+
+    fun confirmModeChange() {
         val request =
             (mutableModeChangeState.value as? AppOpModeChangeUiState.Confirming)
                 ?.request
@@ -87,12 +98,13 @@ class AppDetailViewModel(
 
         mutableModeChangeState.value = AppOpModeChangeUiState.Applying(request)
         modeChangeJob = viewModelScope.launch {
-            val result = repository.changePackageMode(
+            val result = repository.changeMode(
                 packageName = request.packageName,
                 operation = AppOpIdentifier(
                     stableName = request.operationName,
                     shellName = request.operationName,
                 ),
+                scope = request.scope,
                 expectedOriginalMode = request.originalMode,
                 requestedMode = request.requestedMode,
             )
@@ -113,6 +125,22 @@ class AppDetailViewModel(
             mutableModeChangeState.value = AppOpModeChangeUiState.Idle
         }
     }
+
+    private fun affectedPackages(
+        app: InstalledApp,
+        scope: AppOpScope,
+    ): List<String> =
+        when (scope) {
+            AppOpScope.PACKAGE -> listOf(app.packageName)
+            AppOpScope.UID ->
+                getApplication<AppOpsNextApplication>()
+                    .packageManager
+                    .getPackagesForUid(app.uid)
+                    ?.toList()
+                    ?.sorted()
+                    ?.ifEmpty { listOf(app.packageName) }
+                    ?: listOf(app.packageName)
+        }
 
     private fun loadSelectedApp() {
         loadJob?.cancel()

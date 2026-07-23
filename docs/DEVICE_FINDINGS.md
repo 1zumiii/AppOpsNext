@@ -10,6 +10,7 @@ The AppOps shell service accepts named operations and modes:
 ```text
 cmd appops get <PACKAGE> <OP>
 cmd appops set <PACKAGE> <OP> <MODE>
+cmd appops set --uid <PACKAGE> <OP> <MODE>
 ```
 
 The implementation stores the stable Android operation string, such as
@@ -40,8 +41,46 @@ ADB read returned `RUN_IN_BACKGROUND: ignore`, and a second confirmed edit
 restored `ignore -> default`. The final independent read returned
 `RUN_IN_BACKGROUND: default`.
 
-Camera, microphone, and location must later be tested through their real APIs
-and evaluated with both runtime-permission state and UID/package AppOps state.
+Camera, microphone, and location must be evaluated with both
+runtime-permission state and UID/package AppOps state.
+
+## UID block parsing
+
+On this ROM, the full-package output prefixes only the first line of a
+multi-line UID block:
+
+```text
+Uid mode: COARSE_LOCATION: ignore
+FINE_LOCATION: ignore
+CAMERA: ignore
+```
+
+Those later lines are still UID-scoped even though they have no repeated
+prefix. Actual package-scoped entries can appear later with the same operation
+names. Treating every unprefixed row as package-scoped caused AppOpsNext to
+write the wrong scope and then correctly report a read-back mismatch.
+
+Single-operation reads make the boundary explicit, so the repository now uses
+them to enrich the initial package snapshot before editing.
+
+## Verified UID write
+
+ChatGPT had a granted camera runtime permission and reported:
+
+```text
+Uid mode: CAMERA: foreground
+CAMERA: allow
+```
+
+Through the AppOpsNext Compose UI, its effective UID mode was changed from
+`foreground` to `ignore`. An independent ADB read returned `CAMERA: ignore`.
+The same UI then restored it to `foreground`, and a final independent read
+confirmed that state. The package-scoped `CAMERA: allow` entry was not changed.
+
+By contrast, attempting to promote a UID operation whose runtime permission is
+denied can be normalized or rejected by Android. AppOps can further restrict a
+granted capability, but it cannot grant a denied runtime permission. The UI now
+explains this case and the transaction restores the original AppOps mode.
 
 ## Primary references
 

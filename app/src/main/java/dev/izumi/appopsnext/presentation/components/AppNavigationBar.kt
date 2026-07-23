@@ -20,6 +20,10 @@ enum class MainDestination(
         labelRes = R.string.navigation_diagnostics,
         shortLabelRes = R.string.navigation_diagnostics_short,
     ),
+    SETTINGS(
+        labelRes = R.string.navigation_settings,
+        shortLabelRes = R.string.navigation_settings_short,
+    ),
 }
 
 @Composable

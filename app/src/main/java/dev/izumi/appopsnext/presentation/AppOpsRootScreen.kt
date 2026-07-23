@@ -8,6 +8,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.appops.command.AppOpMode
+import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.presentation.app_detail.AppDetailScreen
 import dev.izumi.appopsnext.presentation.app_detail.AppDetailUiState
 import dev.izumi.appopsnext.presentation.app_detail.AppOpModeChangeUiState
@@ -17,6 +18,8 @@ import dev.izumi.appopsnext.presentation.components.AppNavigationBar
 import dev.izumi.appopsnext.presentation.components.MainDestination
 import dev.izumi.appopsnext.presentation.home.HomeScreen
 import dev.izumi.appopsnext.presentation.home.HomeUiState
+import dev.izumi.appopsnext.presentation.settings.SettingsScreen
+import dev.izumi.appopsnext.presentation.settings.SettingsUiState
 
 @Composable
 fun AppOpsRootScreen(
@@ -24,15 +27,24 @@ fun AppOpsRootScreen(
     appListUiState: AppListUiState,
     appDetailUiState: AppDetailUiState,
     appOpModeChangeUiState: AppOpModeChangeUiState,
+    settingsUiState: SettingsUiState,
+    appOpSearchQuery: String,
     onShizukuAction: () -> Unit,
     onAppOpsWriteTest: () -> Unit,
     onAppSearchQueryChange: (String) -> Unit,
     onRefreshApps: () -> Unit,
     onAppSelected: (InstalledApp) -> Unit,
     onRefreshAppDetail: () -> Unit,
-    onAppOpModeChangeRequested: (String, AppOpMode, AppOpMode) -> Unit,
+    onAppOpSearchQueryChange: (String) -> Unit,
+    onAppOpModeChangeRequested: (
+        String,
+        AppOpScope,
+        AppOpMode,
+        AppOpMode,
+    ) -> Unit,
     onAppOpModeChangeConfirmed: () -> Unit,
     onAppOpModeChangeDismissed: () -> Unit,
+    onHideSystemAppsChange: (Boolean) -> Unit,
 ) {
     var selectedDestination by rememberSaveable {
         mutableStateOf(MainDestination.APPS)
@@ -52,11 +64,13 @@ fun AppOpsRootScreen(
         AppDetailScreen(
             uiState = appDetailUiState,
             modeChangeState = appOpModeChangeUiState,
+            searchQuery = appOpSearchQuery,
             onBack = {
                 onAppOpModeChangeDismissed()
                 selectedApp = null
             },
             onRefresh = onRefreshAppDetail,
+            onSearchQueryChange = onAppOpSearchQueryChange,
             onModeChangeRequested = onAppOpModeChangeRequested,
             onModeChangeConfirmed = onAppOpModeChangeConfirmed,
             onModeChangeDismissed = onAppOpModeChangeDismissed,
@@ -78,6 +92,12 @@ fun AppOpsRootScreen(
                 uiState = homeUiState,
                 onShizukuAction = onShizukuAction,
                 onAppOpsWriteTest = onAppOpsWriteTest,
+                bottomBar = navigationBar,
+            )
+
+            MainDestination.SETTINGS -> SettingsScreen(
+                uiState = settingsUiState,
+                onHideSystemAppsChange = onHideSystemAppsChange,
                 bottomBar = navigationBar,
             )
         }

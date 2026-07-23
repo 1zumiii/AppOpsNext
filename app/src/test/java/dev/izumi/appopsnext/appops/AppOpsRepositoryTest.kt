@@ -7,6 +7,7 @@ import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
 import dev.izumi.appopsnext.appops.model.AppOpsRestorationStatus
 import dev.izumi.appopsnext.appops.model.AppOpsWriteTestPhase
 import dev.izumi.appopsnext.appops.model.AppOpsWriteTestState
+import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.appops.model.PackageOpsLoadResult
 import dev.izumi.appopsnext.appops.model.ShellCommandResult
 import kotlinx.coroutines.runBlocking
@@ -37,6 +38,12 @@ class AppOpsRepositoryTest {
                     operationName: String,
                     mode: AppOpMode,
                 ): ShellCommandResult = error("Not used")
+
+                override suspend fun setUidOpMode(
+                    packageName: String,
+                    operationName: String,
+                    mode: AppOpMode,
+                ): ShellCommandResult = error("Not used")
             }
 
             val result = AppOpsRepository(gateway).loadPackageOps(TEST_PACKAGE)
@@ -46,6 +53,75 @@ class AppOpsRepositoryTest {
             assertEquals(TEST_PACKAGE, result.snapshot.packageName)
             assertEquals("RUN_IN_BACKGROUND", result.snapshot.entries.single().name)
             assertEquals("ignore", result.snapshot.entries.single().mode)
+        }
+
+    @Test
+    fun `package load resolves multiline uid block with single-op reads`() =
+        runBlocking {
+            val gateway = object : PrivilegedAppOpsGateway {
+                override suspend fun getPackageOps(packageName: String) =
+                    success(
+                        """
+                        Uid mode: COARSE_LOCATION: ignore
+                        FINE_LOCATION: ignore
+                        CAMERA: ignore
+                        FINE_LOCATION: allow
+                        CAMERA: allow
+                        """.trimIndent(),
+                    )
+
+                override suspend fun getPackageOp(
+                    packageName: String,
+                    operationName: String,
+                ): ShellCommandResult =
+                    when (operationName) {
+                        "COARSE_LOCATION" ->
+                            success("Uid mode: COARSE_LOCATION: ignore\n")
+
+                        "FINE_LOCATION" ->
+                            success(
+                                """
+                                Uid mode: FINE_LOCATION: ignore
+                                FINE_LOCATION: allow
+                                """.trimIndent(),
+                            )
+
+                        "CAMERA" ->
+                            success(
+                                """
+                                Uid mode: CAMERA: ignore
+                                CAMERA: allow
+                                """.trimIndent(),
+                            )
+
+                        else -> error("Unexpected operation")
+                    }
+
+                override suspend fun setPackageOpMode(
+                    packageName: String,
+                    operationName: String,
+                    mode: AppOpMode,
+                ): ShellCommandResult = error("Not used")
+
+                override suspend fun setUidOpMode(
+                    packageName: String,
+                    operationName: String,
+                    mode: AppOpMode,
+                ): ShellCommandResult = error("Not used")
+            }
+
+            val result = AppOpsRepository(gateway).loadPackageOps(TEST_PACKAGE)
+
+            assertTrue(result is PackageOpsLoadResult.Success)
+            result as PackageOpsLoadResult.Success
+            val fineLocationEntries = result.snapshot.entries.filter {
+                it.name == "FINE_LOCATION"
+            }
+            assertEquals(2, fineLocationEntries.size)
+            assertEquals(
+                listOf(AppOpScope.UID, AppOpScope.PACKAGE),
+                fineLocationEntries.map { it.scope },
+            )
         }
 
     @Test
@@ -237,6 +313,51 @@ class AppOpsRepositoryTest {
         }
 
     @Test
+    fun `uid mode change reads and writes only the uid scope`() =
+        runBlocking {
+            val gateway = FakeGateway(
+                getResults = ArrayDeque(
+                    listOf(
+                        success(
+                            """
+                            Uid mode: CAMERA: foreground
+                            CAMERA: allow
+                            """.trimIndent(),
+                        ),
+                        success(
+                            """
+                            Uid mode: CAMERA: ignore
+                            CAMERA: allow
+                            """.trimIndent(),
+                        ),
+                    ),
+                ),
+                setResults = ArrayDeque(listOf(success())),
+            )
+
+            val result = AppOpsRepository(gateway).changeMode(
+                packageName = TEST_PACKAGE,
+                operation = AppOpIdentifier(
+                    stableName = "android:camera",
+                    shellName = "CAMERA",
+                ),
+                scope = AppOpScope.UID,
+                expectedOriginalMode = AppOpMode.FOREGROUND,
+                requestedMode = AppOpMode.IGNORE,
+            )
+
+            assertEquals(
+                AppOpModeChangeResult.Success(
+                    originalMode = AppOpMode.FOREGROUND,
+                    appliedMode = AppOpMode.IGNORE,
+                ),
+                result,
+            )
+            assertTrue(gateway.requestedModes.isEmpty())
+            assertEquals(listOf(AppOpMode.IGNORE), gateway.requestedUidModes)
+        }
+
+    @Test
     fun `failed requested mode verification restores original package mode`() =
         runBlocking {
             val gateway = FakeGateway(
@@ -308,6 +429,7 @@ class AppOpsRepositoryTest {
         private val setResults: ArrayDeque<ShellCommandResult>,
     ) : PrivilegedAppOpsGateway {
         val requestedModes = mutableListOf<AppOpMode>()
+        val requestedUidModes = mutableListOf<AppOpMode>()
 
         override suspend fun getPackageOps(packageName: String): ShellCommandResult =
             error("Not used by these tests")
@@ -323,6 +445,15 @@ class AppOpsRepositoryTest {
             mode: AppOpMode,
         ): ShellCommandResult {
             requestedModes += mode
+            return setResults.removeFirst()
+        }
+
+        override suspend fun setUidOpMode(
+            packageName: String,
+            operationName: String,
+            mode: AppOpMode,
+        ): ShellCommandResult {
+            requestedUidModes += mode
             return setResults.removeFirst()
         }
     }
