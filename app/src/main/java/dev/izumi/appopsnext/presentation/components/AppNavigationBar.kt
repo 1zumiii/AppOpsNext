@@ -19,6 +19,10 @@ enum class MainDestination(
         labelRes = R.string.navigation_apps,
         iconRes = R.drawable.ic_navigation_apps,
     ),
+    TEMPLATES(
+        labelRes = R.string.navigation_templates,
+        iconRes = R.drawable.ic_navigation_templates,
+    ),
     DIAGNOSTICS(
         labelRes = R.string.navigation_diagnostics,
         iconRes = R.drawable.ic_navigation_diagnostics,

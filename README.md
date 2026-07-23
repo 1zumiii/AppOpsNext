@@ -66,3 +66,5 @@ behavior verified on the first supported device.
 - vector navigation symbols and an adaptive AppOpsNext shield/sliders icon
 - detail-page back gestures return to the app list, with a standard back-arrow
   navigation icon replacing the text button
+- persistent user-defined permission templates with neutral common-permission
+  defaults, editable modes/scopes, and a searchable known-AppOp picker

@@ -3,8 +3,8 @@ package dev.izumi.appopsnext.presentation.app_detail
 import androidx.annotation.StringRes
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.appops.model.AppOpEntry
+import dev.izumi.appopsnext.appops.model.AppOpNames
 import dev.izumi.appopsnext.appops.model.AppOpScope
-import java.util.Locale
 
 data class AppOpDisplayItem(
     val operationName: String,
@@ -12,6 +12,13 @@ data class AppOpDisplayItem(
     val mode: String,
     val details: String?,
     val scope: AppOpScope,
+    val priority: Int,
+)
+
+data class KnownAppOp(
+    val stableName: String,
+    val shellName: String,
+    @StringRes val labelRes: Int,
     val priority: Int,
 )
 
@@ -66,10 +73,23 @@ object AppOpDisplayCatalog {
             )
     }
 
+    fun knownOperations(): List<KnownAppOp> =
+        metadataByOperation
+            .map { (shellName, metadata) ->
+                KnownAppOp(
+                    stableName = AppOpNames.stableName(shellName),
+                    shellName = shellName,
+                    labelRes = metadata.labelRes,
+                    priority = metadata.priority,
+                )
+            }
+            .sortedWith(
+                compareBy<KnownAppOp> { it.priority }
+                    .thenBy(KnownAppOp::shellName),
+            )
+
     private fun normalize(operationName: String): String =
-        operationName
-            .substringAfterLast(':')
-            .uppercase(Locale.ROOT)
+        AppOpNames.shellName(operationName)
 
     private data class Metadata(
         @StringRes val labelRes: Int,
