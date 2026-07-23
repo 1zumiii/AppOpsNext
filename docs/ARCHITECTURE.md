@@ -139,3 +139,14 @@ observed mode remain visible regardless of the list's scroll position.
    the original value after a failed change.
 7. Placeholder or temporary UI must include visible status text and a searchable
    `TODO` explaining its removal condition.
+
+## Permission templates
+
+`PermissionTemplateRepository` persists user-defined templates in a dedicated
+Preferences DataStore through a versioned, unit-tested codec. Rules store the
+stable `android:*` operation name, typed mode, and package/UID scope; numeric
+operation codes and localized labels never enter persistence. New templates
+start with a neutral `default` mode for common privacy operations so creation
+does not silently impose a policy. The template editor can then change modes,
+change scopes, remove defaults, or add another operation from the centralized
+AppOp catalog.

@@ -23,6 +23,8 @@ import dev.izumi.appopsnext.presentation.home.HomeScreen
 import dev.izumi.appopsnext.presentation.home.HomeUiState
 import dev.izumi.appopsnext.presentation.settings.SettingsScreen
 import dev.izumi.appopsnext.presentation.settings.SettingsUiState
+import dev.izumi.appopsnext.presentation.templates.TemplatesScreen
+import dev.izumi.appopsnext.presentation.templates.TemplatesUiState
 
 @Composable
 fun AppOpsRootScreen(
@@ -31,6 +33,7 @@ fun AppOpsRootScreen(
     appDetailUiState: AppDetailUiState,
     appOpModeChangeUiState: AppOpModeChangeUiState,
     settingsUiState: SettingsUiState,
+    templatesUiState: TemplatesUiState,
     appOpSearchQuery: String,
     onShizukuAction: () -> Unit,
     onAppSearchQueryChange: (String) -> Unit,
@@ -47,6 +50,14 @@ fun AppOpsRootScreen(
     onAppOpModeChangeConfirmed: () -> Unit,
     onAppOpModeChangeDismissed: () -> Unit,
     onHideSystemAppsChange: (Boolean) -> Unit,
+    onCreateTemplate: (String) -> Unit,
+    onSelectTemplate: (String) -> Unit,
+    onCloseTemplateEditor: () -> Unit,
+    onDeleteTemplate: (String) -> Unit,
+    onTemplateRuleModeChange: (String, AppOpMode) -> Unit,
+    onTemplateRuleScopeChange: (String, AppOpScope) -> Unit,
+    onAddTemplateRule: (String) -> Unit,
+    onRemoveTemplateRule: (String) -> Unit,
 ) {
     var selectedDestination by rememberSaveable {
         mutableStateOf(MainDestination.APPS)
@@ -100,6 +111,19 @@ fun AppOpsRootScreen(
                     selectedApp = app
                     onAppSelected(app)
                 },
+                bottomBar = navigationBar,
+            )
+
+            MainDestination.TEMPLATES -> TemplatesScreen(
+                uiState = templatesUiState,
+                onCreateTemplate = onCreateTemplate,
+                onSelectTemplate = onSelectTemplate,
+                onCloseEditor = onCloseTemplateEditor,
+                onDeleteTemplate = onDeleteTemplate,
+                onRuleModeChange = onTemplateRuleModeChange,
+                onRuleScopeChange = onTemplateRuleScopeChange,
+                onAddRule = onAddTemplateRule,
+                onRemoveRule = onRemoveTemplateRule,
                 bottomBar = navigationBar,
             )
 

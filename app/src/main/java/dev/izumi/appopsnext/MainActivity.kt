@@ -11,6 +11,7 @@ import dev.izumi.appopsnext.presentation.app_detail.AppDetailViewModel
 import dev.izumi.appopsnext.presentation.app_list.AppListViewModel
 import dev.izumi.appopsnext.presentation.home.HomeViewModel
 import dev.izumi.appopsnext.presentation.settings.SettingsViewModel
+import dev.izumi.appopsnext.presentation.templates.TemplatesViewModel
 import dev.izumi.appopsnext.ui.theme.AppOpsNextTheme
 
 class MainActivity : ComponentActivity() {
@@ -18,6 +19,7 @@ class MainActivity : ComponentActivity() {
     private val appListViewModel: AppListViewModel by viewModels()
     private val appDetailViewModel: AppDetailViewModel by viewModels()
     private val settingsViewModel: SettingsViewModel by viewModels()
+    private val templatesViewModel: TemplatesViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,6 +35,8 @@ class MainActivity : ComponentActivity() {
                 appDetailViewModel.modeChangeState.collectAsStateWithLifecycle()
             val settingsUiState =
                 settingsViewModel.uiState.collectAsStateWithLifecycle()
+            val templatesUiState =
+                templatesViewModel.uiState.collectAsStateWithLifecycle()
             val appOpSearchQuery =
                 appDetailViewModel.searchQuery.collectAsStateWithLifecycle()
 
@@ -43,6 +47,7 @@ class MainActivity : ComponentActivity() {
                     appDetailUiState = appDetailUiState.value,
                     appOpModeChangeUiState = appOpModeChangeUiState.value,
                     settingsUiState = settingsUiState.value,
+                    templatesUiState = templatesUiState.value,
                     appOpSearchQuery = appOpSearchQuery.value,
                     onShizukuAction = homeViewModel::performShizukuAction,
                     onAppSearchQueryChange = appListViewModel::updateSearchQuery,
@@ -59,6 +64,16 @@ class MainActivity : ComponentActivity() {
                         appDetailViewModel::dismissModeChange,
                     onHideSystemAppsChange =
                         settingsViewModel::setHideSystemApps,
+                    onCreateTemplate = templatesViewModel::createTemplate,
+                    onSelectTemplate = templatesViewModel::selectTemplate,
+                    onCloseTemplateEditor = templatesViewModel::closeEditor,
+                    onDeleteTemplate = templatesViewModel::deleteTemplate,
+                    onTemplateRuleModeChange =
+                        templatesViewModel::setRuleMode,
+                    onTemplateRuleScopeChange =
+                        templatesViewModel::setRuleScope,
+                    onAddTemplateRule = templatesViewModel::addRule,
+                    onRemoveTemplateRule = templatesViewModel::removeRule,
                 )
             }
         }

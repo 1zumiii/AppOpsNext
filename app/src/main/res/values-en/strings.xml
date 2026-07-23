@@ -1,4 +1,21 @@
 <resources>
+    <string name="navigation_templates">Templates</string>
+    <string name="action_create">Create</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_remove">Remove</string>
+    <string name="templates_title">Permission templates</string>
+    <string name="template_create">New</string>
+    <string name="template_create_title">New permission template</string>
+    <string name="template_name">Template name</string>
+    <string name="templates_empty">No permission templates yet</string>
+    <string name="templates_empty_detail">New templates include common camera, microphone, location, clipboard, notification, and contacts rules in the system-default mode.</string>
+    <string name="template_rule_count">%1$d permission rules</string>
+    <string name="template_editor_detail">Rules are stored with stable system operation names. Targets and scopes will be confirmed before a template is applied.</string>
+    <string name="template_add_permission">Add another permission</string>
+    <string name="template_permission_search">Search system permission names</string>
+    <string name="template_delete_title">Delete template?</string>
+    <string name="template_delete_message">“%1$s” and all of its rules will be deleted.</string>
     <string name="app_op_label_camera">Camera</string>
     <string name="app_op_label_record_audio">Microphone</string>
     <string name="app_op_label_coarse_location">Approximate location</string>
