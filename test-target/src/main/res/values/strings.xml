@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">AppOps Test Target</string>
+    <string name="screen_title">AppOps 安全测试目标</string>
+    <string name="screen_description">此独立应用仅用于验证 AppOps 的读取、修改和恢复，不依赖旧版 App Ops。</string>
+    <string name="operation_label">测试操作：后台运行（android:run_in_background）</string>
+    <string name="operation_notice">主应用只会短暂修改此测试应用的后台运行 AppOp，并立即恢复原始模式。</string>
+</resources>

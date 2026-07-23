@@ -1,16 +1,20 @@
 package dev.izumi.appops.presentation.home
 
 import android.app.Application
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appops.appops.AppOpsRepository
+import dev.izumi.appops.appops.command.AppOpMode
 import dev.izumi.appops.appops.model.AppOpsReadState
+import dev.izumi.appops.appops.model.AppOpsWriteTestState
+import dev.izumi.appops.appops.testing.AppOpsTestTarget
 import dev.izumi.appops.model.DeviceSummary
 import dev.izumi.appops.shizuku.PrivilegedServiceClient
 import dev.izumi.appops.shizuku.ShizukuController
-import dev.izumi.appops.shizuku.model.ShizukuState
 import dev.izumi.appops.shizuku.model.PrivilegedServiceState
+import dev.izumi.appops.shizuku.model.ShizukuState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -25,6 +29,10 @@ class HomeViewModel(
     private val appOpsRepository = AppOpsRepository(privilegedServiceClient)
     private val appOpsReadState =
         MutableStateFlow<AppOpsReadState>(AppOpsReadState.WaitingForBackend)
+    private val isTestTargetInstalled =
+        MutableStateFlow(queryTestTargetInstalled())
+    private val appOpsWriteTestState =
+        MutableStateFlow<AppOpsWriteTestState>(AppOpsWriteTestState.NotRun)
 
     private val device = DeviceSummary(
         manufacturer = Build.MANUFACTURER,
@@ -37,12 +45,16 @@ class HomeViewModel(
         shizukuController.state,
         privilegedServiceClient.state,
         appOpsReadState,
-    ) { shizukuState, serviceState, readState ->
+        isTestTargetInstalled,
+        appOpsWriteTestState,
+    ) { shizukuState, serviceState, readState, targetInstalled, writeTestState ->
         HomeUiState(
             device = device,
             shizukuState = shizukuState,
             privilegedServiceState = serviceState,
             appOpsReadState = readState,
+            isTestTargetInstalled = targetInstalled,
+            appOpsWriteTestState = writeTestState,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -81,6 +93,31 @@ class HomeViewModel(
             else -> shizukuController.refresh()
         }
     }
+
+    fun performAppOpsWriteTest() {
+        val targetInstalled = queryTestTargetInstalled()
+        isTestTargetInstalled.value = targetInstalled
+        if (!targetInstalled) return
+        if (privilegedServiceClient.state.value !is PrivilegedServiceState.Connected) return
+        if (appOpsWriteTestState.value is AppOpsWriteTestState.Running) return
+
+        appOpsWriteTestState.value = AppOpsWriteTestState.Running
+        viewModelScope.launch {
+            appOpsWriteTestState.value = appOpsRepository.runModeRoundTrip(
+                packageName = AppOpsTestTarget.PACKAGE_NAME,
+                operation = AppOpsTestTarget.runInBackgroundOperation,
+                testMode = AppOpMode.IGNORE,
+            )
+        }
+    }
+
+    private fun queryTestTargetInstalled(): Boolean =
+        runCatching {
+            getApplication<Application>().packageManager.getPackageInfo(
+                AppOpsTestTarget.PACKAGE_NAME,
+                PackageManager.PackageInfoFlags.of(0),
+            )
+        }.isSuccess
 
     override fun onCleared() {
         privilegedServiceClient.disconnect()

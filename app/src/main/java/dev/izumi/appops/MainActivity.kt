@@ -24,6 +24,7 @@ class MainActivity : ComponentActivity() {
                 HomeScreen(
                     uiState = uiState.value,
                     onShizukuAction = viewModel::performShizukuAction,
+                    onAppOpsWriteTest = viewModel::performAppOpsWriteTest,
                 )
             }
         }

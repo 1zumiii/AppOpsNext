@@ -3,6 +3,7 @@
 
     <queries>
         <package android:name="moe.shizuku.privileged.api" />
+        <package android:name="dev.izumi.appops.testtarget" />
     </queries>
 
     <application

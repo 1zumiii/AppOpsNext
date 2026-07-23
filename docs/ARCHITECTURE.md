@@ -17,6 +17,10 @@ package owns command construction, execution results, parsing, and repository
 state. App discovery and persistence packages are introduced as their feature
 modules land.
 
+The separate `test-target` application is disposable and contains no user
+data. Privileged write development must target this package until production
+write safeguards and confirmation UI are complete.
+
 ## Privileged read path
 
 ```text
@@ -34,6 +38,24 @@ constructed as shell strings. The AIDL boundary returns a typed
 `ShellCommandResult`, and parsing remains in the regular app process so it can
 be unit tested without Shizuku or a device.
 
+## Safe write proof
+
+The temporary debug-only write card runs a bounded transaction against
+`dev.izumi.appops.testtarget`:
+
+```text
+read original package mode
+    -> set typed test mode
+    -> read and verify test mode
+    -> restore original mode
+    -> read and verify restored mode
+```
+
+Once the original value has been read, every later failure path attempts
+restoration. Failure state distinguishes “no write occurred,” “restored,” and
+“restore could not be confirmed.” The production write flow must preserve this
+contract when the temporary card is removed.
+
 ## Maintenance rules
 
 1. User-visible text belongs in Android string resources.
@@ -44,3 +66,5 @@ be unit tested without Shizuku or a device.
 5. Parsers and mode mappings require unit tests with captured, anonymized
    fixtures.
 6. A write operation must expose the old value and support explicit restoration.
+7. Placeholder or temporary UI must include visible status text and a searchable
+   `TODO` explaining its removal condition.
