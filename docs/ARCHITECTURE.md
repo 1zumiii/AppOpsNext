@@ -12,8 +12,27 @@ behavior stays isolated from UI code.
 - `apps`: installed-application discovery and metadata.
 - `data`: persistence for templates, backups, and settings.
 
-The Shizuku package is implemented. The AppOps, app-discovery, and data
-packages are introduced as their feature modules land.
+The `shizuku` package owns privileged-process lifecycle only. The `appops`
+package owns command construction, execution results, parsing, and repository
+state. App discovery and persistence packages are introduced as their feature
+modules land.
+
+## Privileged read path
+
+```text
+HomeViewModel
+    -> AppOpsRepository
+    -> PrivilegedServiceClient
+    -> IPrivilegedAppOpsService
+    -> AppOpsUserService (shell UID)
+    -> CommandExecutor
+    -> /system/bin/cmd appops
+```
+
+Only validated argument lists cross into `ProcessBuilder`; commands are never
+constructed as shell strings. The AIDL boundary returns a typed
+`ShellCommandResult`, and parsing remains in the regular app process so it can
+be unit tested without Shizuku or a device.
 
 ## Maintenance rules
 

@@ -32,6 +32,13 @@
     <string name="status_user_service_empty_binder_detail">Shizuku 返回了无效的 UserService Binder。</string>
     <string name="status_user_service_initialization_failed_detail">无法读取 UserService 身份信息。</string>
     <string name="status_user_service_bind_failed_detail">无法启动 UserService，请重新打开应用后再试。</string>
+    <string name="status_appops_reading">正在读取系统 AppOps</string>
+    <string name="status_appops_read_success">系统 AppOps 读取成功</string>
+    <string name="status_appops_read_success_detail">当前应用记录 %1$d 项 · 后端 UID %2$d</string>
+    <string name="status_appops_read_failed">系统 AppOps 读取失败</string>
+    <string name="status_appops_backend_unavailable_detail">特权后端当前不可用。</string>
+    <string name="status_appops_command_failed_detail">Android 系统拒绝或无法完成 AppOps 读取命令。</string>
+    <string name="status_appops_command_timed_out_detail">读取系统 AppOps 超时。</string>
     <string name="action_retry">重新检查</string>
     <string name="action_grant_shizuku">授权 Shizuku</string>
     <string name="action_request_again">再次请求</string>

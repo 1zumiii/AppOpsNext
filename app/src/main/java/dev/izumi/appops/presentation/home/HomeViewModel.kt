@@ -4,10 +4,14 @@ import android.app.Application
 import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import dev.izumi.appops.appops.AppOpsRepository
+import dev.izumi.appops.appops.model.AppOpsReadState
 import dev.izumi.appops.model.DeviceSummary
 import dev.izumi.appops.shizuku.PrivilegedServiceClient
 import dev.izumi.appops.shizuku.ShizukuController
 import dev.izumi.appops.shizuku.model.ShizukuState
+import dev.izumi.appops.shizuku.model.PrivilegedServiceState
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
@@ -18,6 +22,9 @@ class HomeViewModel(
 ) : AndroidViewModel(application) {
     private val shizukuController = ShizukuController(application)
     private val privilegedServiceClient = PrivilegedServiceClient(application)
+    private val appOpsRepository = AppOpsRepository(privilegedServiceClient)
+    private val appOpsReadState =
+        MutableStateFlow<AppOpsReadState>(AppOpsReadState.WaitingForBackend)
 
     private val device = DeviceSummary(
         manufacturer = Build.MANUFACTURER,
@@ -29,11 +36,13 @@ class HomeViewModel(
     val uiState = combine(
         shizukuController.state,
         privilegedServiceClient.state,
-    ) { shizukuState, serviceState ->
+        appOpsReadState,
+    ) { shizukuState, serviceState, readState ->
         HomeUiState(
             device = device,
             shizukuState = shizukuState,
             privilegedServiceState = serviceState,
+            appOpsReadState = readState,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -49,6 +58,15 @@ class HomeViewModel(
                     privilegedServiceClient.connect()
                 } else {
                     privilegedServiceClient.disconnect()
+                }
+            }
+        }
+        viewModelScope.launch {
+            privilegedServiceClient.state.collect { state ->
+                appOpsReadState.value = if (state is PrivilegedServiceState.Connected) {
+                    appOpsRepository.readPackageOps(application.packageName)
+                } else {
+                    AppOpsReadState.WaitingForBackend
                 }
             }
         }
@@ -70,4 +88,3 @@ class HomeViewModel(
         super.onCleared()
     }
 }
-

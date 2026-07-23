@@ -30,4 +30,6 @@ maintenance rules.
 - Shizuku permission lifecycle
 - shell UID 2000 UserService over AIDL
 - automatic UserService reconnection after the frontend process restarts
-
+- typed system AppOps reads through the privileged backend
+- isolated command construction and unit-tested output parsing
+- 41 AppOps entries read from the development app on the Android 15 test device

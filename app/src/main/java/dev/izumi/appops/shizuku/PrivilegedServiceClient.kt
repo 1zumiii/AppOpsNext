@@ -6,6 +6,7 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import android.util.Log
 import dev.izumi.appops.BuildConfig
+import dev.izumi.appops.appops.model.ShellCommandResult
 import dev.izumi.appops.shizuku.model.PrivilegedServiceInfo
 import dev.izumi.appops.shizuku.model.PrivilegedServiceFailureReason
 import dev.izumi.appops.shizuku.model.PrivilegedServiceState
@@ -13,6 +14,8 @@ import dev.izumi.appops.shizuku.service.AppOpsUserService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 
 class PrivilegedServiceClient(
@@ -22,6 +25,7 @@ class PrivilegedServiceClient(
         MutableStateFlow<PrivilegedServiceState>(PrivilegedServiceState.Disconnected)
     val state: StateFlow<PrivilegedServiceState> = mutableState.asStateFlow()
 
+    @Volatile
     private var service: IPrivilegedAppOpsService? = null
     private var bound = false
 
@@ -100,6 +104,13 @@ class PrivilegedServiceClient(
         bound = false
         mutableState.value = PrivilegedServiceState.Disconnected
     }
+
+    suspend fun getPackageOps(packageName: String): ShellCommandResult =
+        withContext(Dispatchers.IO) {
+            val connectedService = service
+                ?: throw IllegalStateException("Privileged service is unavailable")
+            connectedService.getPackageOps(packageName)
+        }
 
     private companion object {
         const val TAG = "PrivilegedService"
