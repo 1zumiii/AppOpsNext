@@ -5,6 +5,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.appops.AppOpsRepository
+import dev.izumi.appopsnext.appops.command.AppOpMode
+import dev.izumi.appopsnext.appops.model.AppOpIdentifier
+import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
 import dev.izumi.appopsnext.appops.model.PackageOpsLoadResult
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
@@ -25,7 +28,12 @@ class AppDetailViewModel(
     private val mutableUiState =
         MutableStateFlow<AppDetailUiState>(AppDetailUiState.Idle)
     val uiState: StateFlow<AppDetailUiState> = mutableUiState.asStateFlow()
+    private val mutableModeChangeState =
+        MutableStateFlow<AppOpModeChangeUiState>(AppOpModeChangeUiState.Idle)
+    val modeChangeState: StateFlow<AppOpModeChangeUiState> =
+        mutableModeChangeState.asStateFlow()
     private var loadJob: Job? = null
+    private var modeChangeJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -39,12 +47,71 @@ class AppDetailViewModel(
         if (selectedApp.value == app && uiState.value is AppDetailUiState.Ready) {
             return
         }
+        if (selectedApp.value != app) {
+            modeChangeJob?.cancel()
+            mutableModeChangeState.value = AppOpModeChangeUiState.Idle
+        }
         selectedApp.value = app
         loadSelectedApp()
     }
 
     fun refresh() {
         loadSelectedApp()
+    }
+
+    fun requestPackageModeChange(
+        operationName: String,
+        originalMode: AppOpMode,
+        requestedMode: AppOpMode,
+    ) {
+        val app = selectedApp.value ?: return
+        if (originalMode == requestedMode) return
+        if (mutableModeChangeState.value is AppOpModeChangeUiState.Applying) return
+
+        mutableModeChangeState.value = AppOpModeChangeUiState.Confirming(
+            AppOpModeChangeRequest(
+                packageName = app.packageName,
+                operationName = operationName,
+                originalMode = originalMode,
+                requestedMode = requestedMode,
+            ),
+        )
+    }
+
+    fun confirmPackageModeChange() {
+        val request =
+            (mutableModeChangeState.value as? AppOpModeChangeUiState.Confirming)
+                ?.request
+                ?: return
+        if (selectedApp.value?.packageName != request.packageName) return
+
+        mutableModeChangeState.value = AppOpModeChangeUiState.Applying(request)
+        modeChangeJob = viewModelScope.launch {
+            val result = repository.changePackageMode(
+                packageName = request.packageName,
+                operation = AppOpIdentifier(
+                    stableName = request.operationName,
+                    shellName = request.operationName,
+                ),
+                expectedOriginalMode = request.originalMode,
+                requestedMode = request.requestedMode,
+            )
+
+            mutableModeChangeState.value = when (result) {
+                is AppOpModeChangeResult.Success ->
+                    AppOpModeChangeUiState.Success(request, result)
+
+                is AppOpModeChangeResult.Failure ->
+                    AppOpModeChangeUiState.Failure(request, result)
+            }
+            loadSelectedApp()
+        }
+    }
+
+    fun dismissModeChange() {
+        if (mutableModeChangeState.value !is AppOpModeChangeUiState.Applying) {
+            mutableModeChangeState.value = AppOpModeChangeUiState.Idle
+        }
     }
 
     private fun loadSelectedApp() {

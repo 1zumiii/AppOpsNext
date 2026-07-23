@@ -1,0 +1,33 @@
+package dev.izumi.appopsnext.presentation.app_detail
+
+import dev.izumi.appopsnext.appops.command.AppOpMode
+import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
+
+data class AppOpModeChangeRequest(
+    val packageName: String,
+    val operationName: String,
+    val originalMode: AppOpMode,
+    val requestedMode: AppOpMode,
+)
+
+sealed interface AppOpModeChangeUiState {
+    data object Idle : AppOpModeChangeUiState
+
+    data class Confirming(
+        val request: AppOpModeChangeRequest,
+    ) : AppOpModeChangeUiState
+
+    data class Applying(
+        val request: AppOpModeChangeRequest,
+    ) : AppOpModeChangeUiState
+
+    data class Success(
+        val request: AppOpModeChangeRequest,
+        val result: AppOpModeChangeResult.Success,
+    ) : AppOpModeChangeUiState
+
+    data class Failure(
+        val request: AppOpModeChangeRequest,
+        val result: AppOpModeChangeResult.Failure,
+    ) : AppOpModeChangeUiState
+}

@@ -58,8 +58,9 @@ read original package mode
 
 Once the original value has been read, every later failure path attempts
 restoration. Failure state distinguishes “no write occurred,” “restored,” and
-“restore could not be confirmed.” The production write flow must preserve this
-contract when the temporary card is removed.
+“restore could not be confirmed.” The confirmed package-mode editor below
+preserves the same contract; the temporary card remains only as a development
+diagnostic until its removal milestone is reached.
 
 ## Application discovery
 
@@ -74,6 +75,29 @@ testable without Android framework mocks. Selecting a row loads a structured
 `PackageOpsSnapshot` and displays operation name, raw mode, UID/package scope,
 and recorded timing details.
 
+## Confirmed package-mode writes
+
+The per-app editor allows package-scope changes only. A requested change moves
+through a dedicated ViewModel state machine:
+
+```text
+select typed mode
+    -> explicit user confirmation
+    -> re-read and compare the original mode
+    -> write requested mode
+    -> read and verify requested mode
+```
+
+If the original mode changed after the screen loaded, the transaction stops
+without writing. If the write or requested-mode verification fails, the
+repository restores the original value and verifies the restoration before it
+reports a result. UI code receives typed phases and restoration status rather
+than parsing command output.
+
+UID-scope rows remain read-only until shared-UID discovery and impact
+confirmation are implemented. Both the source and the screen carry an explicit
+`TODO(uid-mode-edit)` marker for that boundary.
+
 ## Maintenance rules
 
 1. User-visible text belongs in Android string resources.
@@ -83,6 +107,7 @@ and recorded timing details.
 4. Android-version and OEM differences stay behind adapter interfaces.
 5. Parsers and mode mappings require unit tests with captured, anonymized
    fixtures.
-6. A write operation must expose the old value and support explicit restoration.
+6. A write operation must expose the old value, verify the result, and restore
+   the original value after a failed change.
 7. Placeholder or temporary UI must include visible status text and a searchable
    `TODO` explaining its removal condition.

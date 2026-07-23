@@ -27,18 +27,27 @@ class MainActivity : ComponentActivity() {
                 appListViewModel.uiState.collectAsStateWithLifecycle()
             val appDetailUiState =
                 appDetailViewModel.uiState.collectAsStateWithLifecycle()
+            val appOpModeChangeUiState =
+                appDetailViewModel.modeChangeState.collectAsStateWithLifecycle()
 
             AppOpsNextTheme {
                 AppOpsRootScreen(
                     homeUiState = homeUiState.value,
                     appListUiState = appListUiState.value,
                     appDetailUiState = appDetailUiState.value,
+                    appOpModeChangeUiState = appOpModeChangeUiState.value,
                     onShizukuAction = homeViewModel::performShizukuAction,
                     onAppOpsWriteTest = homeViewModel::performAppOpsWriteTest,
                     onAppSearchQueryChange = appListViewModel::updateSearchQuery,
                     onRefreshApps = appListViewModel::refresh,
                     onAppSelected = appDetailViewModel::selectApp,
                     onRefreshAppDetail = appDetailViewModel::refresh,
+                    onAppOpModeChangeRequested =
+                        appDetailViewModel::requestPackageModeChange,
+                    onAppOpModeChangeConfirmed =
+                        appDetailViewModel::confirmPackageModeChange,
+                    onAppOpModeChangeDismissed =
+                        appDetailViewModel::dismissModeChange,
                 )
             }
         }
