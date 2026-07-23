@@ -6,6 +6,9 @@ The first supported device is an ASUS AI2302 running Android 15 (API 35).
 The project intentionally uses only clean-room implementations based on public
 Android and Shizuku behavior.
 
+It does not connect to or depend on the legacy `rikka.appops` application.
+“System AppOps” in the UI refers to Android's built-in AppOps system service.
+
 ## Development
 
 - JDK 17
@@ -21,4 +24,10 @@ Build the debug APK:
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for package boundaries and
 maintenance rules.
+
+## Verified milestone
+
+- Shizuku permission lifecycle
+- shell UID 2000 UserService over AIDL
+- automatic UserService reconnection after the frontend process restarts
 

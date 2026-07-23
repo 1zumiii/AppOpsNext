@@ -18,13 +18,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.izumi.appops.R
-import dev.izumi.appops.model.DeviceSummary
 import dev.izumi.appops.presentation.components.StatusCard
+import dev.izumi.appops.shizuku.model.PrivilegedServiceState
+import dev.izumi.appops.shizuku.model.PrivilegedServiceFailureReason
+import dev.izumi.appops.shizuku.model.ShizukuFailureReason
+import dev.izumi.appops.shizuku.model.ShizukuState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    device: DeviceSummary,
+    uiState: HomeUiState,
+    onShizukuAction: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -65,26 +69,150 @@ fun HomeScreen(
                 title = stringResource(R.string.status_device_title),
                 value = stringResource(
                     R.string.status_device_value,
-                    device.manufacturer,
-                    device.model,
+                    uiState.device.manufacturer,
+                    uiState.device.model,
                 ),
                 detail = stringResource(
                     R.string.status_device_detail,
-                    device.androidVersion,
-                    device.apiLevel,
+                    uiState.device.androidVersion,
+                    uiState.device.apiLevel,
                 ),
             )
-            StatusCard(
-                title = stringResource(R.string.status_shizuku_title),
-                value = stringResource(R.string.status_waiting),
-                detail = stringResource(R.string.status_shizuku_pending_detail),
+            ShizukuStatusCard(
+                state = uiState.shizukuState,
+                onAction = onShizukuAction,
             )
-            StatusCard(
-                title = stringResource(R.string.status_appops_title),
-                value = stringResource(R.string.status_disconnected),
-                detail = stringResource(R.string.status_appops_disconnected_detail),
+            PrivilegedServiceStatusCard(
+                state = uiState.privilegedServiceState,
             )
         }
     }
 }
 
+@Composable
+private fun ShizukuStatusCard(
+    state: ShizukuState,
+    onAction: () -> Unit,
+) {
+    val presentation = when (state) {
+        ShizukuState.Checking -> StatusPresentation(
+            value = stringResource(R.string.status_checking),
+            detail = stringResource(R.string.status_shizuku_checking_detail),
+        )
+
+        is ShizukuState.Unavailable -> StatusPresentation(
+            value = stringResource(
+                if (state.isInstalled) {
+                    R.string.status_shizuku_not_running
+                } else {
+                    R.string.status_shizuku_not_installed
+                },
+            ),
+            detail = stringResource(R.string.status_shizuku_unavailable_detail),
+            actionLabel = stringResource(R.string.action_retry),
+        )
+
+        ShizukuState.Unsupported -> StatusPresentation(
+            value = stringResource(R.string.status_unsupported),
+            detail = stringResource(R.string.status_shizuku_unsupported_detail),
+        )
+
+        ShizukuState.PermissionRequired -> StatusPresentation(
+            value = stringResource(R.string.status_permission_required),
+            detail = stringResource(R.string.status_shizuku_permission_detail),
+            actionLabel = stringResource(R.string.action_grant_shizuku),
+        )
+
+        ShizukuState.PermissionDenied -> StatusPresentation(
+            value = stringResource(R.string.status_permission_denied),
+            detail = stringResource(R.string.status_shizuku_denied_detail),
+            actionLabel = stringResource(R.string.action_request_again),
+        )
+
+        is ShizukuState.Ready -> StatusPresentation(
+            value = stringResource(R.string.status_ready),
+            detail = stringResource(
+                R.string.status_shizuku_ready_detail,
+                state.serverVersion,
+                state.serverUid,
+            ),
+        )
+
+        is ShizukuState.Failure -> StatusPresentation(
+            value = stringResource(R.string.status_error),
+            detail = stringResource(
+                when (state.reason) {
+                    ShizukuFailureReason.STATE_READ_FAILED ->
+                        R.string.status_shizuku_read_failed_detail
+
+                    ShizukuFailureReason.PERMISSION_REQUEST_FAILED ->
+                        R.string.status_shizuku_permission_failed_detail
+                },
+            ),
+            actionLabel = stringResource(R.string.action_retry),
+        )
+    }
+
+    StatusCard(
+        title = stringResource(R.string.status_shizuku_title),
+        value = presentation.value,
+        detail = presentation.detail,
+        actionLabel = presentation.actionLabel,
+        onAction = presentation.actionLabel?.let { onAction },
+    )
+}
+
+@Composable
+private fun PrivilegedServiceStatusCard(
+    state: PrivilegedServiceState,
+) {
+    val presentation = when (state) {
+        PrivilegedServiceState.Disconnected -> StatusPresentation(
+            value = stringResource(R.string.status_disconnected),
+            detail = stringResource(R.string.status_appops_disconnected_detail),
+        )
+
+        PrivilegedServiceState.Connecting -> StatusPresentation(
+            value = stringResource(R.string.status_connecting),
+            detail = stringResource(R.string.status_user_service_connecting_detail),
+        )
+
+        is PrivilegedServiceState.Connected -> StatusPresentation(
+            value = stringResource(R.string.status_connected),
+            detail = stringResource(
+                R.string.status_user_service_connected_detail,
+                state.info.uid,
+                state.info.pid,
+                state.info.apiLevel,
+            ),
+        )
+
+        is PrivilegedServiceState.Failure -> StatusPresentation(
+            value = stringResource(R.string.status_error),
+            detail = stringResource(
+                when (state.reason) {
+                    PrivilegedServiceFailureReason.EMPTY_BINDER ->
+                        R.string.status_user_service_empty_binder_detail
+
+                    PrivilegedServiceFailureReason.INITIALIZATION_FAILED ->
+                        R.string.status_user_service_initialization_failed_detail
+
+                    PrivilegedServiceFailureReason.BIND_FAILED ->
+                        R.string.status_user_service_bind_failed_detail
+                },
+            ),
+        )
+    }
+
+    StatusCard(
+        title = stringResource(R.string.status_appops_title),
+        value = presentation.value,
+        detail = presentation.detail,
+    )
+}
+
+private data class StatusPresentation(
+    val value: String,
+    val detail: String,
+    val actionLabel: String? = null,
+)
