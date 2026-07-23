@@ -22,6 +22,10 @@ Build the debug APK:
 ./gradlew :app:assembleDebug
 ```
 
+Debug builds keep the screen awake while the app is in the foreground to
+support long-running physical-device tests. Release builds do not change the
+system screen timeout.
+
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for package boundaries and
 maintenance rules.
 
