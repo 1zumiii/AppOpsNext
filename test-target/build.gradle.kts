@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "dev.izumi.appops.testtarget"
+    namespace = "dev.izumi.appopsnext.testtarget"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "dev.izumi.appops.testtarget"
+        applicationId = "dev.izumi.appopsnext.testtarget"
         minSdk = 35
         targetSdk = 35
         versionCode = 1

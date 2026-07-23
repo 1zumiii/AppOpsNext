@@ -17,7 +17,7 @@ package owns command construction, execution results, parsing, and repository
 state. The `apps` package owns installed-application discovery and pure search
 filtering. Persistence packages are introduced as their feature modules land.
 
-`AppOpsApplication` owns the single `PrivilegedServiceClient` instance shared
+`AppOpsNextApplication` owns the single `PrivilegedServiceClient` instance shared
 by diagnostics and per-app detail ViewModels. The diagnostics ViewModel manages
 the Shizuku binding lifecycle; feature ViewModels consume the shared state and
 repository gateway rather than starting competing privileged services.
@@ -46,7 +46,7 @@ be unit tested without Shizuku or a device.
 ## Safe write proof
 
 The temporary debug-only write card runs a bounded transaction against
-`dev.izumi.appops.testtarget`:
+`dev.izumi.appopsnext.testtarget`:
 
 ```text
 read original package mode

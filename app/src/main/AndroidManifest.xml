@@ -10,11 +10,11 @@
 
     <queries>
         <package android:name="moe.shizuku.privileged.api" />
-        <package android:name="dev.izumi.appops.testtarget" />
+        <package android:name="dev.izumi.appopsnext.testtarget" />
     </queries>
 
     <application
-        android:name=".AppOpsApplication"
+        android:name=".AppOpsNextApplication"
         android:allowBackup="true"
         android:label="@string/app_name"
         android:supportsRtl="true"
