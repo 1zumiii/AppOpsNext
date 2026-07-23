@@ -75,4 +75,11 @@
     <string name="app_list_empty_search">没有匹配的应用</string>
     <string name="app_type_system">系统应用 · UID %1$d</string>
     <string name="app_type_user">用户应用 · UID %1$d</string>
+    <string name="app_detail_title">应用详情</string>
+    <string name="app_detail_waiting_backend">系统 AppOps 后端连接后将自动读取详情。</string>
+    <string name="app_detail_operation_count">记录到 %1$d 项 AppOps</string>
+    <string name="app_detail_no_operations">此应用当前没有 AppOps 记录。</string>
+    <string name="app_detail_scope_uid">UID 作用域</string>
+    <string name="app_detail_scope_package">应用作用域</string>
+    <string name="action_back">返回</string>
 </resources>

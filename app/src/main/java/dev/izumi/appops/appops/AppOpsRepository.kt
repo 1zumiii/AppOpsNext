@@ -7,6 +7,7 @@ import dev.izumi.appops.appops.model.AppOpsReadState
 import dev.izumi.appops.appops.model.AppOpsRestorationStatus
 import dev.izumi.appops.appops.model.AppOpsWriteTestPhase
 import dev.izumi.appops.appops.model.AppOpsWriteTestState
+import dev.izumi.appops.appops.model.PackageOpsLoadResult
 import dev.izumi.appops.appops.model.ShellCommandResult
 import dev.izumi.appops.appops.parser.PackageOpsParser
 
@@ -15,28 +16,40 @@ class AppOpsRepository(
     private val parser: PackageOpsParser = PackageOpsParser(),
 ) {
     suspend fun readPackageOps(packageName: String): AppOpsReadState {
+        return when (val result = loadPackageOps(packageName)) {
+            is PackageOpsLoadResult.Success -> AppOpsReadState.Ready(
+                operationCount = result.snapshot.entries.size,
+            )
+
+            is PackageOpsLoadResult.Failure -> AppOpsReadState.Failure(
+                result.reason,
+            )
+        }
+    }
+
+    suspend fun loadPackageOps(packageName: String): PackageOpsLoadResult {
         val commandResult = runCatching {
             privilegedGateway.getPackageOps(packageName)
         }.getOrElse {
-            return AppOpsReadState.Failure(
+            return PackageOpsLoadResult.Failure(
                 AppOpsReadFailureReason.BACKEND_UNAVAILABLE,
             )
         }
 
         if (commandResult.timedOut) {
-            return AppOpsReadState.Failure(
+            return PackageOpsLoadResult.Failure(
                 AppOpsReadFailureReason.COMMAND_TIMED_OUT,
             )
         }
         if (commandResult.exitCode != 0) {
-            return AppOpsReadState.Failure(
+            return PackageOpsLoadResult.Failure(
                 AppOpsReadFailureReason.COMMAND_FAILED,
             )
         }
 
         val snapshot = parser.parse(packageName, commandResult.stdout)
-        return AppOpsReadState.Ready(
-            operationCount = snapshot.entries.size,
+        return PackageOpsLoadResult.Success(
+            snapshot = snapshot,
         )
     }
 

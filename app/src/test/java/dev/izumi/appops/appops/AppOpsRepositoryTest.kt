@@ -5,6 +5,7 @@ import dev.izumi.appops.appops.model.AppOpIdentifier
 import dev.izumi.appops.appops.model.AppOpsRestorationStatus
 import dev.izumi.appops.appops.model.AppOpsWriteTestPhase
 import dev.izumi.appops.appops.model.AppOpsWriteTestState
+import dev.izumi.appops.appops.model.PackageOpsLoadResult
 import dev.izumi.appops.appops.model.ShellCommandResult
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -16,6 +17,34 @@ class AppOpsRepositoryTest {
         stableName = "android:run_in_background",
         shellName = "RUN_IN_BACKGROUND",
     )
+
+    @Test
+    fun `package load returns a parsed snapshot`() =
+        runBlocking {
+            val gateway = object : PrivilegedAppOpsGateway {
+                override suspend fun getPackageOps(packageName: String) =
+                    success("RUN_IN_BACKGROUND: ignore\n")
+
+                override suspend fun getPackageOp(
+                    packageName: String,
+                    operationName: String,
+                ): ShellCommandResult = error("Not used")
+
+                override suspend fun setPackageOpMode(
+                    packageName: String,
+                    operationName: String,
+                    mode: AppOpMode,
+                ): ShellCommandResult = error("Not used")
+            }
+
+            val result = AppOpsRepository(gateway).loadPackageOps(TEST_PACKAGE)
+
+            assertTrue(result is PackageOpsLoadResult.Success)
+            result as PackageOpsLoadResult.Success
+            assertEquals(TEST_PACKAGE, result.snapshot.packageName)
+            assertEquals("RUN_IN_BACKGROUND", result.snapshot.entries.single().name)
+            assertEquals("ignore", result.snapshot.entries.single().mode)
+        }
 
     @Test
     fun `round trip applies verifies and restores the original package mode`() =
