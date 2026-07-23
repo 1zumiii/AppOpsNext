@@ -1,25 +1,26 @@
 package dev.izumi.appops
 
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import dev.izumi.appops.model.DeviceSummary
+import androidx.activity.viewModels
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.izumi.appops.presentation.home.HomeScreen
+import dev.izumi.appops.presentation.home.HomeViewModel
 import dev.izumi.appops.ui.theme.AppOpsTheme
 
 class MainActivity : ComponentActivity() {
+    private val viewModel: HomeViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            val uiState = viewModel.uiState.collectAsStateWithLifecycle()
+
             AppOpsTheme {
                 HomeScreen(
-                    device = DeviceSummary(
-                        manufacturer = Build.MANUFACTURER,
-                        model = Build.MODEL,
-                        androidVersion = Build.VERSION.RELEASE,
-                        apiLevel = Build.VERSION.SDK_INT,
-                    ),
+                    uiState = uiState.value,
+                    onShizukuAction = viewModel::performShizukuAction,
                 )
             }
         }

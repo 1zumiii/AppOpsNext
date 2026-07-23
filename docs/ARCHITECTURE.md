@@ -12,7 +12,8 @@ behavior stays isolated from UI code.
 - `apps`: installed-application discovery and metadata.
 - `data`: persistence for templates, backups, and settings.
 
-The latter four packages are introduced as their feature modules land.
+The Shizuku package is implemented. The AppOps, app-discovery, and data
+packages are introduced as their feature modules land.
 
 ## Maintenance rules
 
@@ -24,4 +25,3 @@ The latter four packages are introduced as their feature modules land.
 5. Parsers and mode mappings require unit tests with captured, anonymized
    fixtures.
 6. A write operation must expose the old value and support explicit restoration.
-
