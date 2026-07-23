@@ -55,6 +55,23 @@ class AppOpsUserService : IPrivilegedAppOpsService.Stub {
         )
     }
 
+    override fun setUidOpMode(
+        packageName: String,
+        operationName: String,
+        mode: String,
+    ): ShellCommandResult {
+        val validatedMode = requireNotNull(AppOpMode.fromShellValue(mode)) {
+            "Unsupported AppOps mode"
+        }
+        return commandExecutor.execute(
+            AppOpsCommands.setUidOpMode(
+                packageName = packageName,
+                operationName = operationName,
+                mode = validatedMode,
+            ),
+        )
+    }
+
     override fun destroy() {
         commandExecutor.close()
         exitProcess(0)

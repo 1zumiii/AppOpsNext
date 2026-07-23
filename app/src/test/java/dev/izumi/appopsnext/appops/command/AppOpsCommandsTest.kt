@@ -65,6 +65,26 @@ class AppOpsCommandsTest {
     }
 
     @Test
+    fun `set uid mode keeps uid scope as a separate validated argument`() {
+        assertEquals(
+            listOf(
+                "/system/bin/cmd",
+                "appops",
+                "set",
+                "--uid",
+                "dev.izumi.appopsnext.testtarget",
+                "CAMERA",
+                "ignore",
+            ),
+            AppOpsCommands.setUidOpMode(
+                packageName = "dev.izumi.appopsnext.testtarget",
+                operationName = "CAMERA",
+                mode = AppOpMode.IGNORE,
+            ),
+        )
+    }
+
+    @Test
     fun `operation rejects shell metacharacters`() {
         assertThrows(IllegalArgumentException::class.java) {
             AppOpsCommands.getPackageOp(

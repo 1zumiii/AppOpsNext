@@ -1,4 +1,11 @@
-<resources>
+<resources
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="MissingTranslation">
+    <!--
+      TODO(full-localization): Remove the MissingTranslation suppression when
+      the complete UI is localized. English currently covers only the AppOp
+      name dictionary used for locale display and cross-language search.
+    -->
     <string name="app_name">AppOpsNext</string>
     <string name="home_title">Android 权限控制器</string>
     <string name="home_subtitle">当前阶段先验证 Android 15、Shizuku 与 AppOps 的完整权限链。</string>
@@ -68,6 +75,8 @@
     <string name="navigation_apps_short">应</string>
     <string name="navigation_diagnostics">诊断</string>
     <string name="navigation_diagnostics_short">诊</string>
+    <string name="navigation_settings">设置</string>
+    <string name="navigation_settings_short">设</string>
     <string name="app_list_title">应用权限</string>
     <string name="app_list_search_label">搜索应用名称或包名</string>
     <string name="app_list_count">显示 %1$d 个，共 %2$d 个应用</string>
@@ -81,10 +90,13 @@
     <string name="app_detail_no_operations">此应用当前没有 AppOps 记录。</string>
     <string name="app_detail_scope_uid">UID 作用域</string>
     <string name="app_detail_scope_package">应用作用域</string>
-    <string name="app_detail_uid_edit_unavailable">当前仅开放应用作用域修改；UID 作用域暂时只读，以避免共享 UID 应用被一并影响。</string>
+    <string name="app_detail_effective_scope_note">同名的 UID 与应用记录会合并显示；隐私权限优先采用实际生效的 UID 状态。</string>
     <string name="app_detail_mode_button">%1$s ▾</string>
     <string name="app_detail_mode_confirm_title">确认修改 AppOp</string>
     <string name="app_detail_mode_confirm_operation">操作：%1$s</string>
+    <string name="app_detail_mode_scope_uid">修改范围：UID（同一 UID 的应用会共同受影响）</string>
+    <string name="app_detail_mode_scope_package">修改范围：仅当前应用包</string>
+    <string name="app_detail_mode_shared_uid_warning">检测到共享 UID，本次修改会同时影响以下包：\n%1$s</string>
     <string name="app_detail_mode_transition">%1$s → %2$s</string>
     <string name="app_detail_mode_confirm_warning">修改可能立即影响目标应用的功能。写入后会回读验证；如果验证失败，AppOpsNext 会自动尝试恢复原值。</string>
     <string name="app_detail_mode_applying_title">正在修改系统 AppOps</string>
@@ -93,6 +105,7 @@
     <string name="app_detail_mode_change_success_detail">%1$s：%2$s → %3$s</string>
     <string name="app_detail_mode_change_failure">修改未完成</string>
     <string name="app_detail_mode_change_failure_detail">失败阶段：%1$s。恢复状态：%2$s。</string>
+    <string name="app_detail_mode_change_rejected_hint">系统未接受请求的模式。AppOps 不能授予已被 Android 运行时权限或厂商策略禁止的能力，但可以进一步限制已授予的权限。</string>
     <string name="app_detail_mode_observed">系统回读值：%1$s</string>
     <string name="app_detail_mode_phase_read_original">读取原值</string>
     <string name="app_detail_mode_phase_check_original">确认原值未变化</string>
@@ -112,4 +125,71 @@
     <string name="action_cancel">取消</string>
     <string name="action_dismiss">知道了</string>
     <string name="action_back">返回</string>
+    <string name="settings_title">设置</string>
+    <string name="settings_hide_system_apps">隐藏系统应用</string>
+    <string name="settings_hide_system_apps_detail">开启后，应用列表只显示用户安装的应用。</string>
+    <string name="app_detail_search_label">搜索权限中文名、英文名或系统名称</string>
+    <string name="app_detail_filtered_count">显示 %1$d 项，共 %2$d 项权限</string>
+    <string name="app_detail_no_matching_operations">没有匹配的权限。</string>
+    <string name="app_op_label_camera">相机</string>
+    <string name="app_op_label_record_audio">麦克风</string>
+    <string name="app_op_label_coarse_location">大致位置</string>
+    <string name="app_op_label_fine_location">精确位置</string>
+    <string name="app_op_label_read_clipboard">读取剪贴板</string>
+    <string name="app_op_label_write_clipboard">写入剪贴板</string>
+    <string name="app_op_label_post_notification">发送通知</string>
+    <string name="app_op_label_body_sensors">身体传感器</string>
+    <string name="app_op_label_activity_recognition">身体活动</string>
+    <string name="app_op_label_read_contacts">读取联系人</string>
+    <string name="app_op_label_write_contacts">修改联系人</string>
+    <string name="app_op_label_get_accounts">账户列表</string>
+    <string name="app_op_label_read_call_log">读取通话记录</string>
+    <string name="app_op_label_write_call_log">修改通话记录</string>
+    <string name="app_op_label_call_phone">拨打电话</string>
+    <string name="app_op_label_read_phone_state">电话状态</string>
+    <string name="app_op_label_read_phone_numbers">电话号码</string>
+    <string name="app_op_label_answer_phone_calls">接听电话</string>
+    <string name="app_op_label_read_sms">读取短信</string>
+    <string name="app_op_label_send_sms">发送短信</string>
+    <string name="app_op_label_receive_sms">接收短信</string>
+    <string name="app_op_label_receive_mms">接收彩信</string>
+    <string name="app_op_label_read_calendar">读取日历</string>
+    <string name="app_op_label_write_calendar">修改日历</string>
+    <string name="app_op_label_read_external_storage">读取共享存储</string>
+    <string name="app_op_label_write_external_storage">写入共享存储</string>
+    <string name="app_op_label_read_media_audio">音乐和音频</string>
+    <string name="app_op_label_read_media_video">视频</string>
+    <string name="app_op_label_read_media_images">照片</string>
+    <string name="app_op_label_selected_media">选中的照片和视频</string>
+    <string name="app_op_label_media_location">媒体位置信息</string>
+    <string name="app_op_label_bluetooth_scan">扫描附近蓝牙设备</string>
+    <string name="app_op_label_bluetooth_connect">连接蓝牙设备</string>
+    <string name="app_op_label_bluetooth_advertise">蓝牙广播</string>
+    <string name="app_op_label_nearby_wifi">附近的 Wi-Fi 设备</string>
+    <string name="app_op_label_uwb_ranging">超宽带测距</string>
+    <string name="app_op_label_overlay">显示在其他应用上层</string>
+    <string name="app_op_label_picture_in_picture">画中画</string>
+    <string name="app_op_label_run_in_background">后台运行</string>
+    <string name="app_op_label_run_any_in_background">不受限后台运行</string>
+    <string name="app_op_label_start_foreground">启动前台服务</string>
+    <string name="app_op_label_wake_lock">保持设备唤醒</string>
+    <string name="app_op_label_vibrate">振动</string>
+    <string name="app_op_label_activate_vpn">启用 VPN</string>
+    <string name="app_op_label_establish_vpn">建立 VPN 服务</string>
+    <string name="app_op_label_install_packages">安装未知应用</string>
+    <string name="app_op_label_exact_alarm">精确闹钟</string>
+    <string name="app_op_label_usage_stats">使用情况访问</string>
+    <string name="app_op_label_device_identifiers">设备标识符</string>
+    <string name="app_op_label_restricted_settings">受限设置</string>
+    <string name="app_op_usage_separator">" · "</string>
+    <string name="app_op_usage_just_now">刚刚</string>
+    <string name="app_op_usage_ago">%1$s前</string>
+    <string name="app_op_usage_duration">持续 %1$s</string>
+    <string name="app_op_usage_duration_less_than_second">持续不足 1 秒</string>
+    <string name="app_op_usage_rejected_just_now">刚刚被拒绝</string>
+    <string name="app_op_usage_rejected_ago">%1$s前被拒绝</string>
+    <string name="app_op_usage_days">%1$d 天</string>
+    <string name="app_op_usage_hours">%1$d 小时</string>
+    <string name="app_op_usage_minutes">%1$d 分</string>
+    <string name="app_op_usage_seconds">%1$d 秒</string>
 </resources>

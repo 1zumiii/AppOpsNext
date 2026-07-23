@@ -16,4 +16,10 @@ interface PrivilegedAppOpsGateway {
         operationName: String,
         mode: AppOpMode,
     ): ShellCommandResult
+
+    suspend fun setUidOpMode(
+        packageName: String,
+        operationName: String,
+        mode: AppOpMode,
+    ): ShellCommandResult
 }

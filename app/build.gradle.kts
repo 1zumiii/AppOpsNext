@@ -13,8 +13,8 @@ android {
         applicationId = "dev.izumi.appopsnext"
         minSdk = 35
         targetSdk = 35
-        versionCode = 9
-        versionName = "0.7.0"
+        versionCode = 10
+        versionName = "0.8.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -57,6 +57,7 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)
+    implementation(libs.datastore.preferences)
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)

@@ -10,17 +10,20 @@ behavior stays isolated from UI code.
 - `shizuku`: binder lifecycle, authorization, and UserService connection.
 - `appops`: AppOps commands, parsing, mode mapping, and privileged adapters.
 - `apps`: installed-application discovery and metadata.
-- `data`: persistence for templates, backups, and settings.
+- `settings`: Preferences DataStore and typed user settings.
+- `data`: persistence for templates and backups as those modules land.
 
 The `shizuku` package owns privileged-process lifecycle only. The `appops`
 package owns command construction, execution results, parsing, and repository
 state. The `apps` package owns installed-application discovery and pure search
 filtering. Persistence packages are introduced as their feature modules land.
 
-`AppOpsNextApplication` owns the single `PrivilegedServiceClient` instance shared
-by diagnostics and per-app detail ViewModels. The diagnostics ViewModel manages
-the Shizuku binding lifecycle; feature ViewModels consume the shared state and
-repository gateway rather than starting competing privileged services.
+`AppOpsNextApplication` owns the single `PrivilegedServiceClient` and
+`UserSettingsRepository` instances. The privileged client is shared by
+diagnostics and per-app detail ViewModels; feature ViewModels consume the shared
+state and repository gateway rather than starting competing privileged
+services. The settings repository owns the only `user_settings` DataStore
+instance.
 
 The separate `test-target` application is disposable and contains no user
 data. Privileged write development must target this package until production
@@ -72,13 +75,27 @@ and records the reason inline; no general lint baseline is used.
 `InstalledAppsRepository` performs package and label loading off the main
 thread. Search is a pure function in `AppListFilter`, which keeps filtering
 testable without Android framework mocks. Selecting a row loads a structured
-`PackageOpsSnapshot` and displays operation name, raw mode, UID/package scope,
-and recorded timing details.
+`PackageOpsSnapshot`. `AppOpDisplayCatalog` then groups duplicate package/UID
+entries, attaches localized resource identifiers, applies a common-first
+priority, and supports matching the current label, English label, or raw system
+operation name. The UI displays exactly one current-locale title and keeps the
+raw operation name on a separate lower-emphasis line. Raw shell timing metadata
+stays in the snapshot, while the UI formatter rounds it to seconds and displays
+at most the two largest non-zero time units.
 
-## Confirmed package-mode writes
+The hide-system-apps preference is persisted with Preferences DataStore and
+combined with application search inside `AppListViewModel`. Filtering itself
+remains a pure function.
 
-The per-app editor allows package-scope changes only. A requested change moves
-through a dedicated ViewModel state machine:
+## Confirmed package and UID writes
+
+Full `cmd appops get <PACKAGE>` output can contain a multi-line UID block where
+only its first row has the `Uid mode:` prefix. The repository therefore uses
+single-operation reads to resolve the scope of every discovered operation
+before exposing it for editing. When both scopes exist, the effective UID entry
+is preferred in the display catalog.
+
+A requested change moves through a dedicated ViewModel state machine:
 
 ```text
 select typed mode
@@ -94,9 +111,11 @@ repository restores the original value and verifies the restoration before it
 reports a result. UI code receives typed phases and restoration status rather
 than parsing command output.
 
-UID-scope rows remain read-only until shared-UID discovery and impact
-confirmation are implemented. Both the source and the screen carry an explicit
-`TODO(uid-mode-edit)` marker for that boundary.
+Package writes use `cmd appops set <PACKAGE> <OP> <MODE>`. UID writes use the
+explicit `--uid` variant and show every package returned for that UID before
+confirmation. Android may normalize or reject a requested UID mode when it is
+coupled to a runtime permission; this is reported as a verification failure,
+and the repository restores and verifies the original mode.
 
 ## Maintenance rules
 

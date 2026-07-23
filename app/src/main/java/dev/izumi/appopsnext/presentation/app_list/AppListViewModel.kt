@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.apps.AppListFilter
 import dev.izumi.appopsnext.apps.InstalledAppsRepository
 import dev.izumi.appopsnext.apps.model.InstalledApp
+import dev.izumi.appopsnext.AppOpsNextApplication
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -16,6 +17,8 @@ class AppListViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
     private val repository = InstalledAppsRepository(application)
+    private val settingsRepository =
+        getApplication<AppOpsNextApplication>().userSettingsRepository
     private val installedApps = MutableStateFlow<List<InstalledApp>>(emptyList())
     private val searchQuery = MutableStateFlow("")
     private val isLoading = MutableStateFlow(true)
@@ -26,11 +29,20 @@ class AppListViewModel(
         searchQuery,
         isLoading,
         loadFailed,
-    ) { apps, query, loading, failed ->
+        settingsRepository.settings,
+    ) { apps, query, loading, failed, settings ->
+        val eligibleApps = if (settings.hideSystemApps) {
+            apps.filterNot(InstalledApp::isSystemApp)
+        } else {
+            apps
+        }
         AppListUiState(
             searchQuery = query,
-            totalAppCount = apps.size,
-            visibleApps = AppListFilter.apply(apps, query),
+            totalAppCount = eligibleApps.size,
+            visibleApps = AppListFilter.apply(
+                apps = eligibleApps,
+                query = query,
+            ),
             isLoading = loading,
             loadFailed = failed,
         )

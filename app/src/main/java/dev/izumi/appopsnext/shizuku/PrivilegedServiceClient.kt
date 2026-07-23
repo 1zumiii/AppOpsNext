@@ -139,6 +139,21 @@ class PrivilegedServiceClient(
             )
         }
 
+    override suspend fun setUidOpMode(
+        packageName: String,
+        operationName: String,
+        mode: AppOpMode,
+    ): ShellCommandResult =
+        withContext(Dispatchers.IO) {
+            val connectedService = service
+                ?: throw IllegalStateException("Privileged service is unavailable")
+            connectedService.setUidOpMode(
+                packageName,
+                operationName,
+                mode.shellValue,
+            )
+        }
+
     private companion object {
         const val TAG = "PrivilegedService"
         const val USER_SERVICE_PROCESS_SUFFIX = "appops"
