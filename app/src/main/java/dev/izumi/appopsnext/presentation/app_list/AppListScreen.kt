@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.presentation.batch.TemplatePickerDialog
+import dev.izumi.appopsnext.presentation.components.AppIcon
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -273,7 +274,13 @@ private fun InstalledAppListItem(
 ) {
     ListItem(
         modifier = Modifier.clickable(onClick = onClick),
-        leadingContent = selectedForBatch?.let { selected ->
+        leadingContent = {
+            AppIcon(
+                packageName = app.packageName,
+                appLabel = app.label,
+            )
+        },
+        trailingContent = selectedForBatch?.let { selected ->
             {
                 Checkbox(
                     checked = selected,
