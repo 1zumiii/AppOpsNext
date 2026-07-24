@@ -49,6 +49,7 @@
     <string name="app_list_count">显示 %1$d 个，共 %2$d 个应用</string>
     <string name="app_list_load_failed">无法读取已安装应用</string>
     <string name="app_list_empty_search">没有匹配的应用</string>
+    <string name="app_icon_description">%1$s 的应用图标</string>
     <string name="app_type_system">系统应用 · UID %1$d</string>
     <string name="app_type_user">用户应用 · UID %1$d</string>
     <string name="app_detail_title">应用详情</string>
@@ -109,6 +110,12 @@
     <string name="history_title">权限历史</string>
     <string name="history_subtitle">查看相机、麦克风和位置权限近期产生的系统访问记录。</string>
     <string name="history_refresh">刷新历史记录</string>
+    <string name="history_add_permission">添加监测权限</string>
+    <string name="history_permission_search">搜索权限名称或系统名</string>
+    <string name="history_no_permissions_to_add">没有可添加的权限。</string>
+    <string name="history_no_selected_permissions">尚未选择要监测的权限，请使用右上角的添加按钮。</string>
+    <string name="history_auto_refresh_summary">应用进程存活且 Shizuku 已连接时，每 %1$d 分钟自动刷新；回到应用时也会刷新。最近更新：%2$s</string>
+    <string name="history_never_updated">尚未更新</string>
     <string name="history_waiting_for_backend">连接系统 AppOps 后会自动加载历史记录。</string>
     <string name="history_partial_failure">%1$d 项权限历史读取失败，其余结果仍可查看。</string>
     <string name="history_failure_backend">特权后端尚未连接，暂时无法读取历史记录。</string>
@@ -127,7 +134,7 @@
     <string name="history_foreground">前台</string>
     <string name="history_background">后台</string>
     <string name="history_attribution">归因标签：%1$s</string>
-    <string name="history_system_record_caveat">这里展示 Android 保存的离散 AppOps 记录，不是精确的 API 调用次数。系统可能按分钟合并同一应用的多次访问，保留时间也由设备决定。</string>
+    <string name="history_system_record_caveat">这里展示 Android 保存的离散 AppOps 记录，不是精确的 API 调用次数。系统可能按分钟合并同一应用的多次访问，保留时间也由设备决定；部分自行添加的权限可能不会被当前系统离散记录。</string>
     <string name="settings_github_url" translatable="false">https://github.com/1zumiii/AppOpsNext</string>
     <string name="templates_title">权限模板</string>
     <string name="template_create">新建</string>

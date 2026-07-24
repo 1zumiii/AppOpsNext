@@ -1,20 +1,25 @@
 package dev.izumi.appopsnext.presentation.history
 
 import androidx.annotation.StringRes
-import dev.izumi.appopsnext.R
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import dev.izumi.appopsnext.appops.model.AppOpNames
-import dev.izumi.appopsnext.history.model.TrackedHistoryPermission
+import dev.izumi.appopsnext.history.model.HistoryPermission
+import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 
 @StringRes
-fun TrackedHistoryPermission.labelResource(): Int = when (this) {
-    TrackedHistoryPermission.CAMERA -> R.string.app_op_label_camera
-    TrackedHistoryPermission.MICROPHONE -> R.string.app_op_label_record_audio
-    TrackedHistoryPermission.PRECISE_LOCATION ->
-        R.string.app_op_label_fine_location
+fun HistoryPermission.labelResource(): Int? =
+    LabelResourcesByShellName[shellOperationName]
 
-    TrackedHistoryPermission.APPROXIMATE_LOCATION ->
-        R.string.app_op_label_coarse_location
-}
-
-fun TrackedHistoryPermission.systemOperationName(): String =
+fun HistoryPermission.systemOperationName(): String =
     AppOpNames.stableName(shellOperationName)
+
+@Composable
+fun HistoryPermission.displayName(): String =
+    labelResource()?.let { stringResource(it) }
+        ?: systemOperationName()
+
+private val LabelResourcesByShellName =
+    AppOpDisplayCatalog.knownOperations().associate {
+        it.shellName to it.labelRes
+    }

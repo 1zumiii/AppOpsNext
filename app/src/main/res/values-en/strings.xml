@@ -50,6 +50,7 @@
     <string name="app_list_count">Showing %1$d of %2$d apps</string>
     <string name="app_list_load_failed">Could not load installed apps</string>
     <string name="app_list_empty_search">No matching apps</string>
+    <string name="app_icon_description">App icon for %1$s</string>
     <string name="app_type_system">System app · UID %1$d</string>
     <string name="app_type_user">User app · UID %1$d</string>
     <string name="app_detail_title">App details</string>
@@ -110,6 +111,12 @@
     <string name="history_title">Permission history</string>
     <string name="history_subtitle">Review recent system access records for camera, microphone, and location permissions.</string>
     <string name="history_refresh">Refresh history</string>
+    <string name="history_add_permission">Add monitored permission</string>
+    <string name="history_permission_search">Search permission or system name</string>
+    <string name="history_no_permissions_to_add">No permissions are available to add.</string>
+    <string name="history_no_selected_permissions">No permissions are monitored. Use the add button in the top-right corner.</string>
+    <string name="history_auto_refresh_summary">Refreshes every %1$d minutes while the app process is alive and Shizuku is connected, and whenever you return to the app. Last updated: %2$s</string>
+    <string name="history_never_updated">Not updated yet</string>
     <string name="history_waiting_for_backend">History loads automatically after System AppOps connects.</string>
     <string name="history_partial_failure">History for %1$d permissions could not be loaded. Other results remain available.</string>
     <string name="history_failure_backend">The privileged backend is not connected, so history is unavailable.</string>
@@ -128,7 +135,7 @@
     <string name="history_foreground">Foreground</string>
     <string name="history_background">Background</string>
     <string name="history_attribution">Attribution: %1$s</string>
-    <string name="history_system_record_caveat">This page shows discrete AppOps records retained by Android, not exact API call counts. The system may merge repeated access by the same app within a minute, and retention is device-controlled.</string>
+    <string name="history_system_record_caveat">This page shows discrete AppOps records retained by Android, not exact API call counts. The system may merge repeated access by the same app within a minute, and retention is device-controlled. Some permissions you add might not be recorded discretely by this device.</string>
     <string name="templates_title">Permission templates</string>
     <string name="template_create">New</string>
     <string name="template_create_title">New permission template</string>

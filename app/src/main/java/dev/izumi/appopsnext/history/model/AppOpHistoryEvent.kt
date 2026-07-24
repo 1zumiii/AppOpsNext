@@ -11,13 +11,23 @@ data class AppOpHistoryEvent(
     val flags: String,
 )
 
-enum class TrackedHistoryPermission(
+data class HistoryPermission(
     val shellOperationName: String,
 ) {
-    CAMERA("CAMERA"),
-    MICROPHONE("RECORD_AUDIO"),
-    PRECISE_LOCATION("FINE_LOCATION"),
-    APPROXIMATE_LOCATION("COARSE_LOCATION"),
+    init {
+        require(shellOperationName.isNotBlank()) {
+            "History permission operation name must not be blank"
+        }
+    }
+}
+
+object HistoryPermissionDefaults {
+    val permissions = listOf(
+        HistoryPermission("CAMERA"),
+        HistoryPermission("RECORD_AUDIO"),
+        HistoryPermission("FINE_LOCATION"),
+        HistoryPermission("COARSE_LOCATION"),
+    )
 }
 
 enum class AppOpHistoryFailureReason {
