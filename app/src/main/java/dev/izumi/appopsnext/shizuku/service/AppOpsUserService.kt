@@ -8,6 +8,7 @@ import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.command.AppOpsCommands
 import dev.izumi.appopsnext.appops.command.CommandExecutor
 import dev.izumi.appopsnext.appops.model.ShellCommandResult
+import dev.izumi.appopsnext.history.DiscreteHistoryOutputExtractor
 import dev.izumi.appopsnext.shizuku.IPrivilegedAppOpsService
 import kotlin.system.exitProcess
 
@@ -43,10 +44,14 @@ class AppOpsUserService : IPrivilegedAppOpsService.Stub {
 
     override fun getDiscreteHistory(
         operationName: String,
-    ): ShellCommandResult =
-        commandExecutor.execute(
+    ): ShellCommandResult {
+        val result = commandExecutor.execute(
             AppOpsCommands.getDiscreteHistory(operationName),
         )
+        return result.copy(
+            stdout = DiscreteHistoryOutputExtractor.extract(result.stdout),
+        )
+    }
 
     override fun setPackageOpMode(
         packageName: String,
