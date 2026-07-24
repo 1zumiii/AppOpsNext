@@ -1,4 +1,4 @@
-package dev.izumi.appopsnext.presentation.home
+package dev.izumi.appopsnext.presentation.diagnostics
 
 import android.app.Application
 import android.os.Build
@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class HomeViewModel(
+class DiagnosticsViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
     private val shizukuController = ShizukuController(application)
@@ -39,7 +39,7 @@ class HomeViewModel(
         privilegedServiceClient.state,
         appOpsReadState,
     ) { shizukuState, serviceState, readState ->
-        HomeUiState(
+        DiagnosticsUiState(
             device = device,
             shizukuState = shizukuState,
             privilegedServiceState = serviceState,
@@ -48,7 +48,7 @@ class HomeViewModel(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
-        initialValue = HomeUiState(device = device),
+        initialValue = DiagnosticsUiState(device = device),
     )
 
     init {

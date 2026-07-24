@@ -23,9 +23,9 @@ enum class MainDestination(
         labelRes = R.string.navigation_templates,
         iconRes = R.drawable.ic_navigation_templates,
     ),
-    DIAGNOSTICS(
-        labelRes = R.string.navigation_diagnostics,
-        iconRes = R.drawable.ic_navigation_diagnostics,
+    HISTORY(
+        labelRes = R.string.navigation_history,
+        iconRes = R.drawable.ic_navigation_history,
     ),
     SETTINGS(
         labelRes = R.string.navigation_settings,

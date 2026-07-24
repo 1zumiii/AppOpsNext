@@ -1,23 +1,10 @@
-package dev.izumi.appopsnext.presentation.home
+package dev.izumi.appopsnext.presentation.diagnostics
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.appops.model.AppOpsReadFailureReason
@@ -28,61 +15,9 @@ import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceFailureReason
 import dev.izumi.appopsnext.shizuku.model.ShizukuFailureReason
 import dev.izumi.appopsnext.shizuku.model.ShizukuState
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun HomeScreen(
-    uiState: HomeUiState,
-    onShizukuAction: () -> Unit,
-    modifier: Modifier = Modifier,
-    bottomBar: @Composable () -> Unit = {},
-) {
-    Scaffold(
-        modifier = modifier,
-        bottomBar = bottomBar,
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.app_name),
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
-            )
-        },
-    ) { contentPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(contentPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.home_title),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = stringResource(R.string.home_subtitle),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Spacer(Modifier.height(4.dp))
-            DiagnosticsSection(
-                uiState = uiState,
-                onShizukuAction = onShizukuAction,
-            )
-        }
-    }
-}
-
 @Composable
 fun DiagnosticsSection(
-    uiState: HomeUiState,
+    uiState: DiagnosticsUiState,
     onShizukuAction: () -> Unit,
     modifier: Modifier = Modifier,
 ) {

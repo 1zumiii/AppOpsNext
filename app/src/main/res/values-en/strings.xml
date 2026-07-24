@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AppOpsNext</string>
-    <string name="home_title">Android permission controller</string>
-    <string name="home_subtitle">Android 15, Shizuku, and the complete AppOps permission path are active on this device.</string>
     <string name="status_device_title">Device</string>
     <string name="status_device_value">%1$s %2$s</string>
     <string name="status_device_detail">Android %1$s · API %2$d</string>
@@ -45,7 +43,7 @@
     <string name="action_request_again">Request again</string>
     <string name="navigation_apps">Apps</string>
     <string name="navigation_templates">Templates</string>
-    <string name="navigation_diagnostics">Diagnostics</string>
+    <string name="navigation_history">History</string>
     <string name="navigation_settings">Settings</string>
     <string name="app_list_title">App permissions</string>
     <string name="app_list_search_label">Search app name or package</string>
@@ -109,6 +107,28 @@
     <string name="settings_developer">Developer</string>
     <string name="settings_developer_name">1zumiii</string>
     <string name="settings_github">GitHub</string>
+    <string name="history_title">Permission history</string>
+    <string name="history_subtitle">Review recent system access records for camera, microphone, and location permissions.</string>
+    <string name="history_refresh">Refresh history</string>
+    <string name="history_waiting_for_backend">History loads automatically after System AppOps connects.</string>
+    <string name="history_partial_failure">History for %1$d permissions could not be loaded. Other results remain available.</string>
+    <string name="history_failure_backend">The privileged backend is not connected, so history is unavailable.</string>
+    <string name="history_failure_command">Android could not return permission history.</string>
+    <string name="history_failure_timeout">Reading permission history timed out. Try again later.</string>
+    <string name="history_distribution_title">Common permission records</string>
+    <string name="history_permission_list_title">Browse by permission</string>
+    <string name="history_permission_summary">%1$d system records · %2$d apps</string>
+    <string name="history_latest_record">Latest record: %1$s</string>
+    <string name="history_never_recorded">None</string>
+    <string name="history_system_records">System records</string>
+    <string name="history_apps_involved">Apps involved</string>
+    <string name="history_seven_day_title">System records over 7 days</string>
+    <string name="history_timeline_title">Access timeline</string>
+    <string name="history_empty">No recent system access records exist for this permission.</string>
+    <string name="history_foreground">Foreground</string>
+    <string name="history_background">Background</string>
+    <string name="history_attribution">Attribution: %1$s</string>
+    <string name="history_system_record_caveat">This page shows discrete AppOps records retained by Android, not exact API call counts. The system may merge repeated access by the same app within a minute, and retention is device-controlled.</string>
     <string name="templates_title">Permission templates</string>
     <string name="template_create">New</string>
     <string name="template_create_title">New permission template</string>

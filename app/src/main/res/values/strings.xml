@@ -1,7 +1,5 @@
 <resources>
     <string name="app_name">AppOpsNext</string>
-    <string name="home_title">Android 权限控制器</string>
-    <string name="home_subtitle">当前阶段先验证 Android 15、Shizuku 与 AppOps 的完整权限链。</string>
     <string name="status_device_title">设备</string>
     <string name="status_device_value">%1$s %2$s</string>
     <string name="status_device_detail">Android %1$s · API %2$d</string>
@@ -44,7 +42,7 @@
     <string name="action_request_again">再次请求</string>
     <string name="navigation_apps">应用</string>
     <string name="navigation_templates">模板</string>
-    <string name="navigation_diagnostics">诊断</string>
+    <string name="navigation_history">历史</string>
     <string name="navigation_settings">设置</string>
     <string name="app_list_title">应用权限</string>
     <string name="app_list_search_label">搜索应用名称或包名</string>
@@ -108,6 +106,28 @@
     <string name="settings_developer">开发者</string>
     <string name="settings_developer_name">1zumiii</string>
     <string name="settings_github">GitHub</string>
+    <string name="history_title">权限历史</string>
+    <string name="history_subtitle">查看相机、麦克风和位置权限近期产生的系统访问记录。</string>
+    <string name="history_refresh">刷新历史记录</string>
+    <string name="history_waiting_for_backend">连接系统 AppOps 后会自动加载历史记录。</string>
+    <string name="history_partial_failure">%1$d 项权限历史读取失败，其余结果仍可查看。</string>
+    <string name="history_failure_backend">特权后端尚未连接，暂时无法读取历史记录。</string>
+    <string name="history_failure_command">Android 未能返回权限历史记录。</string>
+    <string name="history_failure_timeout">读取权限历史记录超时，请稍后重试。</string>
+    <string name="history_distribution_title">常用权限记录分布</string>
+    <string name="history_permission_list_title">按权限查看</string>
+    <string name="history_permission_summary">%1$d 条系统记录 · %2$d 个应用</string>
+    <string name="history_latest_record">最近记录：%1$s</string>
+    <string name="history_never_recorded">暂无</string>
+    <string name="history_system_records">系统记录次数</string>
+    <string name="history_apps_involved">涉及应用</string>
+    <string name="history_seven_day_title">近 7 天系统记录</string>
+    <string name="history_timeline_title">访问时间线</string>
+    <string name="history_empty">近期没有该权限的系统访问记录。</string>
+    <string name="history_foreground">前台</string>
+    <string name="history_background">后台</string>
+    <string name="history_attribution">归因标签：%1$s</string>
+    <string name="history_system_record_caveat">这里展示 Android 保存的离散 AppOps 记录，不是精确的 API 调用次数。系统可能按分钟合并同一应用的多次访问，保留时间也由设备决定。</string>
     <string name="settings_github_url" translatable="false">https://github.com/1zumiii/AppOpsNext</string>
     <string name="templates_title">权限模板</string>
     <string name="template_create">新建</string>

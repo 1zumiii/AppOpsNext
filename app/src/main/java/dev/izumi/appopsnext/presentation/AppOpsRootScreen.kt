@@ -22,8 +22,11 @@ import dev.izumi.appopsnext.presentation.batch.BatchOperationUiState
 import dev.izumi.appopsnext.presentation.batch.PermissionBatchSelection
 import dev.izumi.appopsnext.presentation.components.AppNavigationBar
 import dev.izumi.appopsnext.presentation.components.MainDestination
-import dev.izumi.appopsnext.presentation.home.HomeScreen
-import dev.izumi.appopsnext.presentation.home.HomeUiState
+import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticsUiState
+import dev.izumi.appopsnext.presentation.history.HistoryOverviewScreen
+import dev.izumi.appopsnext.presentation.history.HistoryUiState
+import dev.izumi.appopsnext.presentation.history.PermissionHistoryDetailScreen
+import dev.izumi.appopsnext.history.model.TrackedHistoryPermission
 import dev.izumi.appopsnext.presentation.settings.SettingsScreen
 import dev.izumi.appopsnext.presentation.settings.SettingsUiState
 import dev.izumi.appopsnext.settings.AppLanguage
@@ -33,7 +36,8 @@ import dev.izumi.appopsnext.templates.model.PermissionTemplate
 
 @Composable
 fun AppOpsRootScreen(
-    homeUiState: HomeUiState,
+    diagnosticsUiState: DiagnosticsUiState,
+    historyUiState: HistoryUiState,
     appListUiState: AppListUiState,
     appDetailUiState: AppDetailUiState,
     appOpModeChangeUiState: AppOpModeChangeUiState,
@@ -44,6 +48,7 @@ fun AppOpsRootScreen(
     onShizukuAction: () -> Unit,
     onAppSearchQueryChange: (String) -> Unit,
     onRefreshApps: () -> Unit,
+    onRefreshHistory: () -> Unit,
     onAppSelected: (InstalledApp) -> Unit,
     onRefreshAppDetail: () -> Unit,
     onAppOpSearchQueryChange: (String) -> Unit,
@@ -80,6 +85,14 @@ fun AppOpsRootScreen(
         mutableStateOf(MainDestination.APPS)
     }
     var selectedApp by remember { mutableStateOf<InstalledApp?>(null) }
+    var selectedHistoryPermissionName by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+    val selectedHistoryPermission = selectedHistoryPermissionName?.let {
+        runCatching {
+            TrackedHistoryPermission.valueOf(it)
+        }.getOrNull()
+    }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val navigateBackFromDetail = {
@@ -95,6 +108,7 @@ fun AppOpsRootScreen(
                 focusManager.clearFocus()
                 keyboardController?.hide()
                 selectedApp = null
+                selectedHistoryPermissionName = null
                 selectedDestination = it
             },
         )
@@ -102,6 +116,11 @@ fun AppOpsRootScreen(
 
     BackHandler(enabled = selectedApp != null) {
         navigateBackFromDetail()
+    }
+    BackHandler(
+        enabled = selectedApp == null && selectedHistoryPermission != null,
+    ) {
+        selectedHistoryPermissionName = null
     }
 
     if (selectedApp != null) {
@@ -152,15 +171,37 @@ fun AppOpsRootScreen(
                 bottomBar = navigationBar,
             )
 
-            MainDestination.DIAGNOSTICS -> HomeScreen(
-                uiState = homeUiState,
-                onShizukuAction = onShizukuAction,
-                bottomBar = navigationBar,
-            )
+            MainDestination.HISTORY -> {
+                if (selectedHistoryPermission == null) {
+                    HistoryOverviewScreen(
+                        uiState = historyUiState,
+                        onRefresh = onRefreshHistory,
+                        onPermissionSelected = { permission ->
+                            selectedHistoryPermissionName = permission.name
+                        },
+                        bottomBar = navigationBar,
+                    )
+                } else {
+                    PermissionHistoryDetailScreen(
+                        permission = selectedHistoryPermission,
+                        history = historyUiState.permissions.firstOrNull {
+                            it.permission == selectedHistoryPermission
+                        },
+                        isLoading = historyUiState.isLoading,
+                        onBack = {
+                            selectedHistoryPermissionName = null
+                        },
+                        onAppSelected = { app ->
+                            selectedApp = app
+                            onAppSelected(app)
+                        },
+                    )
+                }
+            }
 
             MainDestination.SETTINGS -> SettingsScreen(
                 uiState = settingsUiState,
-                diagnosticsUiState = homeUiState,
+                diagnosticsUiState = diagnosticsUiState,
                 onHideSystemAppsChange = onHideSystemAppsChange,
                 onAppLanguageChange = onAppLanguageChange,
                 onShizukuAction = onShizukuAction,
