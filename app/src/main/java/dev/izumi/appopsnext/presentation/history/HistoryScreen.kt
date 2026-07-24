@@ -31,10 +31,14 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,7 +54,8 @@ import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.history.model.AppOpHistoryFailureReason
-import dev.izumi.appopsnext.history.model.TrackedHistoryPermission
+import dev.izumi.appopsnext.history.model.HistoryPermission
+import dev.izumi.appopsnext.presentation.components.AppIcon
 import java.text.DateFormat
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -62,10 +67,13 @@ import java.util.Locale
 fun HistoryOverviewScreen(
     uiState: HistoryUiState,
     onRefresh: () -> Unit,
-    onPermissionSelected: (TrackedHistoryPermission) -> Unit,
+    onPermissionSelected: (HistoryPermission) -> Unit,
+    onPermissionAdded: (HistoryPermission) -> Unit,
+    onPermissionRemoved: (HistoryPermission) -> Unit,
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
 ) {
+    var showPermissionPicker by remember { mutableStateOf(false) }
     Scaffold(
         modifier = modifier,
         bottomBar = bottomBar,
@@ -78,6 +86,16 @@ fun HistoryOverviewScreen(
                     )
                 },
                 actions = {
+                    IconButton(
+                        onClick = { showPermissionPicker = true },
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_action_add),
+                            contentDescription = stringResource(
+                                R.string.history_add_permission,
+                            ),
+                        )
+                    }
                     IconButton(
                         onClick = onRefresh,
                         enabled = !uiState.isLoading,
@@ -99,9 +117,24 @@ fun HistoryOverviewScreen(
         HistoryOverviewContent(
             uiState = uiState,
             onPermissionSelected = onPermissionSelected,
+            onPermissionRemoved = onPermissionRemoved,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(contentPadding),
+        )
+    }
+
+    if (showPermissionPicker) {
+        HistoryPermissionPickerDialog(
+            availablePermissions = uiState.availablePermissions,
+            selectedPermissions = uiState.permissions
+                .map { it.permission.shellOperationName }
+                .toSet(),
+            onSelect = { permission ->
+                showPermissionPicker = false
+                onPermissionAdded(permission)
+            },
+            onDismiss = { showPermissionPicker = false },
         )
     }
 }
@@ -109,7 +142,8 @@ fun HistoryOverviewScreen(
 @Composable
 private fun HistoryOverviewContent(
     uiState: HistoryUiState,
-    onPermissionSelected: (TrackedHistoryPermission) -> Unit,
+    onPermissionSelected: (HistoryPermission) -> Unit,
+    onPermissionRemoved: (HistoryPermission) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -127,8 +161,11 @@ private fun HistoryOverviewContent(
         item {
             HistoryCaveatCard()
         }
-        when {
-            uiState.waitingForBackend -> item {
+        item {
+            HistoryRefreshSummary(uiState = uiState)
+        }
+        if (uiState.waitingForBackend) {
+            item {
                 HistoryStatusCard(
                     text = stringResource(
                         R.string.history_waiting_for_backend,
@@ -136,24 +173,33 @@ private fun HistoryOverviewContent(
                     showProgress = true,
                 )
             }
-
-            uiState.failureReason != null -> item {
-                HistoryStatusCard(
-                    text = historyFailureMessage(uiState.failureReason),
-                )
-            }
-
-            else -> {
-                if (uiState.partialFailureCount > 0) {
-                    item {
-                        HistoryStatusCard(
-                            text = stringResource(
-                                R.string.history_partial_failure,
-                                uiState.partialFailureCount,
-                            ),
-                        )
-                    }
+        } else {
+            uiState.failureReason?.let { failureReason ->
+                item {
+                    HistoryStatusCard(
+                        text = historyFailureMessage(failureReason),
+                    )
                 }
+            }
+            if (uiState.partialFailureCount > 0) {
+                item {
+                    HistoryStatusCard(
+                        text = stringResource(
+                            R.string.history_partial_failure,
+                            uiState.partialFailureCount,
+                        ),
+                    )
+                }
+            }
+            if (uiState.permissions.isEmpty()) {
+                item {
+                    HistoryStatusCard(
+                        text = stringResource(
+                            R.string.history_no_selected_permissions,
+                        ),
+                    )
+                }
+            } else {
                 item {
                     PermissionDistributionChart(
                         permissions = uiState.permissions,
@@ -170,12 +216,15 @@ private fun HistoryOverviewContent(
                 }
                 items(
                     items = uiState.permissions,
-                    key = { it.permission.name },
+                    key = { it.permission.shellOperationName },
                 ) { history ->
                     PermissionHistoryCard(
                         history = history,
                         onClick = {
                             onPermissionSelected(history.permission)
+                        },
+                        onRemove = {
+                            onPermissionRemoved(history.permission)
                         },
                     )
                 }
@@ -191,10 +240,36 @@ private fun HistoryOverviewContent(
     }
 }
 
+@Composable
+private fun HistoryRefreshSummary(
+    uiState: HistoryUiState,
+    modifier: Modifier = Modifier,
+) {
+    val locale = LocalConfiguration.current.locales[0]
+        ?: Locale.getDefault()
+    val lastUpdated = uiState.lastUpdatedAtMillis?.let { timestamp ->
+        DateFormat.getDateTimeInstance(
+            DateFormat.MEDIUM,
+            DateFormat.SHORT,
+            locale,
+        ).format(Date(timestamp))
+    } ?: stringResource(R.string.history_never_updated)
+    Text(
+        text = stringResource(
+            R.string.history_auto_refresh_summary,
+            uiState.autoRefreshIntervalMinutes,
+            lastUpdated,
+        ),
+        modifier = modifier,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PermissionHistoryDetailScreen(
-    permission: TrackedHistoryPermission,
+    permission: HistoryPermission,
     history: PermissionHistory?,
     isLoading: Boolean,
     onBack: () -> Unit,
@@ -207,7 +282,7 @@ fun PermissionHistoryDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = stringResource(permission.labelResource()),
+                        text = permission.displayName(),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         fontWeight = FontWeight.SemiBold,
@@ -243,6 +318,13 @@ fun PermissionHistoryDetailScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            history?.failureReason?.let { failureReason ->
+                item {
+                    HistoryStatusCard(
+                        text = historyFailureMessage(failureReason),
+                    )
+                }
             }
             item {
                 DetailSummary(
@@ -333,9 +415,7 @@ private fun PermissionDistributionChart(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
-                            text = stringResource(
-                                history.permission.labelResource(),
-                            ),
+                            text = history.permission.displayName(),
                             style = MaterialTheme.typography.labelLarge,
                         )
                         Text(
@@ -364,6 +444,7 @@ private fun PermissionDistributionChart(
 private fun PermissionHistoryCard(
     history: PermissionHistory,
     onClick: () -> Unit,
+    onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val locale = LocalConfiguration.current.locales[0]
@@ -387,17 +468,34 @@ private fun PermissionHistoryCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text(
-                text = stringResource(history.permission.labelResource()),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = history.permission.displayName(),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                TextButton(onClick = onRemove) {
+                    Text(text = stringResource(R.string.action_remove))
+                }
+            }
             Text(
                 text = history.permission.systemOperationName(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(2.dp))
+            history.failureReason?.let { failureReason ->
+                Text(
+                    text = historyFailureMessage(failureReason),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
             Text(
                 text = stringResource(
                     R.string.history_permission_summary,
@@ -622,6 +720,12 @@ private fun TimelineHistoryItem(
             .clickable(onClick = onClick),
     ) {
         Spacer(modifier = Modifier.width(24.dp))
+        AppIcon(
+            packageName = item.app.packageName,
+            appLabel = item.app.label,
+            modifier = Modifier.padding(start = 10.dp),
+            size = 38.dp,
+        )
         Column(
             modifier = Modifier
                 .weight(1f)

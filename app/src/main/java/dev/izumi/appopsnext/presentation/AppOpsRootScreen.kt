@@ -26,7 +26,7 @@ import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticsUiState
 import dev.izumi.appopsnext.presentation.history.HistoryOverviewScreen
 import dev.izumi.appopsnext.presentation.history.HistoryUiState
 import dev.izumi.appopsnext.presentation.history.PermissionHistoryDetailScreen
-import dev.izumi.appopsnext.history.model.TrackedHistoryPermission
+import dev.izumi.appopsnext.history.model.HistoryPermission
 import dev.izumi.appopsnext.presentation.settings.SettingsScreen
 import dev.izumi.appopsnext.presentation.settings.SettingsUiState
 import dev.izumi.appopsnext.settings.AppLanguage
@@ -49,6 +49,8 @@ fun AppOpsRootScreen(
     onAppSearchQueryChange: (String) -> Unit,
     onRefreshApps: () -> Unit,
     onRefreshHistory: () -> Unit,
+    onHistoryPermissionAdded: (String) -> Unit,
+    onHistoryPermissionRemoved: (String) -> Unit,
     onAppSelected: (InstalledApp) -> Unit,
     onRefreshAppDetail: () -> Unit,
     onAppOpSearchQueryChange: (String) -> Unit,
@@ -89,9 +91,7 @@ fun AppOpsRootScreen(
         mutableStateOf<String?>(null)
     }
     val selectedHistoryPermission = selectedHistoryPermissionName?.let {
-        runCatching {
-            TrackedHistoryPermission.valueOf(it)
-        }.getOrNull()
+        HistoryPermission(it)
     }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -177,7 +177,24 @@ fun AppOpsRootScreen(
                         uiState = historyUiState,
                         onRefresh = onRefreshHistory,
                         onPermissionSelected = { permission ->
-                            selectedHistoryPermissionName = permission.name
+                            selectedHistoryPermissionName =
+                                permission.shellOperationName
+                        },
+                        onPermissionAdded = { permission ->
+                            onHistoryPermissionAdded(
+                                permission.shellOperationName,
+                            )
+                        },
+                        onPermissionRemoved = { permission ->
+                            if (
+                                selectedHistoryPermissionName ==
+                                permission.shellOperationName
+                            ) {
+                                selectedHistoryPermissionName = null
+                            }
+                            onHistoryPermissionRemoved(
+                                permission.shellOperationName,
+                            )
                         },
                         bottomBar = navigationBar,
                     )

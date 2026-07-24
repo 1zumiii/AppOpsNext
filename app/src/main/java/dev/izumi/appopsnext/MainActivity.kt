@@ -65,6 +65,10 @@ class MainActivity : ComponentActivity() {
                     onAppSearchQueryChange = appListViewModel::updateSearchQuery,
                     onRefreshApps = appListViewModel::refresh,
                     onRefreshHistory = historyViewModel::refresh,
+                    onHistoryPermissionAdded =
+                        historyViewModel::addPermission,
+                    onHistoryPermissionRemoved =
+                        historyViewModel::removePermission,
                     onAppSelected = appDetailViewModel::selectApp,
                     onRefreshAppDetail = appDetailViewModel::refresh,
                     onAppOpSearchQueryChange =
@@ -104,5 +108,10 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        historyViewModel.refresh()
     }
 }
