@@ -41,6 +41,8 @@ AppOps system service, not an interface or technology owned by the legacy app.
 - Restore the original mode automatically when a write cannot be verified
 - Show per-operation progress without reloading the complete detail screen
 - Display compact, localized recent-use timestamps
+- Review camera, microphone, and location system history with summary charts,
+  per-permission statistics, and app-linked timelines
 - Create reusable permission templates with editable modes and scopes
 - Add, remove, and long-press drag template rules into a persistent custom order
 - Apply one template to an app or batch-apply it to multiple applications
@@ -132,6 +134,7 @@ key makes it impossible to publish updates that install over existing releases.
 - `apps`: application discovery and pure filtering
 - `settings`: typed Preferences DataStore settings
 - `templates`: versioned template persistence and ordering
+- `history`: discrete AppOps history parsing, repositories, and statistics
 
 See [Architecture](docs/ARCHITECTURE.md) for package boundaries and maintenance
 rules, and [Android 15 device findings](docs/DEVICE_FINDINGS.md) for behavior

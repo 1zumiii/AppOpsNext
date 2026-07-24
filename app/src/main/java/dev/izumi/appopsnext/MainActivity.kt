@@ -10,14 +10,16 @@ import dev.izumi.appopsnext.presentation.AppOpsRootScreen
 import dev.izumi.appopsnext.presentation.app_detail.AppDetailViewModel
 import dev.izumi.appopsnext.presentation.app_list.AppListViewModel
 import dev.izumi.appopsnext.presentation.batch.BatchOperationsViewModel
-import dev.izumi.appopsnext.presentation.home.HomeViewModel
+import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticsViewModel
+import dev.izumi.appopsnext.presentation.history.HistoryViewModel
 import dev.izumi.appopsnext.presentation.settings.SettingsViewModel
 import dev.izumi.appopsnext.presentation.templates.TemplatesViewModel
 import dev.izumi.appopsnext.ui.theme.AppOpsNextTheme
 
 class MainActivity : ComponentActivity() {
-    private val homeViewModel: HomeViewModel by viewModels()
+    private val diagnosticsViewModel: DiagnosticsViewModel by viewModels()
     private val appListViewModel: AppListViewModel by viewModels()
+    private val historyViewModel: HistoryViewModel by viewModels()
     private val appDetailViewModel: AppDetailViewModel by viewModels()
     private val settingsViewModel: SettingsViewModel by viewModels()
     private val templatesViewModel: TemplatesViewModel by viewModels()
@@ -28,9 +30,12 @@ class MainActivity : ComponentActivity() {
         DevelopmentWindowPolicy.apply(window)
 
         setContent {
-            val homeUiState = homeViewModel.uiState.collectAsStateWithLifecycle()
+            val diagnosticsUiState =
+                diagnosticsViewModel.uiState.collectAsStateWithLifecycle()
             val appListUiState =
                 appListViewModel.uiState.collectAsStateWithLifecycle()
+            val historyUiState =
+                historyViewModel.uiState.collectAsStateWithLifecycle()
             val appDetailUiState =
                 appDetailViewModel.uiState.collectAsStateWithLifecycle()
             val appOpModeChangeUiState =
@@ -46,7 +51,8 @@ class MainActivity : ComponentActivity() {
 
             AppOpsNextTheme {
                 AppOpsRootScreen(
-                    homeUiState = homeUiState.value,
+                    diagnosticsUiState = diagnosticsUiState.value,
+                    historyUiState = historyUiState.value,
                     appListUiState = appListUiState.value,
                     appDetailUiState = appDetailUiState.value,
                     appOpModeChangeUiState = appOpModeChangeUiState.value,
@@ -54,9 +60,11 @@ class MainActivity : ComponentActivity() {
                     templatesUiState = templatesUiState.value,
                     batchOperationUiState = batchOperationUiState.value,
                     appOpSearchQuery = appOpSearchQuery.value,
-                    onShizukuAction = homeViewModel::performShizukuAction,
+                    onShizukuAction =
+                        diagnosticsViewModel::performShizukuAction,
                     onAppSearchQueryChange = appListViewModel::updateSearchQuery,
                     onRefreshApps = appListViewModel::refresh,
+                    onRefreshHistory = historyViewModel::refresh,
                     onAppSelected = appDetailViewModel::selectApp,
                     onRefreshAppDetail = appDetailViewModel::refresh,
                     onAppOpSearchQueryChange =

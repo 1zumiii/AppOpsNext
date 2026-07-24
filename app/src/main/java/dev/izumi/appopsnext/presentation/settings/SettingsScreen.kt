@@ -32,15 +32,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
-import dev.izumi.appopsnext.presentation.home.DiagnosticsSection
-import dev.izumi.appopsnext.presentation.home.HomeUiState
+import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticsSection
+import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticsUiState
 import dev.izumi.appopsnext.settings.AppLanguage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     uiState: SettingsUiState,
-    diagnosticsUiState: HomeUiState,
+    diagnosticsUiState: DiagnosticsUiState,
     onHideSystemAppsChange: (Boolean) -> Unit,
     onAppLanguageChange: (AppLanguage) -> Unit,
     onShizukuAction: () -> Unit,
