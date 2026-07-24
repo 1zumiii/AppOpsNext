@@ -8,7 +8,7 @@ A modern, clean-room AppOps manager for Android 15+, powered by
 AppOpsNext reads and changes Android's built-in AppOps state.
 
 > [!IMPORTANT]
-> Version 1.0.0 is developed and verified for one ASUS AI2302 running Android
+> Version 1.1.0 is developed and verified for one ASUS AI2302 running Android
 > 15 (API 35). Other Android versions and OEM ROMs are not yet supported.
 
 ## Relationship to the legacy App Ops
@@ -65,7 +65,7 @@ unavailable until the connection is restored.
 ## Installation
 
 1. Install and start Shizuku.
-2. Download `AppOpsNext-v1.0.0.apk` from
+2. Download `AppOpsNext-v1.1.0.apk` from
    [GitHub Releases](https://github.com/1zumiii/AppOpsNext/releases).
 3. Install the APK and grant AppOpsNext access when Shizuku asks.
 4. Open an application, inspect its package/UID scope, and confirm every

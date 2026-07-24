@@ -9,7 +9,7 @@ clean-room 方式独立实现。
 AppOpsNext 用于读取和修改 Android 系统内置的 AppOps 状态。
 
 > [!IMPORTANT]
-> 1.0.0 版本目前以一台运行 Android 15（API 35）的 ASUS AI2302
+> 1.1.0 版本目前以一台运行 Android 15（API 35）的 ASUS AI2302
 > 为开发和验证设备，暂未承诺兼容其他 Android 版本或厂商 ROM。
 
 ## 与旧版 App Ops 的关系
@@ -61,7 +61,7 @@ AppOpsNext 使用 Shizuku 提供的 shell 身份。如果设备重启后 Shizuku
 
 1. 安装并启动 Shizuku。
 2. 从 [GitHub Releases](https://github.com/1zumiii/AppOpsNext/releases)
-   下载 `AppOpsNext-v1.0.0.apk`。
+   下载 `AppOpsNext-v1.1.0.apk`。
 3. 安装 APK，并在 Shizuku 请求时授权 AppOpsNext。
 4. 打开目标应用，确认权限的应用包/UID 作用域，再执行修改。
 
