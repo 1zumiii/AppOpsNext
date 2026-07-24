@@ -110,10 +110,12 @@
     <string name="history_title">权限历史</string>
     <string name="history_subtitle">查看相机、麦克风和位置权限近期产生的系统访问记录。</string>
     <string name="history_refresh">刷新历史记录</string>
-    <string name="history_add_permission">添加监测权限</string>
+    <string name="history_manage_permissions">管理监测权限</string>
+    <string name="history_information">历史记录说明</string>
     <string name="history_permission_search">搜索权限名称或系统名</string>
-    <string name="history_no_permissions_to_add">没有可添加的权限。</string>
-    <string name="history_no_selected_permissions">尚未选择要监测的权限，请使用右上角的添加按钮。</string>
+    <string name="history_no_matching_permissions">没有匹配的权限。</string>
+    <string name="history_management_selected_count">已选择 %1$d 项权限，确认应用后才会保存更改。</string>
+    <string name="history_no_selected_permissions">尚未选择要监测的权限，请使用右上角的管理按钮。</string>
     <string name="history_auto_refresh_summary">应用进程存活且 Shizuku 已连接时，每 %1$d 分钟自动刷新；回到应用时也会刷新。最近更新：%2$s</string>
     <string name="history_never_updated">尚未更新</string>
     <string name="history_waiting_for_backend">连接系统 AppOps 后会自动加载历史记录。</string>

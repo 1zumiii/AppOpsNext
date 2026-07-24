@@ -111,10 +111,12 @@
     <string name="history_title">Permission history</string>
     <string name="history_subtitle">Review recent system access records for camera, microphone, and location permissions.</string>
     <string name="history_refresh">Refresh history</string>
-    <string name="history_add_permission">Add monitored permission</string>
+    <string name="history_manage_permissions">Manage monitored permissions</string>
+    <string name="history_information">About permission history</string>
     <string name="history_permission_search">Search permission or system name</string>
-    <string name="history_no_permissions_to_add">No permissions are available to add.</string>
-    <string name="history_no_selected_permissions">No permissions are monitored. Use the add button in the top-right corner.</string>
+    <string name="history_no_matching_permissions">No matching permissions.</string>
+    <string name="history_management_selected_count">%1$d permissions selected. Changes are saved only after you apply them.</string>
+    <string name="history_no_selected_permissions">No permissions are monitored. Use the manage button in the top-right corner.</string>
     <string name="history_auto_refresh_summary">Refreshes every %1$d minutes while the app process is alive and Shizuku is connected, and whenever you return to the app. Last updated: %2$s</string>
     <string name="history_never_updated">Not updated yet</string>
     <string name="history_waiting_for_backend">History loads automatically after System AppOps connects.</string>

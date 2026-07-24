@@ -7,7 +7,6 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import dev.izumi.appopsnext.appops.model.AppOpNames
 import dev.izumi.appopsnext.history.model.HistoryPermission
 import java.io.IOException
 import kotlinx.coroutines.flow.Flow
@@ -39,33 +38,11 @@ class HistoryPermissionSettingsRepository(
                 )
             }
 
-    suspend fun add(operationName: String) {
-        update { current ->
-            val permission = HistoryPermission(
-                AppOpNames.shellName(operationName),
-            )
-            if (permission in current) current else current + permission
-        }
-    }
-
-    suspend fun remove(operationName: String) {
-        val normalizedName = AppOpNames.shellName(operationName)
-        update { current ->
-            current.filterNot { it.shellOperationName == normalizedName }
-        }
-    }
-
-    private suspend fun update(
-        transform: (List<HistoryPermission>) -> List<HistoryPermission>,
-    ) {
+    suspend fun setSelected(permissions: List<HistoryPermission>) {
         dataStore.edit { preferences ->
             preferences[Keys.SELECTED_OPERATIONS] =
                 HistoryPermissionSelectionCodec.encode(
-                    transform(
-                        HistoryPermissionSelectionCodec.decode(
-                            preferences[Keys.SELECTED_OPERATIONS],
-                        ),
-                    ),
+                    permissions.distinct(),
                 )
         }
     }
