@@ -39,6 +39,20 @@ object AppOpsCommands {
         )
     }
 
+    fun getDiscreteHistory(operationName: String): List<String> {
+        validateOperationName(operationName)
+
+        return listOf(
+            DUMPSYS_BINARY,
+            APP_OPS_SERVICE,
+            HISTORY_OPTION,
+            INCLUDE_DISCRETE_OPTION,
+            NO_DISCRETE_LIMIT,
+            OPERATION_OPTION,
+            operationName,
+        )
+    }
+
     fun setPackageOpMode(
         packageName: String,
         operationName: String,
@@ -89,10 +103,15 @@ object AppOpsCommands {
     }
 
     private const val COMMAND_BINARY = "/system/bin/cmd"
+    private const val DUMPSYS_BINARY = "/system/bin/dumpsys"
     private const val APP_OPS_SERVICE = "appops"
     private const val GET_COMMAND = "get"
     private const val SET_COMMAND = "set"
     private const val UID_OPTION = "--uid"
+    private const val HISTORY_OPTION = "--history"
+    private const val INCLUDE_DISCRETE_OPTION = "--include-discrete"
+    private const val NO_DISCRETE_LIMIT = "0"
+    private const val OPERATION_OPTION = "--op"
 }
 
 enum class AppOpMode(

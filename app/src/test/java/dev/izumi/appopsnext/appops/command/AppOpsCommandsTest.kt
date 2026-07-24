@@ -33,6 +33,22 @@ class AppOpsCommandsTest {
     }
 
     @Test
+    fun `get discrete history uses a validated dumpsys argument list`() {
+        assertEquals(
+            listOf(
+                "/system/bin/dumpsys",
+                "appops",
+                "--history",
+                "--include-discrete",
+                "0",
+                "--op",
+                "CAMERA",
+            ),
+            AppOpsCommands.getDiscreteHistory("CAMERA"),
+        )
+    }
+
+    @Test
     fun `get package ops rejects shell metacharacters`() {
         assertThrows(IllegalArgumentException::class.java) {
             AppOpsCommands.getPackageOps("dev.izumi.appopsnext;id")

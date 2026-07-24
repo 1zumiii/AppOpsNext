@@ -41,6 +41,13 @@ class AppOpsUserService : IPrivilegedAppOpsService.Stub {
     override fun getUidOps(uid: Int): ShellCommandResult =
         commandExecutor.execute(AppOpsCommands.getUidOps(uid))
 
+    override fun getDiscreteHistory(
+        operationName: String,
+    ): ShellCommandResult =
+        commandExecutor.execute(
+            AppOpsCommands.getDiscreteHistory(operationName),
+        )
+
     override fun setPackageOpMode(
         packageName: String,
         operationName: String,

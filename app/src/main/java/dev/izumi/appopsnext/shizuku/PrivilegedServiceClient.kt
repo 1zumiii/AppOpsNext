@@ -131,6 +131,15 @@ class PrivilegedServiceClient(
             connectedService.getUidOps(uid)
         }
 
+    override suspend fun getDiscreteHistory(
+        operationName: String,
+    ): ShellCommandResult =
+        withContext(Dispatchers.IO) {
+            val connectedService = service
+                ?: throw IllegalStateException("Privileged service is unavailable")
+            connectedService.getDiscreteHistory(operationName)
+        }
+
     override suspend fun setPackageOpMode(
         packageName: String,
         operationName: String,
