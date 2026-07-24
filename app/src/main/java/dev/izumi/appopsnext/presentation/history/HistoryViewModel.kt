@@ -86,15 +86,13 @@ class HistoryViewModel(
         }
     }
 
-    fun addPermission(operationName: String) {
-        viewModelScope.launch {
-            permissionSettingsRepository.add(operationName)
+    fun setPermissions(operationNames: List<String>) {
+        val requestedNames = operationNames.toSet()
+        val orderedPermissions = availablePermissions.filter {
+            it.shellOperationName in requestedNames
         }
-    }
-
-    fun removePermission(operationName: String) {
         viewModelScope.launch {
-            permissionSettingsRepository.remove(operationName)
+            permissionSettingsRepository.setSelected(orderedPermissions)
         }
     }
 

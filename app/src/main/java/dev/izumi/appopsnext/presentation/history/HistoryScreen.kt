@@ -31,7 +31,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -68,12 +67,12 @@ fun HistoryOverviewScreen(
     uiState: HistoryUiState,
     onRefresh: () -> Unit,
     onPermissionSelected: (HistoryPermission) -> Unit,
-    onPermissionAdded: (HistoryPermission) -> Unit,
-    onPermissionRemoved: (HistoryPermission) -> Unit,
+    onPermissionsChanged: (List<String>) -> Unit,
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
 ) {
-    var showPermissionPicker by remember { mutableStateOf(false) }
+    var showPermissionManagement by remember { mutableStateOf(false) }
+    var showInformation by remember { mutableStateOf(false) }
     Scaffold(
         modifier = modifier,
         bottomBar = bottomBar,
@@ -87,12 +86,26 @@ fun HistoryOverviewScreen(
                 },
                 actions = {
                     IconButton(
-                        onClick = { showPermissionPicker = true },
+                        onClick = { showPermissionManagement = true },
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_action_add),
+                            painter = painterResource(
+                                R.drawable.ic_action_manage,
+                            ),
                             contentDescription = stringResource(
-                                R.string.history_add_permission,
+                                R.string.history_manage_permissions,
+                            ),
+                        )
+                    }
+                    IconButton(
+                        onClick = { showInformation = true },
+                    ) {
+                        Icon(
+                            painter = painterResource(
+                                R.drawable.ic_action_info,
+                            ),
+                            contentDescription = stringResource(
+                                R.string.history_information,
                             ),
                         )
                     }
@@ -117,24 +130,29 @@ fun HistoryOverviewScreen(
         HistoryOverviewContent(
             uiState = uiState,
             onPermissionSelected = onPermissionSelected,
-            onPermissionRemoved = onPermissionRemoved,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(contentPadding),
         )
     }
 
-    if (showPermissionPicker) {
-        HistoryPermissionPickerDialog(
+    if (showPermissionManagement) {
+        HistoryPermissionManagementDialog(
             availablePermissions = uiState.availablePermissions,
             selectedPermissions = uiState.permissions
                 .map { it.permission.shellOperationName }
                 .toSet(),
-            onSelect = { permission ->
-                showPermissionPicker = false
-                onPermissionAdded(permission)
+            onApply = { operationNames ->
+                showPermissionManagement = false
+                onPermissionsChanged(operationNames)
             },
-            onDismiss = { showPermissionPicker = false },
+            onDismiss = { showPermissionManagement = false },
+        )
+    }
+    if (showInformation) {
+        HistoryOverviewInformationDialog(
+            uiState = uiState,
+            onDismiss = { showInformation = false },
         )
     }
 }
@@ -143,7 +161,6 @@ fun HistoryOverviewScreen(
 private fun HistoryOverviewContent(
     uiState: HistoryUiState,
     onPermissionSelected: (HistoryPermission) -> Unit,
-    onPermissionRemoved: (HistoryPermission) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -151,19 +168,6 @@ private fun HistoryOverviewContent(
         contentPadding = HistoryContentPadding,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item {
-            Text(
-                text = stringResource(R.string.history_subtitle),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        item {
-            HistoryCaveatCard()
-        }
-        item {
-            HistoryRefreshSummary(uiState = uiState)
-        }
         if (uiState.waitingForBackend) {
             item {
                 HistoryStatusCard(
@@ -223,9 +227,6 @@ private fun HistoryOverviewContent(
                         onClick = {
                             onPermissionSelected(history.permission)
                         },
-                        onRemove = {
-                            onPermissionRemoved(history.permission)
-                        },
                     )
                 }
             }
@@ -240,32 +241,6 @@ private fun HistoryOverviewContent(
     }
 }
 
-@Composable
-private fun HistoryRefreshSummary(
-    uiState: HistoryUiState,
-    modifier: Modifier = Modifier,
-) {
-    val locale = LocalConfiguration.current.locales[0]
-        ?: Locale.getDefault()
-    val lastUpdated = uiState.lastUpdatedAtMillis?.let { timestamp ->
-        DateFormat.getDateTimeInstance(
-            DateFormat.MEDIUM,
-            DateFormat.SHORT,
-            locale,
-        ).format(Date(timestamp))
-    } ?: stringResource(R.string.history_never_updated)
-    Text(
-        text = stringResource(
-            R.string.history_auto_refresh_summary,
-            uiState.autoRefreshIntervalMinutes,
-            lastUpdated,
-        ),
-        modifier = modifier,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PermissionHistoryDetailScreen(
@@ -276,6 +251,9 @@ fun PermissionHistoryDetailScreen(
     onAppSelected: (InstalledApp) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var showInformation by remember(permission.shellOperationName) {
+        mutableStateOf(false)
+    }
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -298,6 +276,20 @@ fun PermissionHistoryDetailScreen(
                         )
                     }
                 },
+                actions = {
+                    IconButton(
+                        onClick = { showInformation = true },
+                    ) {
+                        Icon(
+                            painter = painterResource(
+                                R.drawable.ic_action_info,
+                            ),
+                            contentDescription = stringResource(
+                                R.string.history_information,
+                            ),
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                 ),
@@ -312,13 +304,6 @@ fun PermissionHistoryDetailScreen(
             contentPadding = HistoryContentPadding,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item {
-                Text(
-                    text = permission.systemOperationName(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
             history?.failureReason?.let { failureReason ->
                 item {
                     HistoryStatusCard(
@@ -334,9 +319,6 @@ fun PermissionHistoryDetailScreen(
             }
             item {
                 SevenDayHistoryChart(events = events)
-            }
-            item {
-                HistoryCaveatCard()
             }
             item {
                 Text(
@@ -382,6 +364,13 @@ fun PermissionHistoryDetailScreen(
                 }
             }
         }
+    }
+
+    if (showInformation) {
+        PermissionHistoryInformationDialog(
+            permission = permission,
+            onDismiss = { showInformation = false },
+        )
     }
 }
 
@@ -444,7 +433,6 @@ private fun PermissionDistributionChart(
 private fun PermissionHistoryCard(
     history: PermissionHistory,
     onClick: () -> Unit,
-    onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val locale = LocalConfiguration.current.locales[0]
@@ -468,21 +456,11 @@ private fun PermissionHistoryCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = history.permission.displayName(),
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                TextButton(onClick = onRemove) {
-                    Text(text = stringResource(R.string.action_remove))
-                }
-            }
+            Text(
+                text = history.permission.displayName(),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
             Text(
                 text = history.permission.systemOperationName(),
                 style = MaterialTheme.typography.bodySmall,
@@ -807,23 +785,6 @@ private fun formatHistoryDuration(durationMillis: Long): String {
         else -> stringResource(
             R.string.app_op_usage_duration,
             stringResource(R.string.app_op_usage_minutes, seconds / 60L),
-        )
-    }
-}
-
-@Composable
-private fun HistoryCaveatCard(modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-        ),
-    ) {
-        Text(
-            text = stringResource(R.string.history_system_record_caveat),
-            modifier = Modifier.padding(16.dp),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
         )
     }
 }

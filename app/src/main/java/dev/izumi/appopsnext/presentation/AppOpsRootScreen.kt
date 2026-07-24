@@ -49,8 +49,7 @@ fun AppOpsRootScreen(
     onAppSearchQueryChange: (String) -> Unit,
     onRefreshApps: () -> Unit,
     onRefreshHistory: () -> Unit,
-    onHistoryPermissionAdded: (String) -> Unit,
-    onHistoryPermissionRemoved: (String) -> Unit,
+    onHistoryPermissionsChanged: (List<String>) -> Unit,
     onAppSelected: (InstalledApp) -> Unit,
     onRefreshAppDetail: () -> Unit,
     onAppOpSearchQueryChange: (String) -> Unit,
@@ -180,22 +179,7 @@ fun AppOpsRootScreen(
                             selectedHistoryPermissionName =
                                 permission.shellOperationName
                         },
-                        onPermissionAdded = { permission ->
-                            onHistoryPermissionAdded(
-                                permission.shellOperationName,
-                            )
-                        },
-                        onPermissionRemoved = { permission ->
-                            if (
-                                selectedHistoryPermissionName ==
-                                permission.shellOperationName
-                            ) {
-                                selectedHistoryPermissionName = null
-                            }
-                            onHistoryPermissionRemoved(
-                                permission.shellOperationName,
-                            )
-                        },
+                        onPermissionsChanged = onHistoryPermissionsChanged,
                         bottomBar = navigationBar,
                     )
                 } else {

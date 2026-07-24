@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.OutlinedTextField
@@ -20,48 +21,59 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.history.model.HistoryPermission
 
 @Composable
-fun HistoryPermissionPickerDialog(
+fun HistoryPermissionManagementDialog(
     availablePermissions: List<HistoryPermission>,
     selectedPermissions: Set<String>,
-    onSelect: (HistoryPermission) -> Unit,
+    onApply: (List<String>) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
-    val options = availablePermissions.filter { permission ->
-        permission.shellOperationName !in selectedPermissions &&
-            (
-                query.isBlank() ||
-                    permission.shellOperationName.contains(
-                        query,
-                        ignoreCase = true,
-                    ) ||
-                    permission.systemOperationName().contains(
-                        query,
-                        ignoreCase = true,
-                    ) ||
-                    permission.displayName().contains(
-                        query,
-                        ignoreCase = true,
-                    )
-                )
+    var draftSelection by remember(selectedPermissions) {
+        mutableStateOf(selectedPermissions)
     }
+    val context = LocalContext.current
+    val options = availablePermissions.filter { permission ->
+        val localizedName = permission.labelResource()
+            ?.let(context::getString)
+            ?: permission.systemOperationName()
+        query.isBlank() ||
+            permission.shellOperationName.contains(
+                query,
+                ignoreCase = true,
+            ) ||
+            permission.systemOperationName().contains(
+                query,
+                ignoreCase = true,
+            ) ||
+            localizedName.contains(query, ignoreCase = true)
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(text = stringResource(R.string.history_add_permission))
+            Text(text = stringResource(R.string.history_manage_permissions))
         },
         text = {
             Column {
+                Text(
+                    text = stringResource(
+                        R.string.history_management_selected_count,
+                        draftSelection.size,
+                    ),
+                )
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
                     label = {
                         Text(
                             text = stringResource(
@@ -81,7 +93,7 @@ fun HistoryPermissionPickerDialog(
                         item {
                             Text(
                                 text = stringResource(
-                                    R.string.history_no_permissions_to_add,
+                                    R.string.history_no_matching_permissions,
                                 ),
                                 modifier = Modifier.padding(16.dp),
                             )
@@ -91,9 +103,14 @@ fun HistoryPermissionPickerDialog(
                         items = options,
                         key = HistoryPermission::shellOperationName,
                     ) { permission ->
+                        val operationName =
+                            permission.shellOperationName
+                        val selected = operationName in draftSelection
                         ListItem(
                             modifier = Modifier.clickable {
-                                onSelect(permission)
+                                draftSelection = draftSelection.toggle(
+                                    operationName,
+                                )
                             },
                             headlineContent = {
                                 Text(text = permission.displayName())
@@ -101,6 +118,17 @@ fun HistoryPermissionPickerDialog(
                             supportingContent = {
                                 Text(
                                     text = permission.systemOperationName(),
+                                )
+                            },
+                            trailingContent = {
+                                Checkbox(
+                                    checked = selected,
+                                    onCheckedChange = {
+                                        draftSelection =
+                                            draftSelection.toggle(
+                                                operationName,
+                                            )
+                                    },
                                 )
                             },
                             colors = ListItemDefaults.colors(
@@ -112,9 +140,25 @@ fun HistoryPermissionPickerDialog(
             }
         },
         confirmButton = {
+            TextButton(
+                onClick = {
+                    onApply(
+                        availablePermissions
+                            .map(HistoryPermission::shellOperationName)
+                            .filter(draftSelection::contains),
+                    )
+                },
+            ) {
+                Text(text = stringResource(R.string.action_apply))
+            }
+        },
+        dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(text = stringResource(R.string.action_cancel))
             }
         },
     )
 }
+
+private fun Set<String>.toggle(value: String): Set<String> =
+    if (value in this) this - value else this + value
