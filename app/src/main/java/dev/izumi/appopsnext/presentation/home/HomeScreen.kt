@@ -72,28 +72,45 @@ fun HomeScreen(
                 style = MaterialTheme.typography.bodyLarge,
             )
             Spacer(Modifier.height(4.dp))
-            StatusCard(
-                title = stringResource(R.string.status_device_title),
-                value = stringResource(
-                    R.string.status_device_value,
-                    uiState.device.manufacturer,
-                    uiState.device.model,
-                ),
-                detail = stringResource(
-                    R.string.status_device_detail,
-                    uiState.device.androidVersion,
-                    uiState.device.apiLevel,
-                ),
-            )
-            ShizukuStatusCard(
-                state = uiState.shizukuState,
-                onAction = onShizukuAction,
-            )
-            PrivilegedServiceStatusCard(
-                serviceState = uiState.privilegedServiceState,
-                readState = uiState.appOpsReadState,
+            DiagnosticsSection(
+                uiState = uiState,
+                onShizukuAction = onShizukuAction,
             )
         }
+    }
+}
+
+@Composable
+fun DiagnosticsSection(
+    uiState: HomeUiState,
+    onShizukuAction: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        StatusCard(
+            title = stringResource(R.string.status_device_title),
+            value = stringResource(
+                R.string.status_device_value,
+                uiState.device.manufacturer,
+                uiState.device.model,
+            ),
+            detail = stringResource(
+                R.string.status_device_detail,
+                uiState.device.androidVersion,
+                uiState.device.apiLevel,
+            ),
+        )
+        ShizukuStatusCard(
+            state = uiState.shizukuState,
+            onAction = onShizukuAction,
+        )
+        PrivilegedServiceStatusCard(
+            serviceState = uiState.privilegedServiceState,
+            readState = uiState.appOpsReadState,
+        )
     }
 }
 
