@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -31,14 +32,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.presentation.home.DiagnosticsSection
+import dev.izumi.appopsnext.presentation.home.HomeUiState
 import dev.izumi.appopsnext.settings.AppLanguage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     uiState: SettingsUiState,
+    diagnosticsUiState: HomeUiState,
     onHideSystemAppsChange: (Boolean) -> Unit,
     onAppLanguageChange: (AppLanguage) -> Unit,
+    onShizukuAction: () -> Unit,
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
 ) {
@@ -62,81 +67,102 @@ fun SettingsScreen(
         },
         bottomBar = bottomBar,
     ) { contentPadding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(contentPadding),
         ) {
-            ListItem(
-                modifier = Modifier.clickable {
-                    onHideSystemAppsChange(!uiState.hideSystemApps)
-                },
-                headlineContent = {
-                    Text(text = stringResource(R.string.settings_hide_system_apps))
-                },
-                supportingContent = {
-                    Text(
-                        text = stringResource(
-                            R.string.settings_hide_system_apps_detail,
-                        ),
-                    )
-                },
-                trailingContent = {
-                    Switch(
-                        checked = uiState.hideSystemApps,
-                        onCheckedChange = onHideSystemAppsChange,
-                    )
-                },
-            )
-            ListItem(
-                modifier = Modifier.clickable {
-                    showLanguageDialog = true
-                },
-                headlineContent = {
-                    Text(text = stringResource(R.string.settings_language))
-                },
-                supportingContent = {
-                    Text(text = appLanguageLabel(uiState.appLanguage))
-                },
-            )
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-            Text(
-                text = stringResource(R.string.settings_about),
-                modifier = Modifier.padding(
-                    horizontal = 16.dp,
-                    vertical = 8.dp,
-                ),
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold,
-                style = MaterialTheme.typography.labelLarge,
-            )
-            ListItem(
-                headlineContent = {
-                    Text(text = stringResource(R.string.settings_developer))
-                },
-                supportingContent = {
-                    Text(
-                        text = stringResource(
-                            R.string.settings_developer_name,
-                        ),
-                    )
-                },
-            )
-            ListItem(
-                modifier = Modifier.clickable {
-                    runCatching {
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse(githubUrl)),
+            item {
+                ListItem(
+                    modifier = Modifier.clickable {
+                        onHideSystemAppsChange(!uiState.hideSystemApps)
+                    },
+                    headlineContent = {
+                        Text(
+                            text = stringResource(
+                                R.string.settings_hide_system_apps,
+                            ),
                         )
-                    }
-                },
-                headlineContent = {
-                    Text(text = stringResource(R.string.settings_github))
-                },
-                supportingContent = {
-                    Text(text = githubUrl)
-                },
-            )
+                    },
+                    supportingContent = {
+                        Text(
+                            text = stringResource(
+                                R.string.settings_hide_system_apps_detail,
+                            ),
+                        )
+                    },
+                    trailingContent = {
+                        Switch(
+                            checked = uiState.hideSystemApps,
+                            onCheckedChange = onHideSystemAppsChange,
+                        )
+                    },
+                )
+            }
+            item {
+                ListItem(
+                    modifier = Modifier.clickable {
+                        showLanguageDialog = true
+                    },
+                    headlineContent = {
+                        Text(text = stringResource(R.string.settings_language))
+                    },
+                    supportingContent = {
+                        Text(text = appLanguageLabel(uiState.appLanguage))
+                    },
+                )
+            }
+            item {
+                SettingsSectionTitle(
+                    text = stringResource(R.string.settings_diagnostics),
+                )
+            }
+            item {
+                DiagnosticsSection(
+                    uiState = diagnosticsUiState,
+                    onShizukuAction = onShizukuAction,
+                    modifier = Modifier.padding(
+                        horizontal = 16.dp,
+                        vertical = 4.dp,
+                    ),
+                )
+            }
+            item {
+                SettingsSectionTitle(
+                    text = stringResource(R.string.settings_about),
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = {
+                        Text(text = stringResource(R.string.settings_developer))
+                    },
+                    supportingContent = {
+                        Text(
+                            text = stringResource(
+                                R.string.settings_developer_name,
+                            ),
+                        )
+                    },
+                )
+            }
+            item {
+                ListItem(
+                    modifier = Modifier.clickable {
+                        runCatching {
+                            context.startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse(githubUrl)),
+                            )
+                        }
+                    },
+                    headlineContent = {
+                        Text(text = stringResource(R.string.settings_github))
+                    },
+                    supportingContent = {
+                        Text(text = githubUrl)
+                    },
+                )
+            }
         }
     }
 
@@ -176,6 +202,23 @@ fun SettingsScreen(
                     Text(text = stringResource(R.string.action_cancel))
                 }
             },
+        )
+    }
+}
+
+@Composable
+private fun SettingsSectionTitle(text: String) {
+    Column {
+        HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
+        Text(
+            text = text,
+            modifier = Modifier.padding(
+                horizontal = 16.dp,
+                vertical = 12.dp,
+            ),
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.labelLarge,
         )
     }
 }

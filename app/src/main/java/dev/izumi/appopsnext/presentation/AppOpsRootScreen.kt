@@ -160,8 +160,10 @@ fun AppOpsRootScreen(
 
             MainDestination.SETTINGS -> SettingsScreen(
                 uiState = settingsUiState,
+                diagnosticsUiState = homeUiState,
                 onHideSystemAppsChange = onHideSystemAppsChange,
                 onAppLanguageChange = onAppLanguageChange,
+                onShizukuAction = onShizukuAction,
                 bottomBar = navigationBar,
             )
         }

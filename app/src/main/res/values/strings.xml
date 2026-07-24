@@ -103,6 +103,7 @@
     <string name="settings_language_system">跟随系统</string>
     <string name="settings_language_chinese">简体中文</string>
     <string name="settings_language_english">English</string>
+    <string name="settings_diagnostics">连接与诊断</string>
     <string name="settings_about">关于</string>
     <string name="settings_developer">开发者</string>
     <string name="settings_developer_name">1zumiii</string>
