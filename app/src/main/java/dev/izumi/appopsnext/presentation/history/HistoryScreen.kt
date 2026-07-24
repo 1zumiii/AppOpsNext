@@ -41,7 +41,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -366,11 +366,13 @@ private fun PermissionHistoryCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
+    val locale = LocalConfiguration.current.locales[0]
+        ?: Locale.getDefault()
     val latestText = history.latestAccessTimeMillis?.let { timestamp ->
         DateFormat.getDateTimeInstance(
             DateFormat.MEDIUM,
             DateFormat.SHORT,
+            locale,
         ).format(Date(timestamp))
     } ?: stringResource(R.string.history_never_recorded)
     Card(
@@ -397,7 +399,7 @@ private fun PermissionHistoryCard(
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text = context.getString(
+                text = stringResource(
                     R.string.history_permission_summary,
                     history.events.size,
                     history.appCount,
@@ -478,6 +480,8 @@ private fun SevenDayHistoryChart(
     modifier: Modifier = Modifier,
 ) {
     val zoneId = remember { ZoneId.systemDefault() }
+    val locale = LocalConfiguration.current.locales[0]
+        ?: Locale.getDefault()
     val counts = remember(events, zoneId) {
         HistoryStatistics.dailyCounts(
             events = events,
@@ -486,8 +490,8 @@ private fun SevenDayHistoryChart(
         )
     }
     val maximum = counts.maxOfOrNull { it.count }?.coerceAtLeast(1) ?: 1
-    val dayFormatter = remember {
-        DateTimeFormatter.ofPattern("M/d", Locale.getDefault())
+    val dayFormatter = remember(locale) {
+        DateTimeFormatter.ofPattern("M/d", locale)
     }
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -576,10 +580,13 @@ private fun TimelineHistoryItem(
 ) {
     val lineColor = MaterialTheme.colorScheme.outlineVariant
     val markerColor = MaterialTheme.colorScheme.primary
-    val timestamp = remember(item.event.accessTimeMillis) {
+    val locale = LocalConfiguration.current.locales[0]
+        ?: Locale.getDefault()
+    val timestamp = remember(item.event.accessTimeMillis, locale) {
         DateFormat.getDateTimeInstance(
             DateFormat.MEDIUM,
             DateFormat.MEDIUM,
+            locale,
         ).format(Date(item.event.accessTimeMillis))
     }
     Row(
