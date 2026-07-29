@@ -236,6 +236,14 @@ internal fun ModeChangeDialog(
                         ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (state.request.requestedMode == AppOpMode.DENY) {
+                        Text(
+                            text = stringResource(
+                                R.string.app_detail_mode_deny_fallback_notice,
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             },
             confirmButton = {
@@ -277,6 +285,14 @@ private fun ModeChangeFailureDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (state.denyFallbackAttempted) {
+                    Text(
+                        text = stringResource(
+                            R.string.app_detail_mode_deny_fallback_failed,
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 Text(
                     text = stringResource(
                         R.string.app_detail_mode_change_failure_detail,

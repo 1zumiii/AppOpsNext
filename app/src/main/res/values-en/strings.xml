@@ -69,9 +69,11 @@
     <string name="app_detail_mode_shared_uid_warning">A shared UID was detected. This change also affects:\n%1$s</string>
     <string name="app_detail_mode_transition">%1$s → %2$s</string>
     <string name="app_detail_mode_confirm_warning">This change may immediately affect the target app. AppOpsNext reads the value back after writing and attempts to restore the original value if verification fails.</string>
+    <string name="app_detail_mode_deny_fallback_notice">If Android rejects Deny, AppOpsNext restores the original value and automatically tries Ignore.</string>
     <string name="app_detail_mode_item_applying">Applying</string>
     <string name="app_detail_mode_change_failure">Change not completed</string>
     <string name="app_detail_mode_change_failure_detail">Failed during: %1$s. Restoration: %2$s.</string>
+    <string name="app_detail_mode_deny_fallback_failed">Android rejected Deny, and the automatic Ignore fallback could not be completed either.</string>
     <string name="app_detail_mode_change_rejected_hint">The system did not retain the requested mode. AppOps cannot grant a capability blocked by an Android runtime permission or vendor policy, but it can further restrict a granted permission.</string>
     <string name="app_detail_mode_observed">System read-back value: %1$s</string>
     <string name="app_detail_mode_phase_read_original">Read original value</string>

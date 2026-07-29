@@ -68,9 +68,11 @@
     <string name="app_detail_mode_shared_uid_warning">检测到共享 UID，本次修改会同时影响以下包：\n%1$s</string>
     <string name="app_detail_mode_transition">%1$s → %2$s</string>
     <string name="app_detail_mode_confirm_warning">修改可能立即影响目标应用的功能。写入后会回读验证；如果验证失败，AppOpsNext 会自动尝试恢复原值。</string>
+    <string name="app_detail_mode_deny_fallback_notice">如果系统不接受“拒绝”，恢复原值后会自动尝试设置为“忽略”。</string>
     <string name="app_detail_mode_item_applying">正在应用</string>
     <string name="app_detail_mode_change_failure">修改未完成</string>
     <string name="app_detail_mode_change_failure_detail">失败阶段：%1$s。恢复状态：%2$s。</string>
+    <string name="app_detail_mode_deny_fallback_failed">系统未接受“拒绝”，随后自动尝试的“忽略”也未能完成。</string>
     <string name="app_detail_mode_change_rejected_hint">系统未接受请求的模式。AppOps 不能授予已被 Android 运行时权限或厂商策略禁止的能力，但可以进一步限制已授予的权限。</string>
     <string name="app_detail_mode_observed">系统回读值：%1$s</string>
     <string name="app_detail_mode_phase_read_original">读取原值</string>

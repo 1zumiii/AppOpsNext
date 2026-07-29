@@ -99,16 +99,21 @@ class AppDetailViewModel(
 
         mutableModeChangeState.value = AppOpModeChangeUiState.Applying(request)
         modeChangeJob = viewModelScope.launch {
-            val result = repository.changeMode(
-                packageName = request.packageName,
-                operation = AppOpIdentifier(
-                    stableName = request.operationName,
-                    shellName = request.operationName,
-                ),
-                scope = request.scope,
-                expectedOriginalMode = request.originalMode,
-                requestedMode = request.requestedMode,
+            val operation = AppOpIdentifier(
+                stableName = request.operationName,
+                shellName = request.operationName,
             )
+            val outcome = DenyFallbackModeChangeExecutor {
+                    requestedMode ->
+                repository.changeMode(
+                    packageName = request.packageName,
+                    operation = operation,
+                    scope = request.scope,
+                    expectedOriginalMode = request.originalMode,
+                    requestedMode = requestedMode,
+                )
+            }.execute(request.requestedMode)
+            val result = outcome.result
 
             updateDisplayedMode(request, result)
             mutableModeChangeState.value = when (result) {
@@ -116,7 +121,12 @@ class AppDetailViewModel(
                     AppOpModeChangeUiState.Idle
 
                 is AppOpModeChangeResult.Failure ->
-                    AppOpModeChangeUiState.Failure(request, result)
+                    AppOpModeChangeUiState.Failure(
+                        request = request,
+                        result = result,
+                        denyFallbackAttempted =
+                            outcome.denyFallbackAttempted,
+                    )
             }
         }
     }
