@@ -10,7 +10,7 @@ AppOpsNext 用于读取和修改 Android 系统内置的 AppOps 状态。
 
 > [!IMPORTANT]
 > 1.1.1 版本目前以一台运行 Android 15（API 35）的 ASUS AI2302
-> 为开发和验证设备，暂未承诺兼容其他 Android 版本或厂商 ROM。
+> 为开发和验证设备，对其他 Android 版本或厂商 ROM 的支持尚不明确。
 
 ## 与旧版 App Ops 的关系
 
