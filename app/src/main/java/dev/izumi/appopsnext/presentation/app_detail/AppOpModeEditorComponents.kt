@@ -3,6 +3,8 @@ package dev.izumi.appopsnext.presentation.app_detail
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
@@ -182,6 +184,8 @@ internal fun ModeChangeDialog(
     state: AppOpModeChangeUiState,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    onDenyFallbackNoticeDismiss: (Boolean) -> Unit,
+    onForegroundAlternativeRequested: () -> Unit,
 ) {
     when (state) {
         is AppOpModeChangeUiState.Confirming -> AlertDialog(
@@ -261,17 +265,83 @@ internal fun ModeChangeDialog(
         is AppOpModeChangeUiState.Failure -> ModeChangeFailureDialog(
             state = state,
             onDismiss = onDismiss,
+            onForegroundAlternativeRequested =
+                onForegroundAlternativeRequested,
         )
+
+        is AppOpModeChangeUiState.DenyFallbackApplied ->
+            DenyFallbackAppliedDialog(
+                state = state,
+                onDismiss = onDenyFallbackNoticeDismiss,
+            )
 
         else -> Unit
     }
 }
 
 @Composable
+private fun DenyFallbackAppliedDialog(
+    state: AppOpModeChangeUiState.DenyFallbackApplied,
+    onDismiss: (Boolean) -> Unit,
+) {
+    var dontShowAgain by remember(state.request) {
+        mutableStateOf(false)
+    }
+    val dismiss = { onDismiss(dontShowAgain) }
+    AlertDialog(
+        onDismissRequest = dismiss,
+        title = {
+            Text(
+                text = stringResource(
+                    R.string.app_detail_mode_deny_fallback_applied_title,
+                ),
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = stringResource(
+                        R.string.app_detail_mode_deny_fallback_applied,
+                    ),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Checkbox(
+                        checked = dontShowAgain,
+                        onCheckedChange = { dontShowAgain = it },
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string
+                                .app_detail_mode_deny_fallback_dont_show,
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = dismiss) {
+                Text(text = stringResource(R.string.action_dismiss))
+            }
+        },
+    )
+}
+
+@Composable
 private fun ModeChangeFailureDialog(
     state: AppOpModeChangeUiState.Failure,
     onDismiss: () -> Unit,
+    onForegroundAlternativeRequested: () -> Unit,
 ) {
+    val canTryForeground =
+        ModeChangeAlternativePolicy.canTryForeground(
+            request = state.request,
+            result = state.result,
+        )
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -314,6 +384,16 @@ private fun ModeChangeFailureDialog(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
+                if (canTryForeground) {
+                    Text(
+                        text = stringResource(
+                            R.string
+                                .app_detail_mode_allow_foreground_hint,
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
                 state.result.observedMode?.let { observedMode ->
                     Text(
                         text = stringResource(
@@ -326,10 +406,32 @@ private fun ModeChangeFailureDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = onDismiss,
+                onClick = if (canTryForeground) {
+                    onForegroundAlternativeRequested
+                } else {
+                    onDismiss
+                },
             ) {
-                Text(text = stringResource(R.string.action_dismiss))
+                Text(
+                    text = stringResource(
+                        if (canTryForeground) {
+                            R.string
+                                .app_detail_mode_try_foreground
+                        } else {
+                            R.string.action_dismiss
+                        },
+                    ),
+                )
             }
+        },
+        dismissButton = if (canTryForeground) {
+            {
+                TextButton(onClick = onDismiss) {
+                    Text(text = stringResource(R.string.action_dismiss))
+                }
+            }
+        } else {
+            null
         },
     )
 }

@@ -74,7 +74,12 @@
     <string name="app_detail_mode_change_failure">Change not completed</string>
     <string name="app_detail_mode_change_failure_detail">Failed during: %1$s. Restoration: %2$s.</string>
     <string name="app_detail_mode_deny_fallback_failed">Android rejected Deny, and the automatic Ignore fallback could not be completed either.</string>
+    <string name="app_detail_mode_deny_fallback_applied_title">Automatically changed to Ignore</string>
+    <string name="app_detail_mode_deny_fallback_applied">Android rejected Deny. AppOpsNext restored the original value and successfully set this permission to Ignore.</string>
+    <string name="app_detail_mode_deny_fallback_dont_show">Do not show this automatic fallback result again</string>
     <string name="app_detail_mode_change_rejected_hint">The system did not retain the requested mode. AppOps cannot grant a capability blocked by an Android runtime permission or vendor policy, but it can further restrict a granted permission.</string>
+    <string name="app_detail_mode_allow_foreground_hint">Android rejected Allow. If this permission supports while-in-use access, you can manually try Foreground only.</string>
+    <string name="app_detail_mode_try_foreground">Try Foreground only</string>
     <string name="app_detail_mode_observed">System read-back value: %1$s</string>
     <string name="app_detail_mode_phase_read_original">Read original value</string>
     <string name="app_detail_mode_phase_check_original">Confirm original value is unchanged</string>

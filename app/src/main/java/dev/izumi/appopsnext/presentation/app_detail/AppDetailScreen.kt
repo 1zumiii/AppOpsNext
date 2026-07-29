@@ -75,6 +75,8 @@ fun AppDetailScreen(
     ) -> Unit,
     onModeChangeConfirmed: () -> Unit,
     onModeChangeDismissed: () -> Unit,
+    onDenyFallbackNoticeDismissed: (Boolean) -> Unit,
+    onForegroundAlternativeRequested: () -> Unit,
     templates: List<PermissionTemplate>,
     onTemplateApplyRequested:
         (PermissionTemplate, InstalledApp) -> Unit,
@@ -232,6 +234,10 @@ fun AppDetailScreen(
         state = modeChangeState,
         onConfirm = onModeChangeConfirmed,
         onDismiss = onModeChangeDismissed,
+        onDenyFallbackNoticeDismiss =
+            onDenyFallbackNoticeDismissed,
+        onForegroundAlternativeRequested =
+            onForegroundAlternativeRequested,
     )
 
     if (showTemplatePicker && app != null) {

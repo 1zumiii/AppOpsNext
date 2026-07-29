@@ -79,6 +79,10 @@ class MainActivity : ComponentActivity() {
                         appDetailViewModel::confirmModeChange,
                     onAppOpModeChangeDismissed =
                         appDetailViewModel::dismissModeChange,
+                    onDenyFallbackNoticeDismissed =
+                        appDetailViewModel::dismissDenyFallbackNotice,
+                    onForegroundAlternativeRequested =
+                        appDetailViewModel::requestForegroundAlternative,
                     onHideSystemAppsChange =
                         settingsViewModel::setHideSystemApps,
                     onAppLanguageChange =
