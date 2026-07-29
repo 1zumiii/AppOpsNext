@@ -25,13 +25,13 @@ class HistoryStatisticsTest {
             .toEpochMilli()
         val events = listOf(
             event(LocalDate.of(2026, 7, 24)),
-            event(LocalDate.of(2026, 7, 24)),
+            event(LocalDate.of(2026, 7, 24), accessCount = 3),
             event(LocalDate.of(2026, 7, 22)),
             event(LocalDate.of(2026, 7, 17)),
         )
 
         assertEquals(
-            listOf(0, 0, 0, 0, 1, 0, 2),
+            listOf(0, 0, 0, 0, 1, 0, 4),
             HistoryStatistics.dailyCounts(
                 events = events,
                 nowMillis = now,
@@ -40,7 +40,10 @@ class HistoryStatisticsTest {
         )
     }
 
-    private fun event(date: LocalDate): ResolvedHistoryEvent =
+    private fun event(
+        date: LocalDate,
+        accessCount: Int = 1,
+    ): ResolvedHistoryEvent =
         ResolvedHistoryEvent(
             event = AppOpHistoryEvent(
                 uid = app.uid,
@@ -55,6 +58,7 @@ class HistoryStatisticsTest {
                 durationMillis = null,
                 uidState = "top",
                 flags = "s",
+                accessCount = accessCount,
             ),
             app = app,
         )

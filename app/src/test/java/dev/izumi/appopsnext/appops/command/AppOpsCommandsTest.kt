@@ -33,7 +33,7 @@ class AppOpsCommandsTest {
     }
 
     @Test
-    fun `get discrete history uses a validated dumpsys argument list`() {
+    fun `get history uses a validated dumpsys argument list`() {
         assertEquals(
             listOf(
                 "/system/bin/dumpsys",
@@ -44,7 +44,7 @@ class AppOpsCommandsTest {
                 "--op",
                 "CAMERA",
             ),
-            AppOpsCommands.getDiscreteHistory("CAMERA"),
+            AppOpsCommands.getHistory("CAMERA"),
         )
     }
 

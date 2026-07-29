@@ -21,6 +21,9 @@ data class PermissionHistory(
     val events: List<ResolvedHistoryEvent>,
     val failureReason: AppOpHistoryFailureReason? = null,
 ) {
+    val recordCount: Int
+        get() = events.sumOf { it.event.accessCount }
+
     val appCount: Int
         get() = events.distinctBy { it.app.packageName }.size
 

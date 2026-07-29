@@ -9,6 +9,8 @@ data class AppOpHistoryEvent(
     val durationMillis: Long?,
     val uidState: String,
     val flags: String,
+    val accessCount: Int = 1,
+    val isAggregated: Boolean = false,
 )
 
 data class HistoryPermission(

@@ -302,27 +302,33 @@ fun PermissionHistoryDetailScreen(
                 .fillMaxSize()
                 .padding(contentPadding),
             contentPadding = HistoryContentPadding,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.Top,
         ) {
             history?.failureReason?.let { failureReason ->
                 item {
                     HistoryStatusCard(
                         text = historyFailureMessage(failureReason),
+                        modifier = Modifier.padding(bottom = 12.dp),
                     )
                 }
             }
             item {
                 DetailSummary(
-                    recordCount = events.size,
+                    recordCount = history?.recordCount ?: 0,
                     appCount = history?.appCount ?: 0,
+                    modifier = Modifier.padding(bottom = 12.dp),
                 )
             }
             item {
-                SevenDayHistoryChart(events = events)
+                SevenDayHistoryChart(
+                    events = events,
+                    modifier = Modifier.padding(bottom = 12.dp),
+                )
             }
             item {
                 Text(
                     text = stringResource(R.string.history_timeline_title),
+                    modifier = Modifier.padding(bottom = 12.dp),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -379,7 +385,7 @@ private fun PermissionDistributionChart(
     permissions: List<PermissionHistory>,
     modifier: Modifier = Modifier,
 ) {
-    val maximum = permissions.maxOfOrNull { it.events.size }
+    val maximum = permissions.maxOfOrNull(PermissionHistory::recordCount)
         ?.coerceAtLeast(1)
         ?: 1
     Card(
@@ -408,14 +414,14 @@ private fun PermissionDistributionChart(
                             style = MaterialTheme.typography.labelLarge,
                         )
                         Text(
-                            text = history.events.size.toString(),
+                            text = history.recordCount.toString(),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }
                     LinearProgressIndicator(
                         progress = {
-                            history.events.size.toFloat() /
+                            history.recordCount.toFloat() /
                                 maximum.toFloat()
                         },
                         modifier = Modifier
@@ -477,7 +483,7 @@ private fun PermissionHistoryCard(
             Text(
                 text = stringResource(
                     R.string.history_permission_summary,
-                    history.events.size,
+                    history.recordCount,
                     history.appCount,
                 ),
                 style = MaterialTheme.typography.bodyMedium,
@@ -751,6 +757,16 @@ private fun TimelineHistoryItem(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            }
+            if (item.event.isAggregated) {
+                Text(
+                    text = stringResource(
+                        R.string.history_aggregated_access_count,
+                        item.event.accessCount,
+                    ),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             item.event.attributionTag?.let { attribution ->
                 Text(

@@ -39,7 +39,7 @@ object AppOpsCommands {
         )
     }
 
-    fun getDiscreteHistory(operationName: String): List<String> {
+    fun getHistory(operationName: String): List<String> {
         validateOperationName(operationName)
 
         return listOf(

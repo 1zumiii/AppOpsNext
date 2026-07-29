@@ -22,14 +22,21 @@ object HistoryStatistics {
             .toLocalDate()
         val firstDay = today.minusDays(dayCount.toLong() - 1)
         val countsByDate = events
-            .map {
-                Instant.ofEpochMilli(it.event.accessTimeMillis)
+            .mapNotNull {
+                val date = Instant.ofEpochMilli(it.event.accessTimeMillis)
                     .atZone(zoneId)
                     .toLocalDate()
+                if (date.isBefore(firstDay) || date.isAfter(today)) {
+                    null
+                } else {
+                    date to it.event.accessCount
+                }
             }
-            .filter { !it.isBefore(firstDay) && !it.isAfter(today) }
-            .groupingBy { it }
-            .eachCount()
+            .groupBy(
+                keySelector = Pair<LocalDate, Int>::first,
+                valueTransform = Pair<LocalDate, Int>::second,
+            )
+            .mapValues { (_, counts) -> counts.sum() }
 
         return (0 until dayCount).map { dayOffset ->
             val date = firstDay.plusDays(dayOffset.toLong())
