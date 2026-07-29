@@ -108,7 +108,7 @@
     <string name="settings_developer_name">1zumiii</string>
     <string name="settings_github">GitHub</string>
     <string name="history_title">权限历史</string>
-    <string name="history_subtitle">查看相机、麦克风和位置权限近期产生的系统访问记录。</string>
+    <string name="history_subtitle">查看所选权限近期产生的系统访问记录。</string>
     <string name="history_refresh">刷新历史记录</string>
     <string name="history_manage_permissions">管理监测权限</string>
     <string name="history_information">历史记录说明</string>
@@ -136,7 +136,8 @@
     <string name="history_foreground">前台</string>
     <string name="history_background">后台</string>
     <string name="history_attribution">归因标签：%1$s</string>
-    <string name="history_system_record_caveat">这里展示 Android 保存的离散 AppOps 记录，不是精确的 API 调用次数。系统可能按分钟合并同一应用的多次访问，保留时间也由设备决定；部分自行添加的权限可能不会被当前系统离散记录。</string>
+    <string name="history_aggregated_access_count">该时间段共 %1$d 次</string>
+    <string name="history_system_record_caveat">AppOpsNext 优先展示 Android 保存的逐次访问记录。对于剪贴板等不提供逐次记录的权限，会自动使用系统时间段统计；此时显示的是时间段结束时间和该时间段内的调用次数。历史保留时间与统计精度均由设备决定。</string>
     <string name="settings_github_url" translatable="false">https://github.com/1zumiii/AppOpsNext</string>
     <string name="templates_title">权限模板</string>
     <string name="template_create">新建</string>
