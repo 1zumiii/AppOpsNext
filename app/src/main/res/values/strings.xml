@@ -111,6 +111,7 @@
     <string name="history_subtitle">查看所选权限近期产生的系统访问记录。</string>
     <string name="history_refresh">刷新历史记录</string>
     <string name="history_manage_permissions">管理监测权限</string>
+    <string name="history_reorder_permissions">长按拖动调整权限顺序</string>
     <string name="history_information">历史记录说明</string>
     <string name="history_permission_search">搜索权限名称或系统名</string>
     <string name="history_no_matching_permissions">没有匹配的权限。</string>
@@ -130,6 +131,8 @@
     <string name="history_never_recorded">暂无</string>
     <string name="history_system_records">系统记录次数</string>
     <string name="history_apps_involved">涉及应用</string>
+    <string name="history_apps_empty">没有可统计的应用记录。</string>
+    <string name="history_app_access_count">%1$d 次</string>
     <string name="history_seven_day_title">近 7 天系统记录</string>
     <string name="history_timeline_title">访问时间线</string>
     <string name="history_empty">近期没有该权限的系统访问记录。</string>

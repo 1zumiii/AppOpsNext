@@ -2,6 +2,8 @@ package dev.izumi.appopsnext.presentation.history
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -34,22 +37,27 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.history.model.AppOpHistoryFailureReason
@@ -60,6 +68,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +78,7 @@ fun HistoryOverviewScreen(
     onRefresh: () -> Unit,
     onPermissionSelected: (HistoryPermission) -> Unit,
     onPermissionsChanged: (List<String>) -> Unit,
+    onPermissionOrderChanged: (List<String>) -> Unit,
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
 ) {
@@ -130,6 +141,7 @@ fun HistoryOverviewScreen(
         HistoryOverviewContent(
             uiState = uiState,
             onPermissionSelected = onPermissionSelected,
+            onPermissionOrderChanged = onPermissionOrderChanged,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(contentPadding),
@@ -161,10 +173,148 @@ fun HistoryOverviewScreen(
 private fun HistoryOverviewContent(
     uiState: HistoryUiState,
     onPermissionSelected: (HistoryPermission) -> Unit,
+    onPermissionOrderChanged: (List<String>) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var displayedPermissions by remember {
+        mutableStateOf(uiState.permissions)
+    }
+    var draggedOperationName by remember {
+        mutableStateOf<String?>(null)
+    }
+    var draggedOffset by remember {
+        mutableStateOf(0f)
+    }
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    LaunchedEffect(uiState.permissions) {
+        if (draggedOperationName == null) {
+            displayedPermissions = uiState.permissions
+        }
+    }
+
     LazyColumn(
-        modifier = modifier,
+        state = listState,
+        modifier = modifier.pointerInput(uiState.permissions) {
+            detectDragGesturesAfterLongPress(
+                onDragStart = { pointerOffset ->
+                    val item = listState.layoutInfo.visibleItemsInfo
+                        .firstOrNull { itemInfo ->
+                            pointerOffset.y.toInt() in
+                                itemInfo.offset until
+                                (itemInfo.offset + itemInfo.size) &&
+                                itemInfo.key
+                                    .toString()
+                                    .startsWith(
+                                        HISTORY_PERMISSION_ITEM_KEY_PREFIX,
+                                    )
+                        }
+                    draggedOperationName = item
+                        ?.key
+                        ?.toString()
+                        ?.removePrefix(
+                            HISTORY_PERMISSION_ITEM_KEY_PREFIX,
+                        )
+                    draggedOffset = 0f
+                },
+                onDrag = { change, dragAmount ->
+                    val operationName = draggedOperationName
+                        ?: return@detectDragGesturesAfterLongPress
+                    change.consume()
+                    draggedOffset += dragAmount.y
+                    val currentItem = listState.layoutInfo.visibleItemsInfo
+                        .firstOrNull {
+                            it.key == historyPermissionItemKey(
+                                operationName,
+                            )
+                        } ?: return@detectDragGesturesAfterLongPress
+                    val draggedCenter = currentItem.offset +
+                        currentItem.size / 2f +
+                        draggedOffset
+                    val targetItem = listState.layoutInfo.visibleItemsInfo
+                        .filter {
+                            it.key
+                                .toString()
+                                .startsWith(
+                                    HISTORY_PERMISSION_ITEM_KEY_PREFIX,
+                                )
+                        }
+                        .minByOrNull {
+                            abs(
+                                draggedCenter -
+                                    (it.offset + it.size / 2f),
+                            )
+                        }
+                    if (
+                        targetItem != null &&
+                        targetItem.key != currentItem.key
+                    ) {
+                        val targetOperation = targetItem.key
+                            .toString()
+                            .removePrefix(
+                                HISTORY_PERMISSION_ITEM_KEY_PREFIX,
+                            )
+                        val fromIndex =
+                            displayedPermissions.indexOfFirst {
+                                it.permission.shellOperationName ==
+                                    operationName
+                            }
+                        val toIndex =
+                            displayedPermissions.indexOfFirst {
+                                it.permission.shellOperationName ==
+                                    targetOperation
+                            }
+                        if (fromIndex >= 0 && toIndex >= 0) {
+                            displayedPermissions =
+                                displayedPermissions
+                                    .toMutableList()
+                                    .apply {
+                                        add(
+                                            toIndex,
+                                            removeAt(fromIndex),
+                                        )
+                                    }
+                            draggedOffset +=
+                                currentItem.offset - targetItem.offset
+                        }
+                    }
+                    val scrollAmount = when {
+                        draggedCenter <
+                            listState.layoutInfo.viewportStartOffset +
+                            HISTORY_DRAG_SCROLL_EDGE_PX ->
+                            -HISTORY_DRAG_SCROLL_STEP_PX
+
+                        draggedCenter >
+                            listState.layoutInfo.viewportEndOffset -
+                            HISTORY_DRAG_SCROLL_EDGE_PX ->
+                            HISTORY_DRAG_SCROLL_STEP_PX
+
+                        else -> 0f
+                    }
+                    if (scrollAmount != 0f) {
+                        coroutineScope.launch {
+                            listState.scrollBy(scrollAmount)
+                        }
+                    }
+                },
+                onDragEnd = {
+                    if (draggedOperationName != null) {
+                        onPermissionOrderChanged(
+                            displayedPermissions.map {
+                                it.permission.shellOperationName
+                            },
+                        )
+                    }
+                    draggedOperationName = null
+                    draggedOffset = 0f
+                },
+                onDragCancel = {
+                    displayedPermissions = uiState.permissions
+                    draggedOperationName = null
+                    draggedOffset = 0f
+                },
+            )
+        },
         contentPadding = HistoryContentPadding,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -219,14 +369,31 @@ private fun HistoryOverviewContent(
                     )
                 }
                 items(
-                    items = uiState.permissions,
-                    key = { it.permission.shellOperationName },
+                    items = displayedPermissions,
+                    key = {
+                        historyPermissionItemKey(
+                            it.permission.shellOperationName,
+                        )
+                    },
                 ) { history ->
+                    val isDragging =
+                        history.permission.shellOperationName ==
+                            draggedOperationName
                     PermissionHistoryCard(
                         history = history,
                         onClick = {
                             onPermissionSelected(history.permission)
                         },
+                        isDragging = isDragging,
+                        modifier = Modifier
+                            .zIndex(if (isDragging) 1f else 0f)
+                            .graphicsLayer {
+                                translationY = if (isDragging) {
+                                    draggedOffset
+                                } else {
+                                    0f
+                                }
+                            },
                     )
                 }
             }
@@ -248,6 +415,7 @@ fun PermissionHistoryDetailScreen(
     history: PermissionHistory?,
     isLoading: Boolean,
     onBack: () -> Unit,
+    onAppsSelected: () -> Unit,
     onAppSelected: (InstalledApp) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -316,6 +484,7 @@ fun PermissionHistoryDetailScreen(
                 DetailSummary(
                     recordCount = history?.recordCount ?: 0,
                     appCount = history?.appCount ?: 0,
+                    onAppsSelected = onAppsSelected,
                     modifier = Modifier.padding(bottom = 12.dp),
                 )
             }
@@ -439,6 +608,7 @@ private fun PermissionDistributionChart(
 private fun PermissionHistoryCard(
     history: PermissionHistory,
     onClick: () -> Unit,
+    isDragging: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val locale = LocalConfiguration.current.locales[0]
@@ -455,23 +625,50 @@ private fun PermissionHistoryCard(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            containerColor = if (isDragging) {
+                MaterialTheme.colorScheme.surfaceContainerHigh
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerLow
+            },
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isDragging) 8.dp else 0.dp,
         ),
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text(
-                text = history.permission.displayName(),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = history.permission.systemOperationName(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    Text(
+                        text = history.permission.displayName(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = history.permission.systemOperationName(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Icon(
+                    painter = painterResource(R.drawable.ic_drag_handle),
+                    contentDescription = stringResource(
+                        R.string.history_reorder_permissions,
+                    ),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Spacer(Modifier.height(2.dp))
             history.failureReason?.let { failureReason ->
                 Text(
@@ -504,6 +701,7 @@ private fun PermissionHistoryCard(
 private fun DetailSummary(
     recordCount: Int,
     appCount: Int,
+    onAppsSelected: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -518,6 +716,7 @@ private fun DetailSummary(
         SummaryMetric(
             value = appCount.toString(),
             label = stringResource(R.string.history_apps_involved),
+            onClick = onAppsSelected,
             modifier = Modifier.weight(1f),
         )
     }
@@ -528,9 +727,16 @@ private fun SummaryMetric(
     value: String,
     label: String,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.then(
+            if (onClick != null) {
+                Modifier.clickable(onClick = onClick)
+            } else {
+                Modifier
+            },
+        ),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
@@ -547,11 +753,27 @@ private fun SummaryMetric(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
             )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = label,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (onClick != null) {
+                    Icon(
+                        painter = painterResource(
+                            R.drawable.ic_chevron_right,
+                        ),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
     }
 }
@@ -849,9 +1071,17 @@ private fun historyFailureMessage(
     },
 )
 
-private val HistoryContentPadding = PaddingValues(
+internal val HistoryContentPadding = PaddingValues(
     horizontal = 20.dp,
     vertical = 14.dp,
 )
+
+private fun historyPermissionItemKey(operationName: String): String =
+    "$HISTORY_PERMISSION_ITEM_KEY_PREFIX$operationName"
+
+private const val HISTORY_PERMISSION_ITEM_KEY_PREFIX =
+    "history_permission:"
+private const val HISTORY_DRAG_SCROLL_EDGE_PX = 96
+private const val HISTORY_DRAG_SCROLL_STEP_PX = 24f
 
 private val ForegroundUidStates = setOf("top", "fg", "fgs")

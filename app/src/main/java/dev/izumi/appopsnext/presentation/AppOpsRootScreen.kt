@@ -24,6 +24,7 @@ import dev.izumi.appopsnext.presentation.components.AppNavigationBar
 import dev.izumi.appopsnext.presentation.components.MainDestination
 import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticsUiState
 import dev.izumi.appopsnext.presentation.history.HistoryOverviewScreen
+import dev.izumi.appopsnext.presentation.history.HistoryAppStatisticsScreen
 import dev.izumi.appopsnext.presentation.history.HistoryUiState
 import dev.izumi.appopsnext.presentation.history.PermissionHistoryDetailScreen
 import dev.izumi.appopsnext.history.model.HistoryPermission
@@ -50,6 +51,7 @@ fun AppOpsRootScreen(
     onRefreshApps: () -> Unit,
     onRefreshHistory: () -> Unit,
     onHistoryPermissionsChanged: (List<String>) -> Unit,
+    onHistoryPermissionOrderChanged: (List<String>) -> Unit,
     onAppSelected: (InstalledApp) -> Unit,
     onRefreshAppDetail: () -> Unit,
     onAppOpSearchQueryChange: (String) -> Unit,
@@ -89,6 +91,9 @@ fun AppOpsRootScreen(
     var selectedHistoryPermissionName by rememberSaveable {
         mutableStateOf<String?>(null)
     }
+    var showHistoryAppStatistics by rememberSaveable {
+        mutableStateOf(false)
+    }
     val selectedHistoryPermission = selectedHistoryPermissionName?.let {
         HistoryPermission(it)
     }
@@ -108,6 +113,7 @@ fun AppOpsRootScreen(
                 keyboardController?.hide()
                 selectedApp = null
                 selectedHistoryPermissionName = null
+                showHistoryAppStatistics = false
                 selectedDestination = it
             },
         )
@@ -117,7 +123,16 @@ fun AppOpsRootScreen(
         navigateBackFromDetail()
     }
     BackHandler(
-        enabled = selectedApp == null && selectedHistoryPermission != null,
+        enabled = selectedApp == null &&
+            selectedHistoryPermission != null &&
+            showHistoryAppStatistics,
+    ) {
+        showHistoryAppStatistics = false
+    }
+    BackHandler(
+        enabled = selectedApp == null &&
+            selectedHistoryPermission != null &&
+            !showHistoryAppStatistics,
     ) {
         selectedHistoryPermissionName = null
     }
@@ -178,9 +193,25 @@ fun AppOpsRootScreen(
                         onPermissionSelected = { permission ->
                             selectedHistoryPermissionName =
                                 permission.shellOperationName
+                            showHistoryAppStatistics = false
                         },
                         onPermissionsChanged = onHistoryPermissionsChanged,
+                        onPermissionOrderChanged =
+                            onHistoryPermissionOrderChanged,
                         bottomBar = navigationBar,
+                    )
+                } else if (showHistoryAppStatistics) {
+                    HistoryAppStatisticsScreen(
+                        history = historyUiState.permissions.firstOrNull {
+                            it.permission == selectedHistoryPermission
+                        },
+                        onBack = {
+                            showHistoryAppStatistics = false
+                        },
+                        onAppSelected = { app ->
+                            selectedApp = app
+                            onAppSelected(app)
+                        },
                     )
                 } else {
                     PermissionHistoryDetailScreen(
@@ -191,6 +222,9 @@ fun AppOpsRootScreen(
                         isLoading = historyUiState.isLoading,
                         onBack = {
                             selectedHistoryPermissionName = null
+                        },
+                        onAppsSelected = {
+                            showHistoryAppStatistics = true
                         },
                         onAppSelected = { app ->
                             selectedApp = app

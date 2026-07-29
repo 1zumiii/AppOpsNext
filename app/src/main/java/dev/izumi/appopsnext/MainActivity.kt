@@ -67,6 +67,8 @@ class MainActivity : ComponentActivity() {
                     onRefreshHistory = historyViewModel::refresh,
                     onHistoryPermissionsChanged =
                         historyViewModel::setPermissions,
+                    onHistoryPermissionOrderChanged =
+                        historyViewModel::setPermissionOrder,
                     onAppSelected = appDetailViewModel::selectApp,
                     onRefreshAppDetail = appDetailViewModel::refresh,
                     onAppOpSearchQueryChange =

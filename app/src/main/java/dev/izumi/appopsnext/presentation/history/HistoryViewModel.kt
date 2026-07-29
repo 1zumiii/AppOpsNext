@@ -6,10 +6,12 @@ import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.apps.InstalledAppsRepository
 import dev.izumi.appopsnext.history.AppOpsHistoryRepository
+import dev.izumi.appopsnext.history.HistoryPermissionOrdering
 import dev.izumi.appopsnext.history.model.AppOpHistoryFailureReason
 import dev.izumi.appopsnext.history.model.AppOpHistoryLoadResult
 import dev.izumi.appopsnext.history.model.HistoryPermission
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
+import dev.izumi.appopsnext.settings.UserSettingsDefaults
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
 import kotlin.time.Duration.Companion.minutes
 import kotlinx.coroutines.delay
@@ -27,6 +29,7 @@ class HistoryViewModel(
     private val privilegedServiceClient = app.privilegedServiceClient
     private val permissionSettingsRepository =
         app.historyPermissionSettingsRepository
+    private val userSettingsRepository = app.userSettingsRepository
     private val historyRepository =
         AppOpsHistoryRepository(privilegedServiceClient)
     private val installedAppsRepository = InstalledAppsRepository(application)
@@ -41,6 +44,8 @@ class HistoryViewModel(
         ),
     )
     private var selectedPermissions = emptyList<HistoryPermission>()
+    private var hideSystemApps =
+        UserSettingsDefaults.HIDE_SYSTEM_APPS
     private var refreshInProgress = false
     private var refreshPending = false
 
@@ -67,6 +72,14 @@ class HistoryViewModel(
             }
         }
         viewModelScope.launch {
+            userSettingsRepository.settings.collect { settings ->
+                if (hideSystemApps != settings.hideSystemApps) {
+                    hideSystemApps = settings.hideSystemApps
+                    refresh()
+                }
+            }
+        }
+        viewModelScope.launch {
             privilegedServiceClient.state.collect { state ->
                 if (state is PrivilegedServiceState.Connected) {
                     refresh()
@@ -87,12 +100,28 @@ class HistoryViewModel(
     }
 
     fun setPermissions(operationNames: List<String>) {
-        val requestedNames = operationNames.toSet()
-        val orderedPermissions = availablePermissions.filter {
-            it.shellOperationName in requestedNames
-        }
+        val updatedPermissions =
+            HistoryPermissionOrdering.mergeSelection(
+                current = selectedPermissions,
+                requestedOperationNames = operationNames,
+                available = availablePermissions,
+            )
         viewModelScope.launch {
-            permissionSettingsRepository.setSelected(orderedPermissions)
+            permissionSettingsRepository.setSelected(
+                updatedPermissions,
+            )
+        }
+    }
+
+    fun setPermissionOrder(operationNames: List<String>) {
+        val reorderedPermissions = HistoryPermissionOrdering.reorder(
+            current = selectedPermissions,
+            orderedOperationNames = operationNames,
+        ) ?: return
+        viewModelScope.launch {
+            permissionSettingsRepository.setSelected(
+                reorderedPermissions,
+            )
         }
     }
 
@@ -135,7 +164,6 @@ class HistoryViewModel(
         val apps = runCatching {
             installedAppsRepository.loadInstalledApps()
         }.getOrDefault(emptyList())
-        val appsByPackage = apps.associateBy { it.packageName }
         val permissionHistories = permissions.map { permission ->
             when (
                 val result = historyRepository.loadOperationHistory(
@@ -143,19 +171,11 @@ class HistoryViewModel(
                 )
             ) {
                 is AppOpHistoryLoadResult.Success -> {
-                    val resolvedEvents =
-                        result.events.mapNotNull { event ->
-                            val installedApp =
-                                appsByPackage[event.packageName]
-                                    ?: return@mapNotNull null
-                            if (installedApp.uid != event.uid) {
-                                return@mapNotNull null
-                            }
-                            ResolvedHistoryEvent(
-                                event = event,
-                                app = installedApp,
-                            )
-                        }
+                    val resolvedEvents = HistoryEventResolver.resolve(
+                        events = result.events,
+                        installedApps = apps,
+                        hideSystemApps = hideSystemApps,
+                    )
                     PermissionHistory(
                         permission = permission,
                         events = resolvedEvents,
