@@ -63,6 +63,8 @@ fun AppOpsRootScreen(
     ) -> Unit,
     onAppOpModeChangeConfirmed: () -> Unit,
     onAppOpModeChangeDismissed: () -> Unit,
+    onDenyFallbackNoticeDismissed: (Boolean) -> Unit,
+    onForegroundAlternativeRequested: () -> Unit,
     onHideSystemAppsChange: (Boolean) -> Unit,
     onAppLanguageChange: (AppLanguage) -> Unit,
     onCreateTemplate: (String) -> Unit,
@@ -148,6 +150,10 @@ fun AppOpsRootScreen(
             onModeChangeRequested = onAppOpModeChangeRequested,
             onModeChangeConfirmed = onAppOpModeChangeConfirmed,
             onModeChangeDismissed = onAppOpModeChangeDismissed,
+            onDenyFallbackNoticeDismissed =
+                onDenyFallbackNoticeDismissed,
+            onForegroundAlternativeRequested =
+                onForegroundAlternativeRequested,
             templates = templatesUiState.templates,
             onTemplateApplyRequested = { template, app ->
                 onTemplateApplyRequested(template, listOf(app))

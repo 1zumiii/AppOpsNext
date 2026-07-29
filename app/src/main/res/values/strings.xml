@@ -73,7 +73,12 @@
     <string name="app_detail_mode_change_failure">修改未完成</string>
     <string name="app_detail_mode_change_failure_detail">失败阶段：%1$s。恢复状态：%2$s。</string>
     <string name="app_detail_mode_deny_fallback_failed">系统未接受“拒绝”，随后自动尝试的“忽略”也未能完成。</string>
+    <string name="app_detail_mode_deny_fallback_applied_title">已自动改用“忽略”</string>
+    <string name="app_detail_mode_deny_fallback_applied">系统未接受“拒绝”。AppOpsNext 已恢复原值，并成功将此权限设置为“忽略”。</string>
+    <string name="app_detail_mode_deny_fallback_dont_show">不再提示此自动回退结果</string>
     <string name="app_detail_mode_change_rejected_hint">系统未接受请求的模式。AppOps 不能授予已被 Android 运行时权限或厂商策略禁止的能力，但可以进一步限制已授予的权限。</string>
+    <string name="app_detail_mode_allow_foreground_hint">系统未接受“允许”。如果此权限支持仅在使用应用时生效，可以手动尝试“仅前台”。</string>
+    <string name="app_detail_mode_try_foreground">尝试仅前台</string>
     <string name="app_detail_mode_observed">系统回读值：%1$s</string>
     <string name="app_detail_mode_phase_read_original">读取原值</string>
     <string name="app_detail_mode_phase_check_original">确认原值未变化</string>

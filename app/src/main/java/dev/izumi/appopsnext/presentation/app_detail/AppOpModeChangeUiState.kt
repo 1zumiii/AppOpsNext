@@ -24,6 +24,10 @@ sealed interface AppOpModeChangeUiState {
         val request: AppOpModeChangeRequest,
     ) : AppOpModeChangeUiState
 
+    data class DenyFallbackApplied(
+        val request: AppOpModeChangeRequest,
+    ) : AppOpModeChangeUiState
+
     data class Failure(
         val request: AppOpModeChangeRequest,
         val result: AppOpModeChangeResult.Failure,

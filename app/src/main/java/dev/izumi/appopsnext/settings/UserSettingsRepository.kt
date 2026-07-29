@@ -33,6 +33,10 @@ class UserSettingsRepository(
                 hideSystemApps =
                     preferences[Keys.HIDE_SYSTEM_APPS]
                         ?: UserSettingsDefaults.HIDE_SYSTEM_APPS,
+                suppressDenyFallbackNotice =
+                    preferences[Keys.SUPPRESS_DENY_FALLBACK_NOTICE]
+                        ?: UserSettingsDefaults
+                            .SUPPRESS_DENY_FALLBACK_NOTICE,
             )
         }
 
@@ -42,7 +46,15 @@ class UserSettingsRepository(
         }
     }
 
+    suspend fun setDenyFallbackNoticeSuppressed(suppressed: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[Keys.SUPPRESS_DENY_FALLBACK_NOTICE] = suppressed
+        }
+    }
+
     private object Keys {
         val HIDE_SYSTEM_APPS = booleanPreferencesKey("hide_system_apps")
+        val SUPPRESS_DENY_FALLBACK_NOTICE =
+            booleanPreferencesKey("suppress_deny_fallback_notice")
     }
 }

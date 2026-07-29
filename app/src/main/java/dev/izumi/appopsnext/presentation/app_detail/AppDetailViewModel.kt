@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -25,6 +26,8 @@ class AppDetailViewModel(
 ) : AndroidViewModel(application) {
     private val privilegedServiceClient =
         getApplication<AppOpsNextApplication>().privilegedServiceClient
+    private val userSettingsRepository =
+        getApplication<AppOpsNextApplication>().userSettingsRepository
     private val repository = AppOpsRepository(privilegedServiceClient)
     private val selectedApp = MutableStateFlow<InstalledApp?>(null)
     private val mutableUiState =
@@ -117,8 +120,18 @@ class AppDetailViewModel(
 
             updateDisplayedMode(request, result)
             mutableModeChangeState.value = when (result) {
-                is AppOpModeChangeResult.Success ->
-                    AppOpModeChangeUiState.Idle
+                is AppOpModeChangeResult.Success -> {
+                    val shouldShowFallbackNotice =
+                        outcome.denyFallbackAttempted &&
+                            !userSettingsRepository.settings
+                                .first()
+                                .suppressDenyFallbackNotice
+                    if (shouldShowFallbackNotice) {
+                        AppOpModeChangeUiState.DenyFallbackApplied(request)
+                    } else {
+                        AppOpModeChangeUiState.Idle
+                    }
+                }
 
                 is AppOpModeChangeResult.Failure ->
                     AppOpModeChangeUiState.Failure(
@@ -129,6 +142,40 @@ class AppDetailViewModel(
                     )
             }
         }
+    }
+
+    fun dismissDenyFallbackNotice(dontShowAgain: Boolean) {
+        if (
+            mutableModeChangeState.value
+            !is AppOpModeChangeUiState.DenyFallbackApplied
+        ) {
+            return
+        }
+        mutableModeChangeState.value = AppOpModeChangeUiState.Idle
+        if (dontShowAgain) {
+            viewModelScope.launch {
+                userSettingsRepository
+                    .setDenyFallbackNoticeSuppressed(true)
+            }
+        }
+    }
+
+    fun requestForegroundAlternative() {
+        val failure =
+            mutableModeChangeState.value as?
+                AppOpModeChangeUiState.Failure
+                ?: return
+        if (
+            !ModeChangeAlternativePolicy.canTryForeground(
+                request = failure.request,
+                result = failure.result,
+            )
+        ) {
+            return
+        }
+        mutableModeChangeState.value = AppOpModeChangeUiState.Confirming(
+            failure.request.copy(requestedMode = AppOpMode.FOREGROUND),
+        )
     }
 
     fun dismissModeChange() {
