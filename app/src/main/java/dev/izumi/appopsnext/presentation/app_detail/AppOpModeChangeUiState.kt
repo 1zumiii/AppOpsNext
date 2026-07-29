@@ -27,5 +27,6 @@ sealed interface AppOpModeChangeUiState {
     data class Failure(
         val request: AppOpModeChangeRequest,
         val result: AppOpModeChangeResult.Failure,
+        val denyFallbackAttempted: Boolean,
     ) : AppOpModeChangeUiState
 }
