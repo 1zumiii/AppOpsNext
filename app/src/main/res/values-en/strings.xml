@@ -112,6 +112,7 @@
     <string name="history_subtitle">Review recent system access records for selected permissions.</string>
     <string name="history_refresh">Refresh history</string>
     <string name="history_manage_permissions">Manage monitored permissions</string>
+    <string name="history_reorder_permissions">Long-press and drag to reorder permissions</string>
     <string name="history_information">About permission history</string>
     <string name="history_permission_search">Search permission or system name</string>
     <string name="history_no_matching_permissions">No matching permissions.</string>
@@ -131,6 +132,8 @@
     <string name="history_never_recorded">None</string>
     <string name="history_system_records">System records</string>
     <string name="history_apps_involved">Apps involved</string>
+    <string name="history_apps_empty">No app records are available.</string>
+    <string name="history_app_access_count">%1$d calls</string>
     <string name="history_seven_day_title">System records over 7 days</string>
     <string name="history_timeline_title">Access timeline</string>
     <string name="history_empty">No recent system access records exist for this permission.</string>
