@@ -47,6 +47,8 @@ fun AppOpsRootScreen(
     batchOperationUiState: BatchOperationUiState,
     appOpSearchQuery: String,
     onShizukuAction: () -> Unit,
+    onPrivilegedServiceRetry: () -> Unit,
+    onClearDiagnosticLog: () -> Unit,
     onAppSearchQueryChange: (String) -> Unit,
     onRefreshApps: () -> Unit,
     onRefreshHistory: () -> Unit,
@@ -246,6 +248,8 @@ fun AppOpsRootScreen(
                 onHideSystemAppsChange = onHideSystemAppsChange,
                 onAppLanguageChange = onAppLanguageChange,
                 onShizukuAction = onShizukuAction,
+                onPrivilegedServiceRetry = onPrivilegedServiceRetry,
+                onClearDiagnosticLog = onClearDiagnosticLog,
                 bottomBar = navigationBar,
             )
         }

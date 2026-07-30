@@ -34,6 +34,7 @@ import dev.izumi.appopsnext.shizuku.model.ShizukuState
 fun DiagnosticsSection(
     uiState: DiagnosticsUiState,
     onShizukuAction: () -> Unit,
+    onPrivilegedServiceRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -62,6 +63,8 @@ fun DiagnosticsSection(
         PrivilegedServiceStatusCard(
             serviceState = uiState.privilegedServiceState,
             readState = uiState.appOpsReadState,
+            canRetry = uiState.shizukuState is ShizukuState.Ready,
+            onRetry = onPrivilegedServiceRetry,
         )
     }
 }
@@ -151,11 +154,18 @@ private fun ShizukuStatusCard(
 private fun PrivilegedServiceStatusCard(
     serviceState: PrivilegedServiceState,
     readState: AppOpsReadState,
+    canRetry: Boolean,
+    onRetry: () -> Unit,
 ) {
     val presentation = when (serviceState) {
         PrivilegedServiceState.Disconnected -> StatusPresentation(
             value = stringResource(R.string.status_disconnected),
             detail = stringResource(R.string.status_appops_disconnected_detail),
+            actionLabel = if (canRetry) {
+                stringResource(R.string.action_retry)
+            } else {
+                null
+            },
             level = DiagnosticStatusLevel.WARNING,
         )
 
@@ -180,8 +190,16 @@ private fun PrivilegedServiceStatusCard(
 
                     PrivilegedServiceFailureReason.BIND_FAILED ->
                         R.string.status_user_service_bind_failed_detail
+
+                    PrivilegedServiceFailureReason.BIND_TIMED_OUT ->
+                        R.string.status_user_service_bind_timeout_detail
                 },
             ),
+            actionLabel = if (canRetry) {
+                stringResource(R.string.action_retry)
+            } else {
+                null
+            },
             level = DiagnosticStatusLevel.ERROR,
         )
     }
@@ -191,6 +209,8 @@ private fun PrivilegedServiceStatusCard(
         value = presentation.value,
         detail = presentation.detail,
         level = presentation.level,
+        actionLabel = presentation.actionLabel,
+        onAction = presentation.actionLabel?.let { onRetry },
     )
 }
 

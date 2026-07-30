@@ -62,6 +62,10 @@ class MainActivity : ComponentActivity() {
                     appOpSearchQuery = appOpSearchQuery.value,
                     onShizukuAction =
                         diagnosticsViewModel::performShizukuAction,
+                    onPrivilegedServiceRetry =
+                        diagnosticsViewModel::retryPrivilegedService,
+                    onClearDiagnosticLog =
+                        diagnosticsViewModel::clearDiagnosticLog,
                     onAppSearchQueryChange = appListViewModel::updateSearchQuery,
                     onRefreshApps = appListViewModel::refresh,
                     onRefreshHistory = historyViewModel::refresh,

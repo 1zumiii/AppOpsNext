@@ -11,4 +11,6 @@ data class DiagnosticsUiState(
     val privilegedServiceState: PrivilegedServiceState =
         PrivilegedServiceState.Disconnected,
     val appOpsReadState: AppOpsReadState = AppOpsReadState.WaitingForBackend,
+    val diagnosticReport: String = "",
+    val diagnosticEventCount: Int = 0,
 )
