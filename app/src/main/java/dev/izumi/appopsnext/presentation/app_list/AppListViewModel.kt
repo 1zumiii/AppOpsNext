@@ -1,6 +1,7 @@
 package dev.izumi.appopsnext.presentation.app_list
 
 import android.app.Application
+import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.apps.AppListFilter
@@ -19,6 +20,8 @@ class AppListViewModel(
     private val repository = InstalledAppsRepository(application)
     private val settingsRepository =
         getApplication<AppOpsNextApplication>().userSettingsRepository
+    private val diagnosticLog =
+        getApplication<AppOpsNextApplication>().diagnosticLogRepository
     private val installedApps = MutableStateFlow<List<InstalledApp>>(emptyList())
     private val searchQuery = MutableStateFlow("")
     private val isLoading = MutableStateFlow(true)
@@ -67,14 +70,37 @@ class AppListViewModel(
         viewModelScope.launch {
             isLoading.value = true
             loadFailed.value = false
+            val startedAt = SystemClock.elapsedRealtime()
+            diagnosticLog.info(
+                source = LOG_SOURCE,
+                message = "Loading installed applications.",
+            )
             runCatching {
                 repository.loadInstalledApps()
             }.onSuccess { apps ->
                 installedApps.value = apps
-            }.onFailure {
+                diagnosticLog.info(
+                    source = LOG_SOURCE,
+                    message =
+                        "Installed applications loaded. count=${apps.size}, " +
+                            "durationMs=" +
+                            (SystemClock.elapsedRealtime() - startedAt),
+                )
+            }.onFailure { error ->
                 loadFailed.value = true
+                diagnosticLog.error(
+                    source = LOG_SOURCE,
+                    message =
+                        "Unable to load installed applications. durationMs=" +
+                            (SystemClock.elapsedRealtime() - startedAt),
+                    error = error,
+                )
             }
             isLoading.value = false
         }
+    }
+
+    private companion object {
+        const val LOG_SOURCE = "AppList"
     }
 }

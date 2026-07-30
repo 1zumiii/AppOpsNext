@@ -18,6 +18,8 @@ class TemplatesViewModel(
 ) : AndroidViewModel(application) {
     private val repository =
         getApplication<AppOpsNextApplication>().permissionTemplateRepository
+    private val diagnosticLog =
+        getApplication<AppOpsNextApplication>().diagnosticLogRepository
     private val selectedTemplateId = MutableStateFlow<String?>(null)
 
     val uiState = combine(
@@ -33,6 +35,18 @@ class TemplatesViewModel(
         started = SharingStarted.Eagerly,
         initialValue = TemplatesUiState(),
     )
+
+    init {
+        viewModelScope.launch {
+            repository.templates.collect { templates ->
+                diagnosticLog.info(
+                    source = LOG_SOURCE,
+                    message =
+                        "Stored templates loaded. count=${templates.size}",
+                )
+            }
+        }
+    }
 
     fun createTemplate(name: String) {
         if (name.isBlank()) return
@@ -100,6 +114,10 @@ class TemplatesViewModel(
                 ),
             )
         }
+    }
+
+    private companion object {
+        const val LOG_SOURCE = "Templates"
     }
 
     fun removeRule(stableOperationName: String) {

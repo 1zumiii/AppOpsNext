@@ -8,7 +8,7 @@ A modern, clean-room AppOps manager for Android 15+, powered by
 AppOpsNext reads and changes Android's built-in AppOps state.
 
 > [!IMPORTANT]
-> Version 1.1.1 is developed and verified using one ASUS AI2302 running Android
+> Version 1.1.2 is developed and verified using one ASUS AI2302 running Android
 > 15 (API 35). Support for other Android versions or OEM ROMs is currently unknown.
 
 ## Relationship to the legacy App Ops

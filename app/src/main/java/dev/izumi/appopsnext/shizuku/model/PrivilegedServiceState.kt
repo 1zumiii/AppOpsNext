@@ -10,6 +10,7 @@ enum class PrivilegedServiceFailureReason {
     EMPTY_BINDER,
     INITIALIZATION_FAILED,
     BIND_FAILED,
+    BIND_TIMED_OUT,
 }
 
 sealed interface PrivilegedServiceState {

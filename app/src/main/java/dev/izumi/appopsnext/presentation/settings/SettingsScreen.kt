@@ -32,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticLogModule
 import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticsSection
 import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticsUiState
 import dev.izumi.appopsnext.settings.AppLanguage
@@ -44,6 +45,8 @@ fun SettingsScreen(
     onHideSystemAppsChange: (Boolean) -> Unit,
     onAppLanguageChange: (AppLanguage) -> Unit,
     onShizukuAction: () -> Unit,
+    onPrivilegedServiceRetry: () -> Unit,
+    onClearDiagnosticLog: () -> Unit,
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
 ) {
@@ -121,6 +124,19 @@ fun SettingsScreen(
                 DiagnosticsSection(
                     uiState = diagnosticsUiState,
                     onShizukuAction = onShizukuAction,
+                    onPrivilegedServiceRetry =
+                        onPrivilegedServiceRetry,
+                )
+            }
+            item {
+                SettingsSectionTitle(
+                    text = stringResource(R.string.settings_testing),
+                )
+            }
+            item {
+                DiagnosticLogModule(
+                    uiState = diagnosticsUiState,
+                    onClear = onClearDiagnosticLog,
                 )
             }
             item {

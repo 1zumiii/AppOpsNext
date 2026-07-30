@@ -30,6 +30,7 @@
     <string name="status_user_service_empty_binder_detail">Shizuku 返回了无效的 UserService Binder。</string>
     <string name="status_user_service_initialization_failed_detail">无法读取 UserService 身份信息。</string>
     <string name="status_user_service_bind_failed_detail">无法启动 UserService，请重新打开应用后再试。</string>
+    <string name="status_user_service_bind_timeout_detail">等待 UserService 连接超时。可重试并在下方查看诊断日志。</string>
     <string name="status_appops_reading">正在读取系统 AppOps</string>
     <string name="status_appops_read_success">系统 AppOps 读取成功</string>
     <string name="status_appops_read_success_detail">当前应用记录 %1$d 项 · 后端 UID %2$d</string>
@@ -110,6 +111,15 @@
     <string name="settings_language_chinese">简体中文</string>
     <string name="settings_language_english">English</string>
     <string name="settings_diagnostics">连接与诊断</string>
+    <string name="settings_testing">测试与日志</string>
+    <string name="diagnostic_log_title">诊断报告</string>
+    <string name="diagnostic_log_summary">包含设备环境、连接状态和最近 %1$d 条应用事件</string>
+    <string name="diagnostic_report_title">可分享诊断报告</string>
+    <string name="diagnostic_report_privacy_warning">报告可能包含设备型号、系统版本、构建信息、Shizuku 版本、UID/PID 和错误内容。分享前请自行检查并脱敏，也可以借助你信任的 AI 工具辅助脱敏。</string>
+    <string name="diagnostic_report_copy">复制报告</string>
+    <string name="diagnostic_log_clear">清空事件日志</string>
+    <string name="diagnostic_report_clip_label">AppOpsNext 诊断报告</string>
+    <string name="diagnostic_report_copied">诊断报告已复制，请脱敏后再分享</string>
     <string name="settings_about">关于</string>
     <string name="settings_developer">开发者</string>
     <string name="settings_developer_name">1zumiii</string>

@@ -25,8 +25,13 @@ android {
         applicationId = "dev.izumi.appopsnext"
         minSdk = 35
         targetSdk = 35
-        versionCode = 18
-        versionName = "1.1.1"
+        versionCode = 19
+        versionName = "1.1.2"
+        buildConfigField(
+            "String",
+            "SHIZUKU_API_VERSION",
+            "\"${libs.versions.shizuku.get()}\"",
+        )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
