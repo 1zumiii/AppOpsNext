@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.izumi.appopsnext.BuildConfig
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticLogModule
 import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticsSection
@@ -142,6 +143,26 @@ fun SettingsScreen(
             item {
                 SettingsSectionTitle(
                     text = stringResource(R.string.settings_about),
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            text = stringResource(
+                                R.string.settings_app_version,
+                            ),
+                        )
+                    },
+                    supportingContent = {
+                        Text(
+                            text = stringResource(
+                                R.string.settings_app_version_value,
+                                BuildConfig.VERSION_NAME,
+                                BuildConfig.VERSION_CODE,
+                            ),
+                        )
+                    },
                 )
             }
             item {
