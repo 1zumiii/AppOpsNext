@@ -1,0 +1,82 @@
+name: Android 16 compatibility APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - Dev/android16-hyperos
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android16-compat-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build signed compatibility APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: "1.26.5"
+          cache: false
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Restore release signing identity
+        env:
+          RELEASE_KEYSTORE_BASE64: >-
+            ${{ secrets.APPOPSNEXT_RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$RELEASE_KEYSTORE_BASE64"
+          install -d -m 700 .signing
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" \
+            | base64 --decode \
+            > .signing/appopsnext-release.keystore
+          chmod 600 .signing/appopsnext-release.keystore
+
+      - name: Test and build
+        env:
+          APPOPSNEXT_STORE_PASSWORD: >-
+            ${{ secrets.APPOPSNEXT_RELEASE_PASSWORD }}
+          APPOPSNEXT_KEY_PASSWORD: >-
+            ${{ secrets.APPOPSNEXT_RELEASE_PASSWORD }}
+        run: |
+          test -n "$APPOPSNEXT_STORE_PASSWORD"
+          ./gradlew \
+            :app:testDebugUnitTest \
+            :app:lintDebug \
+            :app:assembleRelease \
+            --no-daemon
+
+      - name: Prepare compatibility artifact
+        run: |
+          mkdir -p artifacts
+          cp app/build/outputs/apk/release/app-release.apk \
+            artifacts/AppOpsNext-android16-compat.apk
+          cd artifacts
+          sha256sum AppOpsNext-android16-compat.apk \
+            > AppOpsNext-android16-compat.apk.sha256
+
+      - name: Upload compatibility APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: AppOpsNext-android16-compat-${{ github.run_number }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 14
