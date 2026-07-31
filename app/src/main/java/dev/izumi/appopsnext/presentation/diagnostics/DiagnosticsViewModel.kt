@@ -1,6 +1,7 @@
 package dev.izumi.appopsnext.presentation.diagnostics
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
@@ -9,9 +10,11 @@ import dev.izumi.appopsnext.appops.model.AppOpsReadState
 import dev.izumi.appopsnext.diagnostics.DiagnosticEnvironmentCollector
 import dev.izumi.appopsnext.diagnostics.DiagnosticReportComposer
 import dev.izumi.appopsnext.model.DeviceSummary
+import dev.izumi.appopsnext.nativebackend.NativeDaemonBootstrapper
 import dev.izumi.appopsnext.shizuku.ShizukuController
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
 import dev.izumi.appopsnext.shizuku.model.ShizukuState
+import dev.izumi.appopsnext.shizuku.process.ShizukuProcessCapabilityProbe
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -32,6 +35,10 @@ class DiagnosticsViewModel(
     private val appOpsRepository = AppOpsRepository(privilegedServiceClient)
     private val appOpsReadState =
         MutableStateFlow<AppOpsReadState>(AppOpsReadState.WaitingForBackend)
+    private val processCapabilityProbe = ShizukuProcessCapabilityProbe()
+    private val nativeDaemonBootstrapper =
+        NativeDaemonBootstrapper(application)
+    private var processCapabilityChecked = false
 
     private val device = DeviceSummary(
         manufacturer = diagnosticEnvironment.manufacturer,
@@ -71,6 +78,7 @@ class DiagnosticsViewModel(
         viewModelScope.launch {
             shizukuController.state.collect { state ->
                 if (state is ShizukuState.Ready) {
+                    probeRemoteProcessCapability()
                     privilegedServiceClient.connect()
                 } else {
                     privilegedServiceClient.disconnect()
@@ -135,6 +143,93 @@ class DiagnosticsViewModel(
         diagnosticLog.clear()
     }
 
+    private fun probeRemoteProcessCapability() {
+        if (processCapabilityChecked) return
+        processCapabilityChecked = true
+        viewModelScope.launch {
+            diagnosticLog.info(
+                source = NATIVE_BACKEND_LOG_SOURCE,
+                message = "Checking Shizuku remote-process capability.",
+            )
+            runCatching {
+                processCapabilityProbe.run()
+            }.onSuccess { result ->
+                val identity = result.stdout.trim()
+                if (result.exitCode == 0) {
+                    Log.i(
+                        NATIVE_BACKEND_LOG_SOURCE,
+                        "Remote-process capability is available. " +
+                            "identity=$identity",
+                    )
+                    diagnosticLog.info(
+                        source = NATIVE_BACKEND_LOG_SOURCE,
+                        message =
+                            "Remote-process capability is available. " +
+                            "identity=$identity",
+                    )
+                    probeNativeDaemon()
+                } else {
+                    Log.e(
+                        NATIVE_BACKEND_LOG_SOURCE,
+                        "Remote-process probe exited with " +
+                            "code=${result.exitCode}.",
+                    )
+                    diagnosticLog.error(
+                        source = NATIVE_BACKEND_LOG_SOURCE,
+                        message =
+                            "Remote-process probe exited with " +
+                                "code=${result.exitCode}, " +
+                                "stderr=${result.stderr.trim()}",
+                    )
+                }
+            }.onFailure { error ->
+                Log.e(
+                    NATIVE_BACKEND_LOG_SOURCE,
+                    "Remote-process capability check failed.",
+                    error,
+                )
+                diagnosticLog.error(
+                    source = NATIVE_BACKEND_LOG_SOURCE,
+                    message = "Remote-process capability check failed.",
+                    error = error,
+                )
+            }
+        }
+    }
+
+    private fun probeNativeDaemon() {
+        viewModelScope.launch {
+            diagnosticLog.info(
+                source = NATIVE_BACKEND_LOG_SOURCE,
+                message = "Starting native daemon compatibility probe.",
+            )
+            runCatching {
+                nativeDaemonBootstrapper.launchProbe()
+            }.onSuccess { info ->
+                val message =
+                    "Native daemon probe succeeded. " +
+                        "protocol=${info.protocolVersion}, " +
+                        "uid=${info.uid}, pid=${info.pid}"
+                Log.i(NATIVE_BACKEND_LOG_SOURCE, message)
+                diagnosticLog.info(
+                    source = NATIVE_BACKEND_LOG_SOURCE,
+                    message = message,
+                )
+            }.onFailure { error ->
+                Log.e(
+                    NATIVE_BACKEND_LOG_SOURCE,
+                    "Native daemon compatibility probe failed.",
+                    error,
+                )
+                diagnosticLog.error(
+                    source = NATIVE_BACKEND_LOG_SOURCE,
+                    message = "Native daemon compatibility probe failed.",
+                    error = error,
+                )
+            }
+        }
+    }
+
     override fun onCleared() {
         privilegedServiceClient.disconnect()
         shizukuController.stop()
@@ -143,5 +238,6 @@ class DiagnosticsViewModel(
 
     private companion object {
         const val LOG_SOURCE = "Diagnostics"
+        const val NATIVE_BACKEND_LOG_SOURCE = "NativeBackend"
     }
 }
