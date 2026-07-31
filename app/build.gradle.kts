@@ -71,11 +71,67 @@ android {
         buildConfig = true
     }
 
+    sourceSets {
+        getByName("main").assets.srcDir(
+            layout.buildDirectory.dir("native-daemon/main"),
+        )
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+}
+
+val nativeDaemonOutput =
+    layout.buildDirectory.file(
+        "native-daemon/main/arm64-v8a/appopsnextd",
+    )
+val goExecutable =
+    providers.environmentVariable("GO_EXECUTABLE").orElse("go")
+
+val buildNativeDaemon by tasks.registering(Exec::class) {
+    group = "build"
+    description = "Builds the ARM64 native AppOps daemon."
+    workingDir = rootProject.file("daemon")
+    inputs.files(
+        rootProject.fileTree("daemon") {
+            include("**/*.go")
+            include("go.mod")
+        },
+    )
+    outputs.file(nativeDaemonOutput)
+    environment("GOOS", "android")
+    environment("GOARCH", "arm64")
+    environment("CGO_ENABLED", "0")
+    commandLine(
+        goExecutable.get(),
+        "build",
+        "-trimpath",
+        "-buildvcs=false",
+        "-buildmode=pie",
+        "-ldflags=-s -w -buildid=",
+        "-o",
+        nativeDaemonOutput.get().asFile.absolutePath,
+        "./cmd/appopsnextd",
+    )
+    doFirst {
+        nativeDaemonOutput.get().asFile.parentFile.mkdirs()
+    }
+}
+
+tasks.matching {
+    it.name == "mergeDebugAssets" ||
+        it.name == "mergeReleaseAssets"
+}.configureEach {
+    dependsOn(buildNativeDaemon)
+}
+
+tasks.matching {
+    it.name.contains("Lint", ignoreCase = true)
+}.configureEach {
+    dependsOn(buildNativeDaemon)
 }
 
 tasks.configureEach {
