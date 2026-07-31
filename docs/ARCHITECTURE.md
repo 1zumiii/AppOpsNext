@@ -46,8 +46,9 @@ UserService/app_process loading path. One remote process installs the bundled
 ELF atomically under `/data/local/tmp`; a second process runs it with private
 stdin/stdout pipe file descriptors. Those unenumerable pipes are the IPC
 capability, so no TCP port, Unix-domain socket, or command-line secret is
-exposed. The legacy UserService remains a fallback when native bootstrap is
-unavailable.
+exposed. The UserService backend remains a fallback when native bootstrap is
+unavailable. Backend selection, device evidence, and the external-ADB decision
+are recorded in [Privileged backends](PRIVILEGED_BACKENDS.md).
 
 Both the app and daemon validate package names, operation names, modes, and
 command arity. The daemon maps fixed protocol verbs to argument arrays and

@@ -5,9 +5,9 @@ import rikka.shizuku.Shizuku
 
 /**
  * Isolates the deprecated Shizuku remote-process protocol used only to
- * bootstrap the native compatibility backend.
+ * bootstrap the native privileged backend.
  */
-class ShizukuRemoteProcessLauncher {
+internal class ShizukuRemoteProcessLauncher {
     fun launch(
         arguments: List<String>,
         environment: Map<String, String> = emptyMap(),

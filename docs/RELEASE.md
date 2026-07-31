@@ -36,6 +36,7 @@ unset release_password
 2. Run the complete local checks:
 
    ```shell
+   (cd daemon && go test ./...)
    ./gradlew :app:testDebugUnitTest :app:lintDebug \
      :app:assembleDebug :app:assembleRelease
    ```
