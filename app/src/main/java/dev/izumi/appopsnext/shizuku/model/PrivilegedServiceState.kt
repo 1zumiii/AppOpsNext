@@ -22,7 +22,9 @@ enum class PrivilegedServiceFailureReason {
 sealed interface PrivilegedServiceState {
     data object Disconnected : PrivilegedServiceState
 
-    data object Connecting : PrivilegedServiceState
+    data class Connecting(
+        val backendType: PrivilegedBackendType,
+    ) : PrivilegedServiceState
 
     data class Connected(
         val info: PrivilegedServiceInfo,
