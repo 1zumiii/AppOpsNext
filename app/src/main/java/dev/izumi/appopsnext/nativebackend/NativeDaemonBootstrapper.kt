@@ -4,12 +4,9 @@ import android.content.Context
 import dev.izumi.appopsnext.BuildConfig
 import dev.izumi.appopsnext.shizuku.process.RemoteProcessHandle
 import dev.izumi.appopsnext.shizuku.process.ShizukuRemoteProcessLauncher
-import java.io.BufferedReader
-import java.io.BufferedWriter
 import java.io.IOException
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
 import java.security.SecureRandom
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -29,19 +26,19 @@ class NativeDaemonBootstrapper(
 ) {
     private val applicationContext = context.applicationContext
 
-    suspend fun launchProbe(): NativeDaemonInfo =
+    internal suspend fun launch(): NativeDaemonConnection =
         withContext(Dispatchers.IO) {
             val credentials = createCredentials()
             installDaemon(credentials)
             val process = launchDaemon(credentials)
             try {
-                connectAndProbe(process, credentials)
+                openConnection(process)
             } catch (error: Throwable) {
                 val daemonDetails = readDaemonFailure(process)
                 process.destroy()
                 throw IOException(
                     buildString {
-                        append(error.message ?: "Native daemon probe failed")
+                        append(error.message ?: "Native daemon startup failed")
                         if (daemonDetails.isNotBlank()) {
                             append("; daemon=")
                             append(daemonDetails)
@@ -49,10 +46,21 @@ class NativeDaemonBootstrapper(
                     },
                     error,
                 )
-            } finally {
-                waitForProbeExit(process)
             }
         }
+
+    private fun openConnection(
+        process: RemoteProcessHandle,
+    ): NativeDaemonConnection {
+        val executor = Executors.newSingleThreadExecutor()
+        return try {
+            executor.submit<NativeDaemonConnection> {
+                NativeDaemonConnection.open(process)
+            }.get(HANDSHAKE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        } finally {
+            executor.shutdownNow()
+        }
+    }
 
     private fun installDaemon(
         credentials: NativeDaemonCredentials,
@@ -123,42 +131,8 @@ class NativeDaemonBootstrapper(
         return processLauncher.launch(
             arguments = listOf(
                 executablePath,
-                "--token",
-                credentials.token,
             ),
         )
-    }
-
-    private fun connectAndProbe(
-        process: RemoteProcessHandle,
-        credentials: NativeDaemonCredentials,
-    ): NativeDaemonInfo {
-        val writer = BufferedWriter(
-            OutputStreamWriter(process.stdin, Charsets.UTF_8),
-        )
-        val reader = BufferedReader(
-            InputStreamReader(process.stdout, Charsets.UTF_8),
-        )
-
-        writer.write(
-            NativeDaemonProtocol.helloRequest(credentials.token),
-        )
-        writer.flush()
-        val info = NativeDaemonProtocol.parseReady(
-            requireNotNull(reader.readLine()) {
-                "Native daemon closed before the handshake completed"
-            },
-        )
-
-        writer.write(NativeDaemonProtocol.PING_REQUEST)
-        writer.flush()
-        check(
-            reader.readLine() ==
-                NativeDaemonProtocol.PING_RESPONSE,
-        ) {
-            "Native daemon returned an invalid probe response"
-        }
-        return info
     }
 
     private fun readDaemonFailure(
@@ -174,48 +148,26 @@ class NativeDaemonBootstrapper(
         }.getOrDefault("")
     }
 
-    private fun waitForProbeExit(process: RemoteProcessHandle) {
-        runCatching {
-            if (process.isAlive()) {
-                process.waitFor(
-                    PROBE_EXIT_TIMEOUT_MILLIS,
-                    java.util.concurrent.TimeUnit.MILLISECONDS,
-                )
-            }
-        }
-        if (process.isAlive()) {
-            process.destroy()
-        }
-    }
-
     private fun createCredentials(): NativeDaemonCredentials {
-        val tokenBytes = ByteArray(TOKEN_BYTE_LENGTH)
-        secureRandom.nextBytes(tokenBytes)
-        val token = tokenBytes.joinToString(separator = "") { byte ->
-            "%02x".format(byte.toInt() and 0xff)
-        }
         val instanceBytes = ByteArray(INSTANCE_ID_BYTE_LENGTH)
         secureRandom.nextBytes(instanceBytes)
         val instanceId = instanceBytes.joinToString(separator = "") { byte ->
             "%02x".format(byte.toInt() and 0xff)
         }
         return NativeDaemonCredentials(
-            token = token,
             instanceId = instanceId,
         )
     }
 
     private data class NativeDaemonCredentials(
-        val token: String,
         val instanceId: String,
     )
 
     private companion object {
-        const val TOKEN_BYTE_LENGTH = 32
         const val INSTANCE_ID_BYTE_LENGTH = 8
         const val MAX_DAEMON_ERROR_LENGTH = 600
         const val INSTALL_TIMEOUT_SECONDS = 10L
-        const val PROBE_EXIT_TIMEOUT_MILLIS = 1_000L
+        const val HANDSHAKE_TIMEOUT_SECONDS = 5L
         const val INSTALL_ROOT = "/data/local/tmp/appopsnext"
         const val DAEMON_FILE_NAME = "appopsnextd"
         const val DAEMON_ASSET_PATH = "arm64-v8a/appopsnextd"

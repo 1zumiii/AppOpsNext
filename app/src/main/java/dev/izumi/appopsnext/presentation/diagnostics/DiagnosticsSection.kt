@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.appops.model.AppOpsReadFailureReason
 import dev.izumi.appopsnext.appops.model.AppOpsReadState
+import dev.izumi.appopsnext.shizuku.model.PrivilegedBackendType
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceFailureReason
 import dev.izumi.appopsnext.shizuku.model.ShizukuFailureReason
@@ -225,7 +226,13 @@ private fun appOpsReadPresentation(
         -> StatusPresentation(
             value = stringResource(R.string.status_appops_reading),
             detail = stringResource(
-                R.string.status_user_service_connected_detail,
+                when (serviceState.info.backendType) {
+                    PrivilegedBackendType.NATIVE_DAEMON ->
+                        R.string.status_native_daemon_connected_detail
+
+                    PrivilegedBackendType.USER_SERVICE ->
+                        R.string.status_user_service_connected_detail
+                },
                 serviceState.info.uid,
                 serviceState.info.pid,
                 serviceState.info.apiLevel,

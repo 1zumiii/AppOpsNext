@@ -86,8 +86,10 @@ UID 作用域的修改可能影响共用同一 UID 的多个应用，确认界�
 
 ## 开发
 
-项目需要 JDK 17 和 Android SDK，主要测试环境是通过 USB 调试连接的
-Android 15 实体设备。
+项目需要 JDK 17、Go 1.24 或更高版本以及 Android SDK。Gradle 会通过
+`GOOS=android` 和 `CGO_ENABLED=0` 交叉编译内置的 ARM64 守护进程。
+主要测试环境是通过 USB 调试连接的 Android 15 实体设备。如果 `go` 不在
+`PATH` 中，可以通过 `GO_EXECUTABLE` 指定其路径。
 
 构建 Debug 应用：
 
@@ -122,7 +124,9 @@ export APPOPSNEXT_KEY_PASSWORD="<密钥密码>"
 
 - `presentation`：Compose 界面、状态和可复用 UI
 - `appops`：命令适配、解析、仓库和验证写入
-- `shizuku`：授权、Binder 生命周期和特权 UserService
+- `nativebackend`：原生守护进程启动、私有管道协议和网关
+- `shizuku`：授权、进程启动和 UserService 回退
+- `daemon`：使用 Go 构建、只执行白名单命令的 ARM64 shell 守护进程
 - `apps`：应用发现和纯函数过滤
 - `settings`：类型化 Preferences DataStore 设置
 - `templates`：版本化模板持久化和排序
