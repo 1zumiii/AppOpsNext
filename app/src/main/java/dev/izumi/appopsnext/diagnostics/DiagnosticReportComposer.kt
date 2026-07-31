@@ -47,7 +47,7 @@ object DiagnosticReportComposer {
         appendLine("state=${describe(shizukuState)}")
         appendLine()
         appendLine("[AppOps backend]")
-        appendLine("userService=${describe(privilegedServiceState)}")
+        appendLine("backend=${describe(privilegedServiceState)}")
         appendLine("selfCheck=${describe(appOpsReadState)}")
         appendLine()
         appendLine("[Events]")
@@ -75,9 +75,11 @@ object DiagnosticReportComposer {
     private fun describe(state: PrivilegedServiceState): String =
         when (state) {
             PrivilegedServiceState.Disconnected -> "disconnected"
-            PrivilegedServiceState.Connecting -> "connecting"
+            is PrivilegedServiceState.Connecting ->
+                "connecting(type=${state.backendType.name.lowercase()})"
             is PrivilegedServiceState.Connected ->
-                "connected(uid=${state.info.uid},pid=${state.info.pid}," +
+                "connected(type=${state.info.backendType.name.lowercase()}," +
+                    "uid=${state.info.uid},pid=${state.info.pid}," +
                     "api=${state.info.apiLevel})"
             is PrivilegedServiceState.Failure ->
                 "failure(${state.reason})"

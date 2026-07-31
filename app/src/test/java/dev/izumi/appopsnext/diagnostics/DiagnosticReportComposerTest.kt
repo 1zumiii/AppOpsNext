@@ -1,6 +1,7 @@
 package dev.izumi.appopsnext.diagnostics
 
 import dev.izumi.appopsnext.appops.model.AppOpsReadState
+import dev.izumi.appopsnext.shizuku.model.PrivilegedBackendType
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceFailureReason
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
 import dev.izumi.appopsnext.shizuku.model.ShizukuState
@@ -48,5 +49,42 @@ class DiagnosticReportComposerTest {
         assertTrue(report.contains("failure(BIND_TIMED_OUT)"))
         assertTrue(report.contains("event-line"))
         assertTrue(report.contains("review and redact"))
+    }
+
+    @Test
+    fun `report identifies the backend attempted while connecting`() {
+        val report = DiagnosticReportComposer.compose(
+            environment = DiagnosticEnvironment(
+                appVersionName = "1.1.2",
+                appVersionCode = 19,
+                buildType = "release",
+                targetSdk = 35,
+                compileSdk = 36,
+                manufacturer = "Example",
+                model = "Device",
+                device = "device_code",
+                androidVersion = "16",
+                apiLevel = 36,
+                securityPatch = "2026-07-01",
+                buildId = "BUILD.1",
+                userHandle = "UserHandle{0}",
+                processUid = 10_123,
+                locale = "en-US",
+                supportedAbis = "arm64-v8a",
+                shizukuApiVersion = "13.1.5",
+                shizukuManagerVersion = "13.6.0 (1086)",
+            ),
+            shizukuState = ShizukuState.Ready(
+                serverVersion = 13,
+                serverUid = 2_000,
+            ),
+            privilegedServiceState = PrivilegedServiceState.Connecting(
+                PrivilegedBackendType.NATIVE_DAEMON,
+            ),
+            appOpsReadState = AppOpsReadState.WaitingForBackend,
+            eventLines = emptyList(),
+        )
+
+        assertTrue(report.contains("connecting(type=native_daemon)"))
     }
 }

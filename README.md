@@ -8,8 +8,10 @@ A modern, clean-room AppOps manager for Android 15+, powered by
 AppOpsNext reads and changes Android's built-in AppOps state.
 
 > [!IMPORTANT]
-> Version 1.1.2 is developed and verified using one ASUS AI2302 running Android
-> 15 (API 35). Support for other Android versions or OEM ROMs is currently unknown.
+> Android 15 (API 35) development and verification use an ASUS AI2302. The
+> native backend has also been independently verified on a Xiaomi 24117RN76G
+> running HyperOS 3 / Android 16 (API 36). Support outside these tested devices
+> and system versions remains unknown.
 
 ## Relationship to the legacy App Ops
 
@@ -51,21 +53,26 @@ AppOps system service, not an interface or technology owned by the legacy app.
 - Change several permissions in one app as a verified batch operation
 - Report every batch success and failure in a persistent result dialog
 - Switch between system language, Simplified Chinese, and English
+- Run AppOps commands through a bundled native daemon, with Shizuku UserService
+  retained as an automatic fallback
 
 ## Requirements
 
-- Android 15 (API 35)
+- Android 15 (API 35) or newer
 - Shizuku 13 or newer
 - ADB or wireless debugging to start Shizuku on a non-rooted device
 
-AppOpsNext uses the shell identity supplied by Shizuku. If Shizuku stops after
-a reboot or the authorization is revoked, privileged reads and writes remain
-unavailable until the connection is restored.
+Shizuku starts AppOpsNext's bundled native daemon with the shell identity. The
+app then communicates with that daemon through private process pipes, avoiding
+the UserService callback path that can fail on some Android 16 / HyperOS
+devices. If native startup fails, AppOpsNext automatically tries its Shizuku
+UserService backend. If Shizuku stops after a reboot or authorization is
+revoked, privileged reads and writes remain unavailable until it is restored.
 
 ## Installation
 
 1. Install and start Shizuku.
-2. Download `AppOpsNext-v1.1.1.apk` from
+2. Download the latest APK from
    [GitHub Releases](https://github.com/1zumiii/AppOpsNext/releases).
 3. Install the APK and grant AppOpsNext access when Shizuku asks.
 4. Open an application, inspect its package/UID scope, and confirm every
@@ -95,8 +102,10 @@ sequentially and retain a result for every target.
 
 ## Development
 
-The project requires JDK 17 and an Android SDK. A physical Android 15 device
-with USB debugging is the primary test environment.
+The project requires JDK 17, Go 1.24 or newer, and an Android SDK. Gradle
+cross-compiles the bundled ARM64 daemon with `GOOS=android` and `CGO_ENABLED=0`.
+A physical Android 15 device with USB debugging is the primary test
+environment. Set `GO_EXECUTABLE` when `go` is not available on `PATH`.
 
 Build the debug app:
 
@@ -107,6 +116,7 @@ Build the debug app:
 Run local verification:
 
 ```shell
+(cd daemon && go test ./...)
 ./gradlew :app:testDebugUnitTest :app:lintDebug \
   :app:assembleDebug
 ```
@@ -132,13 +142,17 @@ key makes it impossible to publish updates that install over existing releases.
 
 - `presentation`: Compose screens, state, and reusable UI
 - `appops`: command adapters, parsing, repositories, and verified writes
-- `shizuku`: authorization, Binder lifecycle, and privileged UserService
+- `nativebackend`: native-daemon bootstrap, private pipe protocol, and gateway
+- `shizuku`: authorization, process bootstrap, and UserService fallback
+- `daemon`: allowlisted ARM64 shell daemon built with Go
 - `apps`: application discovery and pure filtering
 - `settings`: typed Preferences DataStore settings
 - `templates`: versioned template persistence and ordering
 - `history`: discrete AppOps history parsing, repositories, and statistics
 
 See [Architecture](docs/ARCHITECTURE.md) for package boundaries and maintenance
-rules, and [Android 15 device findings](docs/DEVICE_FINDINGS.md) for behavior
-verified on the reference device. Maintainers should also follow the
+rules, [Privileged backends](docs/PRIVILEGED_BACKENDS.md) for backend selection
+and compatibility evidence, and
+[Android 15 device findings](docs/DEVICE_FINDINGS.md) for behavior verified on
+the reference device. Maintainers should also follow the
 [release checklist](docs/RELEASE.md) before publishing an APK.

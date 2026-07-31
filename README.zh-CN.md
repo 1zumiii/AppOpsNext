@@ -9,8 +9,9 @@ clean-room 方式独立实现。
 AppOpsNext 用于读取和修改 Android 系统内置的 AppOps 状态。
 
 > [!IMPORTANT]
-> 1.1.2 版本目前以一台运行 Android 15（API 35）的 ASUS AI2302
-> 为开发和验证设备，对其他 Android 版本或厂商 ROM 的支持尚不明确。
+> Android 15（API 35）的开发和验证设备为 ASUS AI2302；原生后端还经过一位
+> 用户在运行 HyperOS 3 / Android 16（API 36）的 Xiaomi 24117RN76G 上独立
+> 验证。对这些已测试设备和系统版本之外环境的支持尚不明确。
 
 ## 与旧版 App Ops 的关系
 
@@ -47,21 +48,26 @@ fork、移植版、修改版、破解版或官方续作。
 - 在单个应用内批量修改多个权限
 - 通过结果弹窗完整报告每一项批量操作的成功或失败
 - 支持跟随系统、简体中文和英文
+- 通过内置原生守护进程执行 AppOps 命令，并保留 Shizuku UserService 作为
+  自动回退后端
 
 ## 运行要求
 
-- Android 15（API 35）
+- Android 15（API 35）或更高版本
 - Shizuku 13 或更高版本
 - 非 Root 设备需要通过 ADB 或无线调试启动 Shizuku
 
-AppOpsNext 使用 Shizuku 提供的 shell 身份。如果设备重启后 Shizuku
-没有运行，或者用户撤销了授权，特权读取和修改功能将不可用，直到重新建立连接。
+Shizuku 以 shell 身份启动 AppOpsNext 内置的原生守护进程，应用随后通过私有
+进程管道与其通信，从而避开在部分 Android 16 / HyperOS 设备上可能失效的
+UserService 回调路径。如果原生后端启动失败，AppOpsNext 会自动尝试 Shizuku
+UserService 后端。设备重启后若 Shizuku 未运行，或用户撤销授权，特权读取和
+修改功能将不可用，直到重新建立连接。
 
 ## 安装
 
 1. 安装并启动 Shizuku。
 2. 从 [GitHub Releases](https://github.com/1zumiii/AppOpsNext/releases)
-   下载 `AppOpsNext-v1.1.1.apk`。
+   下载最新 APK。
 3. 安装 APK，并在 Shizuku 请求时授权 AppOpsNext。
 4. 打开目标应用，确认权限的应用包/UID 作用域，再执行修改。
 
@@ -86,8 +92,10 @@ UID 作用域的修改可能影响共用同一 UID 的多个应用，确认界�
 
 ## 开发
 
-项目需要 JDK 17 和 Android SDK，主要测试环境是通过 USB 调试连接的
-Android 15 实体设备。
+项目需要 JDK 17、Go 1.24 或更高版本以及 Android SDK。Gradle 会通过
+`GOOS=android` 和 `CGO_ENABLED=0` 交叉编译内置的 ARM64 守护进程。
+主要测试环境是通过 USB 调试连接的 Android 15 实体设备。如果 `go` 不在
+`PATH` 中，可以通过 `GO_EXECUTABLE` 指定其路径。
 
 构建 Debug 应用：
 
@@ -98,6 +106,7 @@ Android 15 实体设备。
 运行本地验证：
 
 ```shell
+(cd daemon && go test ./...)
 ./gradlew :app:testDebugUnitTest :app:lintDebug \
   :app:assembleDebug
 ```
@@ -122,12 +131,15 @@ export APPOPSNEXT_KEY_PASSWORD="<密钥密码>"
 
 - `presentation`：Compose 界面、状态和可复用 UI
 - `appops`：命令适配、解析、仓库和验证写入
-- `shizuku`：授权、Binder 生命周期和特权 UserService
+- `nativebackend`：原生守护进程启动、私有管道协议和网关
+- `shizuku`：授权、进程启动和 UserService 回退
+- `daemon`：使用 Go 构建、只执行白名单命令的 ARM64 shell 守护进程
 - `apps`：应用发现和纯函数过滤
 - `settings`：类型化 Preferences DataStore 设置
 - `templates`：版本化模板持久化和排序
 - `history`：离散 AppOps 历史解析、仓库和统计
 
-详细维护约束参见[架构说明](docs/ARCHITECTURE.md)，实体设备行为记录参见
+详细维护约束参见[架构说明](docs/ARCHITECTURE.md)，后端选择和兼容性证据参见
+[特权后端说明](docs/PRIVILEGED_BACKENDS.md)，实体设备行为记录参见
 [Android 15 设备验证结果](docs/DEVICE_FINDINGS.md)。发布 APK 前请同时遵循
 [发布检查清单](docs/RELEASE.md)。

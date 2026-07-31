@@ -11,6 +11,9 @@ import dev.izumi.appopsnext.appops.PrivilegedAppOpsGateway
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.ShellCommandResult
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
+import dev.izumi.appopsnext.nativebackend.NativeDaemonBootstrapper
+import dev.izumi.appopsnext.nativebackend.NativeDaemonGateway
+import dev.izumi.appopsnext.shizuku.model.PrivilegedBackendType
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceInfo
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceFailureReason
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
@@ -37,10 +40,16 @@ class PrivilegedServiceClient(
 
     @Volatile
     private var service: IPrivilegedAppOpsService? = null
+    @Volatile
+    private var nativeGateway: NativeDaemonGateway? = null
     private var bound = false
     private var connectionTimeoutJob: Job? = null
+    private var nativeConnectionJob: Job? = null
+    private var connectionGeneration = 0
     private val connectionScope =
         CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val nativeDaemonBootstrapper =
+        NativeDaemonBootstrapper(context)
 
     private val userServiceArgs =
         Shizuku.UserServiceArgs(
@@ -78,6 +87,7 @@ class PrivilegedServiceClient(
                         uid = connectedService.uid,
                         pid = connectedService.pid,
                         apiLevel = connectedService.apiLevel,
+                        backendType = PrivilegedBackendType.USER_SERVICE,
                     )
                     service = connectedService
                     mutableState.value = PrivilegedServiceState.Connected(
@@ -118,7 +128,12 @@ class PrivilegedServiceClient(
     }
 
     fun connect() {
-        if (bound || mutableState.value is PrivilegedServiceState.Connecting) {
+        if (
+            bound ||
+            nativeGateway != null ||
+            nativeConnectionJob?.isActive == true ||
+            mutableState.value is PrivilegedServiceState.Connecting
+        ) {
             diagnosticLog.info(
                 source = LOG_SOURCE,
                 message =
@@ -128,11 +143,75 @@ class PrivilegedServiceClient(
             return
         }
 
-        mutableState.value = PrivilegedServiceState.Connecting
+        mutableState.value = PrivilegedServiceState.Connecting(
+            PrivilegedBackendType.NATIVE_DAEMON,
+        )
+        val generation = ++connectionGeneration
+        diagnosticLog.info(
+            source = NATIVE_LOG_SOURCE,
+            message =
+                "Starting native daemon backend. api=${Build.VERSION.SDK_INT}, " +
+                    "clientVersion=${BuildConfig.VERSION_CODE}",
+        )
+        nativeConnectionJob = connectionScope.launch {
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    NativeDaemonGateway(
+                        nativeDaemonBootstrapper.launch(),
+                    )
+                }
+            }
+            if (generation != connectionGeneration) {
+                result.getOrNull()?.close()
+                return@launch
+            }
+            result.onSuccess { gateway ->
+                nativeGateway = gateway
+                val daemonInfo = gateway.info
+                val serviceInfo = PrivilegedServiceInfo(
+                    uid = daemonInfo.uid,
+                    pid = daemonInfo.pid,
+                    apiLevel = Build.VERSION.SDK_INT,
+                    backendType = PrivilegedBackendType.NATIVE_DAEMON,
+                )
+                mutableState.value = PrivilegedServiceState.Connected(
+                    serviceInfo,
+                )
+                Log.i(
+                    NATIVE_LOG_SOURCE,
+                    "Native daemon connected. " +
+                        "protocol=${daemonInfo.protocolVersion}, " +
+                        "uid=${daemonInfo.uid}, pid=${daemonInfo.pid}",
+                )
+                diagnosticLog.info(
+                    source = NATIVE_LOG_SOURCE,
+                    message =
+                        "Native daemon connected. " +
+                            "protocol=${daemonInfo.protocolVersion}, " +
+                            "uid=${daemonInfo.uid}, pid=${daemonInfo.pid}",
+                )
+            }.onFailure { error ->
+                Log.w(TAG, "Native daemon backend unavailable", error)
+                diagnosticLog.warning(
+                    source = NATIVE_LOG_SOURCE,
+                    message =
+                        "Native daemon startup failed; falling back to " +
+                            "UserService. ${error::class.java.simpleName}: " +
+                            error.message.orEmpty(),
+                )
+                bindUserService()
+            }
+        }
+    }
+
+    private fun bindUserService() {
+        mutableState.value = PrivilegedServiceState.Connecting(
+            PrivilegedBackendType.USER_SERVICE,
+        )
         diagnosticLog.info(
             source = LOG_SOURCE,
             message =
-                "Binding UserService. api=${Build.VERSION.SDK_INT}, " +
+                "Binding UserService fallback. api=${Build.VERSION.SDK_INT}, " +
                     "clientVersion=${BuildConfig.VERSION_CODE}",
         )
         runCatching {
@@ -160,15 +239,20 @@ class PrivilegedServiceClient(
 
     fun retry() {
         diagnosticLog.info(
-            source = LOG_SOURCE,
-            message = "Manual UserService retry requested.",
+            source = NATIVE_LOG_SOURCE,
+            message = "Manual privileged backend retry requested.",
         )
         disconnect()
         connect()
     }
 
     fun disconnect() {
+        connectionGeneration++
+        nativeConnectionJob?.cancel()
+        nativeConnectionJob = null
         connectionTimeoutJob?.cancel()
+        nativeGateway?.close()
+        nativeGateway = null
         if (bound) {
             runCatching {
                 Shizuku.unbindUserService(userServiceArgs, connection, false)
@@ -190,8 +274,8 @@ class PrivilegedServiceClient(
             mutableState.value !is PrivilegedServiceState.Disconnected
         ) {
             diagnosticLog.info(
-                source = LOG_SOURCE,
-                message = "UserService connection state cleared.",
+                source = NATIVE_LOG_SOURCE,
+                message = "Privileged backend connection state cleared.",
             )
         }
         service = null
@@ -203,7 +287,10 @@ class PrivilegedServiceClient(
         connectionTimeoutJob?.cancel()
         connectionTimeoutJob = connectionScope.launch {
             delay(CONNECTION_TIMEOUT_MILLIS)
-            if (mutableState.value is PrivilegedServiceState.Connecting) {
+            if (
+                (mutableState.value as? PrivilegedServiceState.Connecting)
+                    ?.backendType == PrivilegedBackendType.USER_SERVICE
+            ) {
                 diagnosticLog.error(
                     source = LOG_SOURCE,
                     message =
@@ -219,9 +306,9 @@ class PrivilegedServiceClient(
 
     override suspend fun getPackageOps(packageName: String): ShellCommandResult =
         withContext(Dispatchers.IO) {
-            val connectedService = service
+            nativeGateway?.getPackageOps(packageName)
+                ?: service?.getPackageOps(packageName)
                 ?: throw IllegalStateException("Privileged service is unavailable")
-            connectedService.getPackageOps(packageName)
         }
 
     override suspend fun getPackageOp(
@@ -229,25 +316,25 @@ class PrivilegedServiceClient(
         operationName: String,
     ): ShellCommandResult =
         withContext(Dispatchers.IO) {
-            val connectedService = service
+            nativeGateway?.getPackageOp(packageName, operationName)
+                ?: service?.getPackageOp(packageName, operationName)
                 ?: throw IllegalStateException("Privileged service is unavailable")
-            connectedService.getPackageOp(packageName, operationName)
         }
 
     override suspend fun getUidOps(uid: Int): ShellCommandResult =
         withContext(Dispatchers.IO) {
-            val connectedService = service
+            nativeGateway?.getUidOps(uid)
+                ?: service?.getUidOps(uid)
                 ?: throw IllegalStateException("Privileged service is unavailable")
-            connectedService.getUidOps(uid)
         }
 
     override suspend fun getHistory(
         operationName: String,
     ): ShellCommandResult =
         withContext(Dispatchers.IO) {
-            val connectedService = service
+            nativeGateway?.getHistory(operationName)
+                ?: service?.getHistory(operationName)
                 ?: throw IllegalStateException("Privileged service is unavailable")
-            connectedService.getHistory(operationName)
         }
 
     override suspend fun setPackageOpMode(
@@ -256,13 +343,16 @@ class PrivilegedServiceClient(
         mode: AppOpMode,
     ): ShellCommandResult =
         withContext(Dispatchers.IO) {
-            val connectedService = service
-                ?: throw IllegalStateException("Privileged service is unavailable")
-            connectedService.setPackageOpMode(
+            nativeGateway?.setPackageOpMode(
                 packageName,
                 operationName,
-                mode.shellValue,
-            )
+                mode,
+            ) ?: service?.setPackageOpMode(
+                    packageName,
+                    operationName,
+                    mode.shellValue,
+                )
+                ?: throw IllegalStateException("Privileged service is unavailable")
         }
 
     override suspend fun setUidOpMode(
@@ -271,18 +361,22 @@ class PrivilegedServiceClient(
         mode: AppOpMode,
     ): ShellCommandResult =
         withContext(Dispatchers.IO) {
-            val connectedService = service
-                ?: throw IllegalStateException("Privileged service is unavailable")
-            connectedService.setUidOpMode(
+            nativeGateway?.setUidOpMode(
                 packageName,
                 operationName,
-                mode.shellValue,
-            )
+                mode,
+            ) ?: service?.setUidOpMode(
+                    packageName,
+                    operationName,
+                    mode.shellValue,
+                )
+                ?: throw IllegalStateException("Privileged service is unavailable")
         }
 
     private companion object {
         const val TAG = "PrivilegedService"
         const val LOG_SOURCE = "UserService"
+        const val NATIVE_LOG_SOURCE = "NativeBackend"
         const val USER_SERVICE_PROCESS_SUFFIX = "appops"
         const val CONNECTION_TIMEOUT_MILLIS = 12_000L
     }

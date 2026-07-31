@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.history.parser
 
+import dev.izumi.appopsnext.history.model.AppOpHistoryEvent
 import java.text.SimpleDateFormat
 import java.util.Locale
 import org.junit.Assert.assertEquals
@@ -53,6 +54,52 @@ class DiscreteAppOpsHistoryParserTest {
         assertEquals(
             emptyList<Any>(),
             parser.parse("CAMERA", "Current AppOps Service state:"),
+        )
+    }
+
+    @Test
+    fun `merges a duration-less companion into its duration event`() {
+        val result = parser.parse(
+            operationName = "CAMERA",
+            output = """
+                Discrete accesses:
+                  Uid: 10123
+                    Package: com.example.camera
+                      CAMERA
+                        Attribution: null
+                          Access [top-s] at 2026-07-31 15:04:00.000
+                          Access [top-s] at 2026-07-31 15:04:00.000 for 60000 milliseconds
+            """.trimIndent(),
+        )
+
+        assertEquals(1, result.size)
+        assertEquals(60_000L, result.single().durationMillis)
+    }
+
+    @Test
+    fun `keeps unpaired and differently identified accesses`() {
+        val result = parser.parse(
+            operationName = "CAMERA",
+            output = """
+                Discrete accesses:
+                  Uid: 10123
+                    Package: com.example.camera
+                      CAMERA
+                        Attribution: null
+                          Access [top-s] at 2026-07-31 15:04:00.000
+                          Access [top-s] at 2026-07-31 15:04:00.000
+                          Access [top-s] at 2026-07-31 15:04:00.000 for 60000 milliseconds
+                          Access [fg-s] at 2026-07-31 15:04:00.000 for 60000 milliseconds
+            """.trimIndent(),
+        )
+
+        assertEquals(3, result.size)
+        assertEquals(1, result.count { it.durationMillis == null })
+        assertEquals(
+            setOf("top", "fg"),
+            result
+                .filter { it.durationMillis != null }
+                .mapTo(mutableSetOf(), AppOpHistoryEvent::uidState),
         )
     }
 
