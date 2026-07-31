@@ -27,7 +27,8 @@
     <string name="status_shizuku_ready_detail">Service version %1$d · UID %2$d</string>
     <string name="status_appops_disconnected_detail">Read and edit features are enabled after the connection succeeds.</string>
     <string name="status_user_service_connecting_detail">Starting the shell-identity UserService.</string>
-    <string name="status_user_service_connected_detail">UID %1$d · PID %2$d · API %3$d</string>
+    <string name="status_native_daemon_connected_detail">Native daemon · UID %1$d · PID %2$d · API %3$d</string>
+    <string name="status_user_service_connected_detail">UserService fallback · UID %1$d · PID %2$d · API %3$d</string>
     <string name="status_shizuku_read_failed_detail">Could not read the Shizuku state. Check again.</string>
     <string name="status_shizuku_permission_failed_detail">Could not request Shizuku authorization. Make sure Shizuku is running.</string>
     <string name="status_user_service_empty_binder_detail">Shizuku returned an invalid UserService Binder.</string>

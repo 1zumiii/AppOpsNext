@@ -7,16 +7,20 @@ behavior stays isolated from UI code.
 
 - `model`: immutable app-wide data models.
 - `presentation`: Compose screens, reusable components, and screen state.
-- `shizuku`: binder lifecycle, authorization, and UserService connection.
+- `shizuku`: binder lifecycle, authorization, and privileged process launch.
+- `nativebackend`: daemon installation, private pipe protocol, and gateway.
+- `daemon`: allowlisted shell process compiled as an ARM64 Android ELF.
 - `appops`: AppOps commands, parsing, mode mapping, and privileged adapters.
 - `apps`: installed-application discovery and metadata.
 - `settings`: Preferences DataStore and typed user settings.
 - `data`: persistence for templates and backups as those modules land.
 
-The `shizuku` package owns privileged-process lifecycle only. The `appops`
-package owns command construction, execution results, parsing, and repository
-state. The `apps` package owns installed-application discovery and pure search
-filtering. Persistence packages are introduced as their feature modules land.
+The `shizuku` package owns privileged-process lifecycle only. The
+`nativebackend` package isolates the deprecated Shizuku remote-process
+bootstrap surface and the versioned daemon protocol. The `appops` package owns
+command construction, execution results, parsing, and repository state. The
+`apps` package owns installed-application discovery and pure search filtering.
+Persistence packages are introduced as their feature modules land.
 
 `AppOpsNextApplication` owns the single `PrivilegedServiceClient` and
 `UserSettingsRepository` instances. The privileged client is shared by
@@ -31,16 +35,27 @@ instance.
 HomeViewModel
     -> AppOpsRepository
     -> PrivilegedServiceClient
-    -> IPrivilegedAppOpsService
-    -> AppOpsUserService (shell UID)
-    -> CommandExecutor
+    -> NativeDaemonGateway
+    -> private stdin/stdout pipe
+    -> appopsnextd (shell UID)
     -> /system/bin/cmd appops
 ```
 
-Only validated argument lists cross into `ProcessBuilder`; commands are never
-constructed as shell strings. The AIDL boundary returns a typed
-`ShellCommandResult`, and parsing remains in the regular app process so it can
-be unit tested without Shizuku or a device.
+Shizuku launches the native daemon as shell UID 2000, but it does not use the
+UserService/app_process loading path. One remote process installs the bundled
+ELF atomically under `/data/local/tmp`; a second process runs it with private
+stdin/stdout pipe file descriptors. Those unenumerable pipes are the IPC
+capability, so no TCP port, Unix-domain socket, or command-line secret is
+exposed. The legacy UserService remains a fallback when native bootstrap is
+unavailable.
+
+Both the app and daemon validate package names, operation names, modes, and
+command arity. The daemon maps fixed protocol verbs to argument arrays and
+never accepts an arbitrary executable or shell fragment. Results return as a
+typed `ShellCommandResult`; parsing remains in the regular app process so it
+can be unit tested without Shizuku or a device. Large history output travels
+through the pipe instead of Binder and is trimmed before further app-layer
+processing.
 
 ## Safe write proof
 

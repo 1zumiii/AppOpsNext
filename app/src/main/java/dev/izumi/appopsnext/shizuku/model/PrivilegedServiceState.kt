@@ -4,7 +4,13 @@ data class PrivilegedServiceInfo(
     val uid: Int,
     val pid: Int,
     val apiLevel: Int,
+    val backendType: PrivilegedBackendType,
 )
+
+enum class PrivilegedBackendType {
+    NATIVE_DAEMON,
+    USER_SERVICE,
+}
 
 enum class PrivilegedServiceFailureReason {
     EMPTY_BINDER,

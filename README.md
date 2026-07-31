@@ -95,8 +95,10 @@ sequentially and retain a result for every target.
 
 ## Development
 
-The project requires JDK 17 and an Android SDK. A physical Android 15 device
-with USB debugging is the primary test environment.
+The project requires JDK 17, Go 1.24 or newer, and an Android SDK. Gradle
+cross-compiles the bundled ARM64 daemon with `GOOS=android` and `CGO_ENABLED=0`.
+A physical Android 15 device with USB debugging is the primary test
+environment. Set `GO_EXECUTABLE` when `go` is not available on `PATH`.
 
 Build the debug app:
 
@@ -132,7 +134,9 @@ key makes it impossible to publish updates that install over existing releases.
 
 - `presentation`: Compose screens, state, and reusable UI
 - `appops`: command adapters, parsing, repositories, and verified writes
-- `shizuku`: authorization, Binder lifecycle, and privileged UserService
+- `nativebackend`: native-daemon bootstrap, private pipe protocol, and gateway
+- `shizuku`: authorization, process bootstrap, and UserService fallback
+- `daemon`: allowlisted ARM64 shell daemon built with Go
 - `apps`: application discovery and pure filtering
 - `settings`: typed Preferences DataStore settings
 - `templates`: versioned template persistence and ordering
