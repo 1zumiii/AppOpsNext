@@ -84,7 +84,9 @@ class DiscreteAppOpsHistoryParser {
             )
         }
 
-        return events.sortedByDescending(AppOpHistoryEvent::accessTimeMillis)
+        return DiscreteHistoryEventMerger
+            .merge(events)
+            .sortedByDescending(AppOpHistoryEvent::accessTimeMillis)
     }
 
     private companion object {
