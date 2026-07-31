@@ -12,7 +12,7 @@ import moe.shizuku.server.IRemoteProcess
  * Keeping this type in one package prevents the compatibility backend from
  * leaking Shizuku's deprecated process API into AppOps business code.
  */
-class RemoteProcessHandle internal constructor(
+internal class RemoteProcessHandle(
     private val remoteProcess: IRemoteProcess,
 ) {
     val stdin: OutputStream by lazy {

@@ -18,7 +18,7 @@ import kotlinx.coroutines.withContext
  * descriptors. Runtime requests flow through those private kernel pipes,
  * avoiding UserService callbacks and cross-domain sockets.
  */
-class NativeDaemonBootstrapper(
+internal class NativeDaemonBootstrapper(
     context: Context,
     private val processLauncher: ShizukuRemoteProcessLauncher =
         ShizukuRemoteProcessLauncher(),
@@ -28,9 +28,9 @@ class NativeDaemonBootstrapper(
 
     internal suspend fun launch(): NativeDaemonConnection =
         withContext(Dispatchers.IO) {
-            val credentials = createCredentials()
-            installDaemon(credentials)
-            val process = launchDaemon(credentials)
+            val instanceId = createInstanceId()
+            installDaemon(instanceId)
+            val process = launchDaemon()
             try {
                 openConnection(process)
             } catch (error: Throwable) {
@@ -63,13 +63,13 @@ class NativeDaemonBootstrapper(
     }
 
     private fun installDaemon(
-        credentials: NativeDaemonCredentials,
+        instanceId: String,
     ) {
         val installDirectory =
             "$INSTALL_ROOT/${BuildConfig.VERSION_CODE}"
         val executablePath = "$installDirectory/$DAEMON_FILE_NAME"
         val temporaryPath =
-            "$installDirectory/$DAEMON_FILE_NAME.${credentials.instanceId}.tmp"
+            "$installDirectory/$DAEMON_FILE_NAME.$instanceId.tmp"
         val installScript = buildString {
             append("umask 077; ")
             append("mkdir -p ")
@@ -123,9 +123,7 @@ class NativeDaemonBootstrapper(
         }
     }
 
-    private fun launchDaemon(
-        credentials: NativeDaemonCredentials,
-    ): RemoteProcessHandle {
+    private fun launchDaemon(): RemoteProcessHandle {
         val executablePath =
             "$INSTALL_ROOT/${BuildConfig.VERSION_CODE}/$DAEMON_FILE_NAME"
         return processLauncher.launch(
@@ -148,20 +146,14 @@ class NativeDaemonBootstrapper(
         }.getOrDefault("")
     }
 
-    private fun createCredentials(): NativeDaemonCredentials {
+    private fun createInstanceId(): String {
         val instanceBytes = ByteArray(INSTANCE_ID_BYTE_LENGTH)
         secureRandom.nextBytes(instanceBytes)
         val instanceId = instanceBytes.joinToString(separator = "") { byte ->
             "%02x".format(byte.toInt() and 0xff)
         }
-        return NativeDaemonCredentials(
-            instanceId = instanceId,
-        )
+        return instanceId
     }
-
-    private data class NativeDaemonCredentials(
-        val instanceId: String,
-    )
 
     private companion object {
         const val INSTANCE_ID_BYTE_LENGTH = 8

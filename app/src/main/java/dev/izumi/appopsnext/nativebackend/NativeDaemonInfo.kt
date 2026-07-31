@@ -1,6 +1,6 @@
 package dev.izumi.appopsnext.nativebackend
 
-data class NativeDaemonInfo(
+internal data class NativeDaemonInfo(
     val protocolVersion: Int,
     val uid: Int,
     val pid: Int,
