@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.appops.model.AppOpsReadFailureReason
 import dev.izumi.appopsnext.appops.model.AppOpsReadState
+import dev.izumi.appopsnext.shizuku.model.PrivilegedBackendType
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceFailureReason
 import dev.izumi.appopsnext.shizuku.model.ShizukuFailureReason
@@ -60,6 +61,10 @@ fun DiagnosticsSection(
             onAction = onShizukuAction,
         )
         HorizontalDivider(modifier = Modifier.padding(start = 72.dp))
+        RuntimeModeStatusItem(
+            serviceState = uiState.privilegedServiceState,
+        )
+        HorizontalDivider(modifier = Modifier.padding(start = 72.dp))
         PrivilegedServiceStatusCard(
             serviceState = uiState.privilegedServiceState,
             readState = uiState.appOpsReadState,
@@ -68,6 +73,85 @@ fun DiagnosticsSection(
         )
     }
 }
+
+@Composable
+private fun RuntimeModeStatusItem(
+    serviceState: PrivilegedServiceState,
+) {
+    val presentation = when (serviceState) {
+        PrivilegedServiceState.Disconnected -> StatusPresentation(
+            value = stringResource(R.string.status_runtime_mode_pending),
+            detail = stringResource(R.string.status_runtime_mode_pending_detail),
+            level = DiagnosticStatusLevel.NEUTRAL,
+        )
+
+        is PrivilegedServiceState.Connecting ->
+            runtimeModePresentation(
+                backendType = serviceState.backendType,
+                isConnecting = true,
+            )
+
+        is PrivilegedServiceState.Connected ->
+            runtimeModePresentation(
+                backendType = serviceState.info.backendType,
+                isConnecting = false,
+            )
+
+        is PrivilegedServiceState.Failure -> StatusPresentation(
+            value = stringResource(R.string.status_runtime_mode_fallback_failed),
+            detail = stringResource(
+                R.string.status_runtime_mode_fallback_failed_detail,
+            ),
+            level = DiagnosticStatusLevel.ERROR,
+        )
+    }
+
+    DiagnosticStatusItem(
+        title = stringResource(R.string.status_runtime_mode_title),
+        value = presentation.value,
+        detail = presentation.detail,
+        level = presentation.level,
+    )
+}
+
+@Composable
+private fun runtimeModePresentation(
+    backendType: PrivilegedBackendType,
+    isConnecting: Boolean,
+): StatusPresentation =
+    when (backendType) {
+        PrivilegedBackendType.NATIVE_DAEMON -> StatusPresentation(
+            value = stringResource(
+                if (isConnecting) {
+                    R.string.status_runtime_mode_native_connecting
+                } else {
+                    R.string.status_runtime_mode_native
+                },
+            ),
+            detail = stringResource(
+                R.string.status_runtime_mode_native_detail,
+            ),
+            level = if (isConnecting) {
+                DiagnosticStatusLevel.NEUTRAL
+            } else {
+                DiagnosticStatusLevel.SUCCESS
+            },
+        )
+
+        PrivilegedBackendType.USER_SERVICE -> StatusPresentation(
+            value = stringResource(
+                if (isConnecting) {
+                    R.string.status_runtime_mode_user_service_connecting
+                } else {
+                    R.string.status_runtime_mode_user_service
+                },
+            ),
+            detail = stringResource(
+                R.string.status_runtime_mode_user_service_detail,
+            ),
+            level = DiagnosticStatusLevel.WARNING,
+        )
+    }
 
 @Composable
 private fun ShizukuStatusCard(
@@ -169,9 +253,17 @@ private fun PrivilegedServiceStatusCard(
             level = DiagnosticStatusLevel.WARNING,
         )
 
-        PrivilegedServiceState.Connecting -> StatusPresentation(
+        is PrivilegedServiceState.Connecting -> StatusPresentation(
             value = stringResource(R.string.status_connecting),
-            detail = stringResource(R.string.status_user_service_connecting_detail),
+            detail = stringResource(
+                when (serviceState.backendType) {
+                    PrivilegedBackendType.NATIVE_DAEMON ->
+                        R.string.status_native_daemon_connecting_detail
+
+                    PrivilegedBackendType.USER_SERVICE ->
+                        R.string.status_user_service_connecting_detail
+                },
+            ),
             level = DiagnosticStatusLevel.NEUTRAL,
         )
 
@@ -225,7 +317,13 @@ private fun appOpsReadPresentation(
         -> StatusPresentation(
             value = stringResource(R.string.status_appops_reading),
             detail = stringResource(
-                R.string.status_user_service_connected_detail,
+                when (serviceState.info.backendType) {
+                    PrivilegedBackendType.NATIVE_DAEMON ->
+                        R.string.status_native_daemon_connected_detail
+
+                    PrivilegedBackendType.USER_SERVICE ->
+                        R.string.status_user_service_connected_detail
+                },
                 serviceState.info.uid,
                 serviceState.info.pid,
                 serviceState.info.apiLevel,

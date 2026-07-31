@@ -1,6 +1,7 @@
 package dev.izumi.appopsnext.presentation.diagnostics
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
@@ -90,14 +91,17 @@ class DiagnosticsViewModel(
                         uid = application.applicationInfo.uid,
                     ).also { result ->
                         when (result) {
-                            is AppOpsReadState.Ready ->
+                            is AppOpsReadState.Ready -> {
+                                val message =
+                                    "AppOps self-check succeeded. " +
+                                        "operationCount=" +
+                                        result.operationCount
+                                Log.i(LOG_SOURCE, message)
                                 diagnosticLog.info(
                                     source = LOG_SOURCE,
-                                    message =
-                                        "AppOps self-check succeeded. " +
-                                            "operationCount=" +
-                                            result.operationCount,
+                                    message = message,
                                 )
+                            }
 
                             is AppOpsReadState.Failure ->
                                 diagnosticLog.error(
