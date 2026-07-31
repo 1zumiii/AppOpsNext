@@ -1,21 +1,18 @@
-name: Android 16 compatibility APK
+name: Signed test APK
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - Dev/android16-hyperos
 
 permissions:
   contents: read
 
 concurrency:
-  group: android16-compat-${{ github.ref }}
+  group: signed-test-apk-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
-    name: Build signed compatibility APK
+    name: Build signed test APK
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
@@ -50,7 +47,11 @@ jobs:
             > .signing/appopsnext-release.keystore
           chmod 600 .signing/appopsnext-release.keystore
 
-      - name: Test and build
+      - name: Test native daemon
+        working-directory: daemon
+        run: go test ./...
+
+      - name: Test and build signed APK
         env:
           APPOPSNEXT_STORE_PASSWORD: >-
             ${{ secrets.APPOPSNEXT_RELEASE_PASSWORD }}
@@ -64,19 +65,19 @@ jobs:
             :app:assembleRelease \
             --no-daemon
 
-      - name: Prepare compatibility artifact
+      - name: Prepare signed artifact
         run: |
           mkdir -p artifacts
           cp app/build/outputs/apk/release/app-release.apk \
-            artifacts/AppOpsNext-android16-compat.apk
+            artifacts/AppOpsNext-signed-test.apk
           cd artifacts
-          sha256sum AppOpsNext-android16-compat.apk \
-            > AppOpsNext-android16-compat.apk.sha256
+          sha256sum AppOpsNext-signed-test.apk \
+            > AppOpsNext-signed-test.apk.sha256
 
-      - name: Upload compatibility APK
+      - name: Upload signed test APK
         uses: actions/upload-artifact@v7
         with:
-          name: AppOpsNext-android16-compat-${{ github.run_number }}
+          name: AppOpsNext-signed-test-${{ github.run_number }}
           path: artifacts/
           if-no-files-found: error
           retention-days: 14
