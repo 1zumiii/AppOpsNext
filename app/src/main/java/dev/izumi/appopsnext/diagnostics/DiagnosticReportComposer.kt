@@ -75,7 +75,8 @@ object DiagnosticReportComposer {
     private fun describe(state: PrivilegedServiceState): String =
         when (state) {
             PrivilegedServiceState.Disconnected -> "disconnected"
-            PrivilegedServiceState.Connecting -> "connecting"
+            is PrivilegedServiceState.Connecting ->
+                "connecting(type=${state.backendType.name.lowercase()})"
             is PrivilegedServiceState.Connected ->
                 "connected(type=${state.info.backendType.name.lowercase()}," +
                     "uid=${state.info.uid},pid=${state.info.pid}," +

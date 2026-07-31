@@ -143,7 +143,9 @@ class PrivilegedServiceClient(
             return
         }
 
-        mutableState.value = PrivilegedServiceState.Connecting
+        mutableState.value = PrivilegedServiceState.Connecting(
+            PrivilegedBackendType.NATIVE_DAEMON,
+        )
         val generation = ++connectionGeneration
         diagnosticLog.info(
             source = NATIVE_LOG_SOURCE,
@@ -203,6 +205,9 @@ class PrivilegedServiceClient(
     }
 
     private fun bindUserService() {
+        mutableState.value = PrivilegedServiceState.Connecting(
+            PrivilegedBackendType.USER_SERVICE,
+        )
         diagnosticLog.info(
             source = LOG_SOURCE,
             message =
@@ -282,7 +287,10 @@ class PrivilegedServiceClient(
         connectionTimeoutJob?.cancel()
         connectionTimeoutJob = connectionScope.launch {
             delay(CONNECTION_TIMEOUT_MILLIS)
-            if (mutableState.value is PrivilegedServiceState.Connecting) {
+            if (
+                (mutableState.value as? PrivilegedServiceState.Connecting)
+                    ?.backendType == PrivilegedBackendType.USER_SERVICE
+            ) {
                 diagnosticLog.error(
                     source = LOG_SOURCE,
                     message =
