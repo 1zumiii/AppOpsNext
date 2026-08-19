@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.appops
 
+import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpModeChangePhase
 import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
 import dev.izumi.appopsnext.appops.model.AppOpScope
@@ -25,14 +26,32 @@ class AdaptiveScopeModeChangeExecutor(
         packageName: String,
         uid: Int,
         preferredScope: AppOpScope,
+        requestedMode: AppOpMode,
+        readMode: suspend (AppOpScope) -> AppOpMode?,
         applyMode: suspend (AppOpScope) -> AppOpModeChangeResult,
     ): AdaptiveScopeModeChangeOutcome {
         val initialResult = applyMode(preferredScope)
         val alternateScope = preferredScope.alternate()
-        if (
-            !initialResult.isSafeScopeRejection() ||
-            !canUseScope(packageName, uid, alternateScope)
-        ) {
+        if (!initialResult.isSafeScopeRejection()) {
+            return AdaptiveScopeModeChangeOutcome(
+                result = initialResult,
+                appliedScope = preferredScope,
+                fallbackAttempted = false,
+            )
+        }
+
+        if (!canUseScope(packageName, uid, alternateScope)) {
+            val alternateMode = readMode(alternateScope)
+            if (alternateMode == requestedMode) {
+                return AdaptiveScopeModeChangeOutcome(
+                    result = AppOpModeChangeResult.Success(
+                        originalMode = alternateMode,
+                        appliedMode = alternateMode,
+                    ),
+                    appliedScope = alternateScope,
+                    fallbackAttempted = true,
+                )
+            }
             return AdaptiveScopeModeChangeOutcome(
                 result = initialResult,
                 appliedScope = preferredScope,

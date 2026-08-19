@@ -21,6 +21,8 @@ class AdaptiveScopeModeChangeExecutorTest {
             packageName = "example.app",
             uid = 10_123,
             preferredScope = AppOpScope.PACKAGE,
+            requestedMode = AppOpMode.IGNORE,
+            readMode = { null },
         ) { scope ->
             scopes += scope
             success()
@@ -40,6 +42,8 @@ class AdaptiveScopeModeChangeExecutorTest {
             packageName = "example.app",
             uid = 10_123,
             preferredScope = AppOpScope.PACKAGE,
+            requestedMode = AppOpMode.IGNORE,
+            readMode = { null },
         ) { scope ->
             scopes += scope
             if (scope == AppOpScope.PACKAGE) rejected() else success()
@@ -64,6 +68,8 @@ class AdaptiveScopeModeChangeExecutorTest {
             packageName = "example.app",
             uid = 10_123,
             preferredScope = AppOpScope.PACKAGE,
+            requestedMode = AppOpMode.IGNORE,
+            readMode = { null },
         ) { scope ->
             scopes += scope
             rejected()
@@ -73,6 +79,42 @@ class AdaptiveScopeModeChangeExecutorTest {
         assertEquals(AppOpScope.PACKAGE, outcome.appliedScope)
         assertFalse(outcome.fallbackAttempted)
     }
+
+    @Test
+    fun `shared uid already at requested mode counts as success`() =
+        runBlocking {
+            val appliedScopes = mutableListOf<AppOpScope>()
+            val readScopes = mutableListOf<AppOpScope>()
+            val executor = AdaptiveScopeModeChangeExecutor {
+                listOf("example.app", "sibling.app")
+            }
+
+            val outcome = executor.execute(
+                packageName = "example.app",
+                uid = 10_123,
+                preferredScope = AppOpScope.PACKAGE,
+                requestedMode = AppOpMode.IGNORE,
+                readMode = { scope ->
+                    readScopes += scope
+                    AppOpMode.IGNORE
+                },
+            ) { scope ->
+                appliedScopes += scope
+                rejected()
+            }
+
+            assertEquals(listOf(AppOpScope.PACKAGE), appliedScopes)
+            assertEquals(listOf(AppOpScope.UID), readScopes)
+            assertEquals(AppOpScope.UID, outcome.appliedScope)
+            assertEquals(
+                AppOpModeChangeResult.Success(
+                    originalMode = AppOpMode.IGNORE,
+                    appliedMode = AppOpMode.IGNORE,
+                ),
+                outcome.result,
+            )
+            assertTrue(outcome.fallbackAttempted)
+        }
 
     @Test
     fun `safe uid rejection can fall back to package scope`() = runBlocking {
@@ -85,6 +127,8 @@ class AdaptiveScopeModeChangeExecutorTest {
             packageName = "example.app",
             uid = 10_123,
             preferredScope = AppOpScope.UID,
+            requestedMode = AppOpMode.IGNORE,
+            readMode = { null },
         ) { scope ->
             scopes += scope
             if (scope == AppOpScope.UID) rejected() else success()
@@ -113,6 +157,8 @@ class AdaptiveScopeModeChangeExecutorTest {
             packageName = "example.app",
             uid = 10_123,
             preferredScope = AppOpScope.PACKAGE,
+            requestedMode = AppOpMode.IGNORE,
+            readMode = { null },
         ) { scope ->
             scopes += scope
             unsafeFailure
