@@ -117,30 +117,32 @@ class AdaptiveScopeModeChangeExecutorTest {
         }
 
     @Test
-    fun `safe uid rejection can fall back to package scope`() = runBlocking {
-        val scopes = mutableListOf<AppOpScope>()
-        val executor = AdaptiveScopeModeChangeExecutor {
-            listOf("example.app", "sibling.app")
-        }
+    fun `uid rejection does not fall back to covered package scope`() =
+        runBlocking {
+            val scopes = mutableListOf<AppOpScope>()
+            val executor = AdaptiveScopeModeChangeExecutor {
+                listOf("example.app", "sibling.app")
+            }
 
-        val outcome = executor.execute(
-            packageName = "example.app",
-            uid = 10_123,
-            preferredScope = AppOpScope.UID,
-            requestedMode = AppOpMode.IGNORE,
-            readMode = { null },
-        ) { scope ->
-            scopes += scope
-            if (scope == AppOpScope.UID) rejected() else success()
-        }
+            val outcome = executor.execute(
+                packageName = "example.app",
+                uid = 10_123,
+                preferredScope = AppOpScope.UID,
+                requestedMode = AppOpMode.IGNORE,
+                readMode = { null },
+            ) { scope ->
+                scopes += scope
+                if (scope == AppOpScope.UID) rejected() else success()
+            }
 
-        assertEquals(
-            listOf(AppOpScope.UID, AppOpScope.PACKAGE),
-            scopes,
-        )
-        assertEquals(AppOpScope.PACKAGE, outcome.appliedScope)
-        assertTrue(outcome.fallbackAttempted)
-    }
+            assertEquals(
+                listOf(AppOpScope.UID),
+                scopes,
+            )
+            assertEquals(AppOpScope.UID, outcome.appliedScope)
+            assertEquals(rejected(), outcome.result)
+            assertFalse(outcome.fallbackAttempted)
+        }
 
     @Test
     fun `unsafe failure is never retried`() = runBlocking {
