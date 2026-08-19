@@ -23,6 +23,7 @@ import dev.izumi.appopsnext.templates.NewAppPolicyTemplate
 import dev.izumi.appopsnext.templates.PermissionTemplateRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
@@ -92,6 +93,7 @@ class NewAppPolicyCoordinator(
             }
             val packageName = intent.data?.schemeSpecificPart ?: return
             scope.launch {
+                delay(NEW_PACKAGE_SETTLE_DELAY_MS)
                 runSafely("package_added:$packageName") {
                     reconcileAndProcess("package_added:$packageName")
                 }
@@ -317,5 +319,6 @@ class NewAppPolicyCoordinator(
 
     private companion object {
         const val LOG_SOURCE = "NewAppPolicy"
+        const val NEW_PACKAGE_SETTLE_DELAY_MS = 2_000L
     }
 }
