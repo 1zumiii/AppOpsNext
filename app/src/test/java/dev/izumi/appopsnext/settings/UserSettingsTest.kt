@@ -14,4 +14,9 @@ class UserSettingsTest {
     fun `deny fallback success notice is shown by default`() {
         assertFalse(UserSettings().suppressDenyFallbackNotice)
     }
+
+    @Test
+    fun `automatic new app policy is opt in`() {
+        assertFalse(UserSettings().autoApplyNewAppTemplate)
+    }
 }

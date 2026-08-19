@@ -7,6 +7,7 @@ import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.templates.PermissionTemplateDefaults
+import dev.izumi.appopsnext.templates.NewAppPolicyTemplate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -21,14 +22,18 @@ class TemplatesViewModel(
     private val diagnosticLog =
         getApplication<AppOpsNextApplication>().diagnosticLogRepository
     private val selectedTemplateId = MutableStateFlow<String?>(null)
+    private val settingsRepository =
+        getApplication<AppOpsNextApplication>().userSettingsRepository
 
     val uiState = combine(
         repository.templates,
         selectedTemplateId,
-    ) { templates, selectedId ->
+        settingsRepository.settings,
+    ) { templates, selectedId, settings ->
         TemplatesUiState(
             templates = templates,
             selectedTemplate = templates.firstOrNull { it.id == selectedId },
+            autoApplyNewAppTemplate = settings.autoApplyNewAppTemplate,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -64,11 +69,20 @@ class TemplatesViewModel(
     }
 
     fun deleteTemplate(templateId: String) {
+        if (NewAppPolicyTemplate.isBuiltIn(templateId)) {
+            return
+        }
         if (selectedTemplateId.value == templateId) {
             selectedTemplateId.value = null
         }
         viewModelScope.launch {
             repository.delete(templateId)
+        }
+    }
+
+    fun setAutoApplyNewAppTemplate(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setAutoApplyNewAppTemplate(enabled)
         }
     }
 

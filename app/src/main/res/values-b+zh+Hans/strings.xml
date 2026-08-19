@@ -108,6 +108,7 @@
     <string name="app_op_mode_ignore">忽略</string>
     <string name="app_op_mode_deny">拒绝</string>
     <string name="app_op_mode_default">系统默认</string>
+    <string name="app_detail_implicit_default_hint">未保存显式 AppOps 模式，系统默认仍可能允许访问。</string>
     <string name="app_op_mode_foreground">仅前台</string>
     <string name="action_apply">应用修改</string>
     <string name="action_cancel">取消</string>
@@ -116,6 +117,7 @@
     <string name="action_create">创建</string>
     <string name="action_delete">删除</string>
     <string name="action_edit">编辑</string>
+    <string name="action_got_it">知道了</string>
     <string name="action_remove">移除</string>
     <string name="settings_title">设置</string>
     <string name="settings_hide_system_apps">隐藏系统应用</string>
@@ -177,6 +179,13 @@
     <string name="settings_github_url" translatable="false">https://github.com/1zumiii/AppOpsNext</string>
     <string name="templates_title">权限模板</string>
     <string name="template_create">新建</string>
+    <string name="template_new_app_policy_title">新装应用默认模板</string>
+    <string name="template_new_app_policy_description">自动套用常见隐私权限。模板不可删除；AppOpsNext 未运行时，将在下次打开后补处理。获得通知权限后，每次处理完成会发送一条简短的结果通知。</string>
+    <string name="template_new_app_auto_apply">自动套用到新装应用</string>
+    <string name="template_new_app_policy_information">自动套用说明</string>
+    <string name="new_app_policy_notification_channel">新装应用规则</string>
+    <string name="new_app_policy_notification_title">已处理新装应用：%1$s</string>
+    <string name="new_app_policy_notification_result">权限规则：%1$d 条成功，%2$d 条失败</string>
     <string name="template_create_title">新建权限模板</string>
     <string name="template_name">模板名称</string>
     <string name="templates_empty">还没有权限模板</string>

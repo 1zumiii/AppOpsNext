@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
+import dev.izumi.appopsnext.presentation.templates.templateDisplayName
 
 @Composable
 fun TemplatePickerDialog(
@@ -54,7 +55,7 @@ fun TemplatePickerDialog(
                             },
                             headlineContent = {
                                 Text(
-                                    text = template.name,
+                                    text = templateDisplayName(template),
                                     fontWeight = FontWeight.Medium,
                                 )
                             },

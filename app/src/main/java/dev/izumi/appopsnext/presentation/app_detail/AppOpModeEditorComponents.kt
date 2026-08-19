@@ -76,6 +76,15 @@ internal fun AppOpListItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                 )
+                if (item.isImplicitDefault) {
+                    Text(
+                        text = stringResource(
+                            R.string.app_detail_implicit_default_hint,
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
                 usageDetails?.let { details ->
                     Text(
                         text = details,

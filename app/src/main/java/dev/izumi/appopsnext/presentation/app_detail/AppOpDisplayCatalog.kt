@@ -13,6 +13,7 @@ data class AppOpDisplayItem(
     val details: String?,
     val scope: AppOpScope,
     val priority: Int,
+    val isImplicitDefault: Boolean,
 )
 
 data class KnownAppOp(
@@ -30,9 +31,9 @@ object AppOpDisplayCatalog {
         alternateLabelResolver: (Int) -> String = labelResolver,
     ): List<AppOpDisplayItem> {
         val normalizedQuery = query.trim()
-        return entries
+        val explicitItems = entries
             .groupBy { normalize(it.name) }
-            .map { (_, scopedEntries) ->
+            .mapValues { (_, scopedEntries) ->
                 val effectiveEntry = scopedEntries
                     .firstOrNull { it.scope == AppOpScope.UID }
                     ?: scopedEntries.first()
@@ -45,8 +46,26 @@ object AppOpDisplayCatalog {
                         ?: scopedEntries.firstNotNullOfOrNull(AppOpEntry::details),
                     scope = effectiveEntry.scope,
                     priority = metadata?.priority ?: PRIORITY_OTHER,
+                    isImplicitDefault = false,
                 )
             }
+        return metadataByOperation
+            .map { (operationName, metadata) ->
+                explicitItems[operationName] ?: AppOpDisplayItem(
+                    operationName = operationName,
+                    labelRes = metadata.labelRes,
+                    mode = "default",
+                    details = null,
+                    scope = AppOpScope.PACKAGE,
+                    priority = metadata.priority,
+                    isImplicitDefault = true,
+                )
+            }
+            .plus(
+                explicitItems
+                    .filterKeys { it !in metadataByOperation }
+                    .values,
+            )
             .filter { item ->
                 normalizedQuery.isEmpty() ||
                     item.operationName.contains(
