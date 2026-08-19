@@ -1,6 +1,10 @@
 package dev.izumi.appopsnext.presentation.templates
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
@@ -89,6 +93,23 @@ fun TemplatesScreen(
     var deleteCandidate by remember {
         mutableStateOf<PermissionTemplate?>(null)
     }
+    var showNewAppPolicyInfo by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) {}
+    LaunchedEffect(uiState.autoApplyNewAppTemplate) {
+        if (
+            uiState.autoApplyNewAppTemplate &&
+            context.checkSelfPermission(
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(
+                Manifest.permission.POST_NOTIFICATIONS,
+            )
+        }
+    }
 
     BackHandler(enabled = selectedTemplate != null, onBack = onCloseEditor)
 
@@ -123,8 +144,31 @@ fun TemplatesScreen(
                 },
                 actions = {
                     if (selectedTemplate == null) {
-                        TextButton(onClick = { showCreateDialog = true }) {
-                            Text(text = stringResource(R.string.template_create))
+                        IconButton(onClick = { showCreateDialog = true }) {
+                            Icon(
+                                painter = painterResource(
+                                    R.drawable.ic_action_add,
+                                ),
+                                contentDescription = stringResource(
+                                    R.string.template_create_title,
+                                ),
+                            )
+                        }
+                    } else if (
+                        NewAppPolicyTemplate.isBuiltIn(selectedTemplate.id)
+                    ) {
+                        IconButton(
+                            onClick = { showNewAppPolicyInfo = true },
+                        ) {
+                            Icon(
+                                painter = painterResource(
+                                    R.drawable.ic_action_info,
+                                ),
+                                contentDescription = stringResource(
+                                    R.string
+                                        .template_new_app_policy_information,
+                                ),
+                            )
                         }
                     }
                 },
@@ -204,6 +248,33 @@ fun TemplatesScreen(
             },
         )
     }
+
+    if (showNewAppPolicyInfo) {
+        AlertDialog(
+            onDismissRequest = { showNewAppPolicyInfo = false },
+            title = {
+                Text(
+                    text = stringResource(
+                        R.string.template_new_app_policy_title,
+                    ),
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(
+                        R.string.template_new_app_policy_description,
+                    ),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { showNewAppPolicyInfo = false },
+                ) {
+                    Text(text = stringResource(R.string.action_got_it))
+                }
+            },
+        )
+    }
 }
 
 @Composable
@@ -238,81 +309,142 @@ private fun TemplateList(
         contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(templates, key = PermissionTemplate::id) { template ->
-            val isNewAppPolicy = NewAppPolicyTemplate.isBuiltIn(template.id)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onSelectTemplate(template.id) },
-                colors = CardDefaults.cardColors(
-                    containerColor =
-                        MaterialTheme.colorScheme.surfaceContainer,
-                ),
+        val newAppTemplate = templates.firstOrNull {
+            NewAppPolicyTemplate.isBuiltIn(it.id)
+        }
+        val customTemplates = templates.filterNot {
+            NewAppPolicyTemplate.isBuiltIn(it.id)
+        }
+        newAppTemplate?.let { template ->
+            item(key = template.id) {
+                NewAppPolicyCard(
+                    template = template,
+                    enabled = autoApplyNewAppTemplate,
+                    onEnabledChange = onAutoApplyNewAppTemplateChange,
+                    onEdit = { onSelectTemplate(template.id) },
+                )
+            }
+        }
+        item(key = CUSTOM_TEMPLATE_DIVIDER_KEY) {
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 4.dp),
+            )
+        }
+        items(customTemplates, key = PermissionTemplate::id) { template ->
+            CustomTemplateCard(
+                template = template,
+                onEdit = { onSelectTemplate(template.id) },
+                onDelete = { onDeleteTemplate(template) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun NewAppPolicyCard(
+    template: PermissionTemplate,
+    enabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+    onEdit: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        text = templateDisplayName(template),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.template_rule_count,
-                            template.rules.size,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (isNewAppPolicy) {
-                        Text(
-                            text = stringResource(
-                                R.string.template_new_app_policy_description,
-                            ),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodySmall,
+                Text(
+                    text = templateDisplayName(template),
+                    modifier = Modifier.weight(1f),
+                    color = if (enabled) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                            alpha = 0.55f,
                         )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = stringResource(
-                                    R.string.template_new_app_auto_apply,
-                                ),
-                                fontWeight = FontWeight.Medium,
-                            )
-                            Switch(
-                                checked = autoApplyNewAppTemplate,
-                                onCheckedChange =
-                                    onAutoApplyNewAppTemplateChange,
-                            )
-                        }
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                    ) {
-                        if (!isNewAppPolicy) {
-                            TextButton(
-                                onClick = { onDeleteTemplate(template) },
-                            ) {
-                                Text(
-                                    text = stringResource(
-                                        R.string.action_delete,
-                                    ),
-                                )
-                            }
-                        }
-                        TextButton(onClick = {
-                            onSelectTemplate(template.id)
-                        }) {
-                            Text(text = stringResource(R.string.action_edit))
-                        }
-                    }
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = onEnabledChange,
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(
+                        R.string.template_rule_count,
+                        template.rules.size,
+                    ),
+                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_action_edit),
+                        contentDescription = stringResource(
+                            R.string.action_edit,
+                        ),
+                    )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CustomTemplateCard(
+    template: PermissionTemplate,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, top = 16.dp, bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = templateDisplayName(template),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = stringResource(
+                        R.string.template_rule_count,
+                        template.rules.size,
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            IconButton(onClick = onDelete) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_action_delete),
+                    contentDescription = stringResource(R.string.action_delete),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
+            IconButton(onClick = onEdit) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_action_edit),
+                    contentDescription = stringResource(R.string.action_edit),
+                )
             }
         }
     }
@@ -616,6 +748,7 @@ private fun TemplateRuleItem(
 }
 
 private const val RULE_ITEM_KEY_PREFIX = "template-rule:"
+private const val CUSTOM_TEMPLATE_DIVIDER_KEY = "custom-template-divider"
 
 private fun ruleItemKey(operationName: String): String =
     "$RULE_ITEM_KEY_PREFIX$operationName"

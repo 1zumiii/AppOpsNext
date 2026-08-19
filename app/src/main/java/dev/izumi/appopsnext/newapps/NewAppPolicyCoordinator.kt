@@ -38,6 +38,8 @@ class NewAppPolicyCoordinator(
     private val diagnosticLog: DiagnosticLogRepository,
     private val scanner: InstalledPackageScanner =
         InstalledPackageScanner(context),
+    private val notifier: NewAppPolicyNotifier =
+        NewAppPolicyNotifier(context),
 ) {
     private val workMutex = Mutex()
     private val appOpsRepository = AppOpsRepository(privilegedServiceClient)
@@ -231,6 +233,12 @@ class NewAppPolicyCoordinator(
                         "package=${fingerprint.packageName}, " +
                         "success=${report.successCount}, " +
                         "failure=${report.failureCount}",
+            )
+            notifier.notifyCompleted(
+                packageName = fingerprint.packageName,
+                appLabel = app.label,
+                successCount = report.successCount,
+                failureCount = report.failureCount,
             )
             stateRepository.markProcessed(fingerprint)
         }
