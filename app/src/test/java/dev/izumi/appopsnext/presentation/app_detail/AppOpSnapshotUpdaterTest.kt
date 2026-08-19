@@ -34,6 +34,49 @@ class AppOpSnapshotUpdaterTest {
         assertEquals(snapshot.rawOutput, updated.rawOutput)
     }
 
+    @Test
+    fun `mode update materializes a previously implicit operation`() {
+        val snapshot = PackageOpsSnapshot(
+            packageName = "dev.izumi.example",
+            entries = emptyList(),
+            rawOutput = "No operations.",
+        )
+
+        val updated = AppOpSnapshotUpdater.updateMode(
+            snapshot = snapshot,
+            operationName = "READ_CLIPBOARD",
+            scope = AppOpScope.PACKAGE,
+            mode = AppOpMode.IGNORE,
+        )
+
+        assertEquals(1, updated.entries.size)
+        assertEquals("READ_CLIPBOARD", updated.entries.single().name)
+        assertEquals("ignore", updated.entries.single().mode)
+        assertEquals(AppOpScope.PACKAGE, updated.entries.single().scope)
+    }
+
+    @Test
+    fun `restoring default removes the explicit scoped operation`() {
+        val snapshot = PackageOpsSnapshot(
+            packageName = "dev.izumi.example",
+            entries = listOf(
+                entry("CAMERA", "ignore", AppOpScope.PACKAGE),
+                entry("CAMERA", "foreground", AppOpScope.UID),
+            ),
+            rawOutput = "diagnostic raw output",
+        )
+
+        val updated = AppOpSnapshotUpdater.updateMode(
+            snapshot = snapshot,
+            operationName = "CAMERA",
+            scope = AppOpScope.PACKAGE,
+            mode = AppOpMode.DEFAULT,
+        )
+
+        assertEquals(1, updated.entries.size)
+        assertEquals(AppOpScope.UID, updated.entries.single().scope)
+    }
+
     private fun entry(
         name: String,
         mode: String,

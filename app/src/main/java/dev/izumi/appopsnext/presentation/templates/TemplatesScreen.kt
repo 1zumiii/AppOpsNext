@@ -32,6 +32,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -62,6 +63,7 @@ import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 import dev.izumi.appopsnext.presentation.app_detail.KnownAppOp
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
 import dev.izumi.appopsnext.templates.model.PermissionTemplateRule
+import dev.izumi.appopsnext.templates.NewAppPolicyTemplate
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 
@@ -78,6 +80,7 @@ fun TemplatesScreen(
     onAddRule: (String) -> Unit,
     onRemoveRule: (String) -> Unit,
     onRuleOrderChange: (List<String>) -> Unit,
+    onAutoApplyNewAppTemplateChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
 ) {
@@ -95,7 +98,9 @@ fun TemplatesScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = selectedTemplate?.name
+                        text = selectedTemplate?.let {
+                            templateDisplayName(it)
+                        }
                             ?: stringResource(R.string.templates_title),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -133,6 +138,10 @@ fun TemplatesScreen(
         if (selectedTemplate == null) {
             TemplateList(
                 templates = uiState.templates,
+                autoApplyNewAppTemplate =
+                    uiState.autoApplyNewAppTemplate,
+                onAutoApplyNewAppTemplateChange =
+                    onAutoApplyNewAppTemplateChange,
                 onSelectTemplate = onSelectTemplate,
                 onDeleteTemplate = { deleteCandidate = it },
                 modifier = Modifier
@@ -200,6 +209,8 @@ fun TemplatesScreen(
 @Composable
 private fun TemplateList(
     templates: List<PermissionTemplate>,
+    autoApplyNewAppTemplate: Boolean,
+    onAutoApplyNewAppTemplateChange: (Boolean) -> Unit,
     onSelectTemplate: (String) -> Unit,
     onDeleteTemplate: (PermissionTemplate) -> Unit,
     modifier: Modifier = Modifier,
@@ -228,6 +239,7 @@ private fun TemplateList(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         items(templates, key = PermissionTemplate::id) { template ->
+            val isNewAppPolicy = NewAppPolicyTemplate.isBuiltIn(template.id)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -242,7 +254,7 @@ private fun TemplateList(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        text = template.name,
+                        text = templateDisplayName(template),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -253,12 +265,46 @@ private fun TemplateList(
                         ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (isNewAppPolicy) {
+                        Text(
+                            text = stringResource(
+                                R.string.template_new_app_policy_description,
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = stringResource(
+                                    R.string.template_new_app_auto_apply,
+                                ),
+                                fontWeight = FontWeight.Medium,
+                            )
+                            Switch(
+                                checked = autoApplyNewAppTemplate,
+                                onCheckedChange =
+                                    onAutoApplyNewAppTemplateChange,
+                            )
+                        }
+                    }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End,
                     ) {
-                        TextButton(onClick = { onDeleteTemplate(template) }) {
-                            Text(text = stringResource(R.string.action_delete))
+                        if (!isNewAppPolicy) {
+                            TextButton(
+                                onClick = { onDeleteTemplate(template) },
+                            ) {
+                                Text(
+                                    text = stringResource(
+                                        R.string.action_delete,
+                                    ),
+                                )
+                            }
                         }
                         TextButton(onClick = {
                             onSelectTemplate(template.id)
@@ -271,6 +317,14 @@ private fun TemplateList(
         }
     }
 }
+
+@Composable
+internal fun templateDisplayName(template: PermissionTemplate): String =
+    if (NewAppPolicyTemplate.isBuiltIn(template.id)) {
+        stringResource(R.string.template_new_app_policy_title)
+    } else {
+        template.name
+    }
 
 @Composable
 private fun TemplateEditor(

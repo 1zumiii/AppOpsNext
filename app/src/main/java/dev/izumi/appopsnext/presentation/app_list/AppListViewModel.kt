@@ -100,6 +100,12 @@ class AppListViewModel(
         }
     }
 
+    fun refreshAfterResume() {
+        if (installedApps.value.isNotEmpty()) {
+            refresh()
+        }
+    }
+
     private companion object {
         const val LOG_SOURCE = "AppList"
     }

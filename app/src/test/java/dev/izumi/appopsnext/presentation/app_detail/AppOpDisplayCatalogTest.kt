@@ -29,9 +29,10 @@ class AppOpDisplayCatalogTest {
             alternateLabelResolver = ::englishLabel,
         )
 
-        assertEquals(1, items.size)
-        assertEquals(AppOpScope.UID, items.single().scope)
-        assertEquals("ignore", items.single().mode)
+        val camera = items.single { it.operationName == "CAMERA" }
+        assertEquals(AppOpScope.UID, camera.scope)
+        assertEquals("ignore", camera.mode)
+        assertEquals(false, camera.isImplicitDefault)
     }
 
     @Test
@@ -48,9 +49,31 @@ class AppOpDisplayCatalogTest {
         )
 
         assertEquals(
-            listOf("CAMERA", "RUN_IN_BACKGROUND", "VENDOR_PRIVATE_OP"),
-            items.map(AppOpDisplayItem::operationName),
+            true,
+            items.indexOfFirst { it.operationName == "CAMERA" } <
+                items.indexOfFirst { it.operationName == "RUN_IN_BACKGROUND" },
         )
+        assertEquals(
+            true,
+            items.indexOfFirst { it.operationName == "RUN_IN_BACKGROUND" } <
+                items.indexOfFirst { it.operationName == "VENDOR_PRIVATE_OP" },
+        )
+    }
+
+    @Test
+    fun `missing known operations are shown as implicit system defaults`() {
+        val items = AppOpDisplayCatalog.build(
+            entries = emptyList(),
+            query = "camera",
+            labelResolver = ::label,
+            alternateLabelResolver = ::englishLabel,
+        )
+
+        assertEquals(1, items.size)
+        assertEquals("CAMERA", items.single().operationName)
+        assertEquals("default", items.single().mode)
+        assertEquals(AppOpScope.PACKAGE, items.single().scope)
+        assertEquals(true, items.single().isImplicitDefault)
     }
 
     @Test
@@ -83,10 +106,10 @@ class AppOpDisplayCatalogTest {
             .map(AppOpDisplayItem::operationName)
 
     private fun label(resourceId: Int): String =
-        requireNotNull(labels[resourceId])
+        labels[resourceId] ?: "label-$resourceId"
 
     private fun englishLabel(resourceId: Int): String =
-        requireNotNull(englishLabels[resourceId])
+        englishLabels[resourceId] ?: "label-$resourceId"
 
     private fun entry(
         name: String,
