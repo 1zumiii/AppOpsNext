@@ -69,13 +69,17 @@ class NewAppPolicyNotifier(
                 context.getString(
                     R.string.new_app_policy_notification_channel,
                 ),
-                NotificationManager.IMPORTANCE_DEFAULT,
-            ),
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
+                enableVibration(true)
+            },
         )
     }
 
     private companion object {
-        const val CHANNEL_ID = "new_app_policy_results"
+        // A new ID upgrades existing installs because Android preserves the
+        // importance selected when a notification channel is first created.
+        const val CHANNEL_ID = "new_app_policy_results_heads_up"
         const val NOTIFICATION_REQUEST_CODE = 2_201
     }
 }
