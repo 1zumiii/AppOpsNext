@@ -110,6 +110,7 @@
     <string name="app_op_mode_ignore">Ignore</string>
     <string name="app_op_mode_deny">Deny</string>
     <string name="app_op_mode_default">System default</string>
+    <string name="app_detail_implicit_default_hint">No explicit AppOps mode is stored. The system default may still allow access.</string>
     <string name="app_op_mode_foreground">Foreground only</string>
     <string name="action_apply">Apply changes</string>
     <string name="action_cancel">Cancel</string>
@@ -179,6 +180,9 @@
     <string name="settings_github_url" translatable="false">https://github.com/1zumiii/AppOpsNext</string>
     <string name="templates_title">Permission templates</string>
     <string name="template_create">New</string>
+    <string name="template_new_app_policy_title">New app defaults</string>
+    <string name="template_new_app_policy_description">Automatically applies common privacy controls. This template cannot be deleted; missed installs are handled the next time AppOpsNext opens.</string>
+    <string name="template_new_app_auto_apply">Automatically apply to new apps</string>
     <string name="template_create_title">New permission template</string>
     <string name="template_name">Template name</string>
     <string name="templates_empty">No permission templates yet</string>

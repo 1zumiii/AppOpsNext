@@ -35,7 +35,9 @@ class PermissionTemplateRepository(
             }
         }
         .map { preferences ->
-            PermissionTemplateCodec.decode(preferences[Keys.TEMPLATES])
+            NewAppPolicyTemplate.ensurePresent(
+                PermissionTemplateCodec.decode(preferences[Keys.TEMPLATES]),
+            )
         }
 
     suspend fun create(name: String): String {
@@ -49,6 +51,7 @@ class PermissionTemplateRepository(
     }
 
     suspend fun rename(templateId: String, name: String) {
+        if (NewAppPolicyTemplate.isBuiltIn(templateId)) return
         val trimmedName = name.trim()
         if (trimmedName.isEmpty()) return
         updateTemplate(templateId) { template ->
@@ -113,6 +116,7 @@ class PermissionTemplateRepository(
     }
 
     suspend fun delete(templateId: String) {
+        if (NewAppPolicyTemplate.isBuiltIn(templateId)) return
         updateTemplates { templates ->
             templates.filterNot { it.id == templateId }
         }
@@ -138,9 +142,13 @@ class PermissionTemplateRepository(
     ) {
         dataStore.edit { preferences ->
             val currentTemplates =
-                PermissionTemplateCodec.decode(preferences[Keys.TEMPLATES])
+                NewAppPolicyTemplate.ensurePresent(
+                    PermissionTemplateCodec.decode(preferences[Keys.TEMPLATES]),
+                )
             preferences[Keys.TEMPLATES] = PermissionTemplateCodec.encode(
-                transform(currentTemplates),
+                NewAppPolicyTemplate.ensurePresent(
+                    transform(currentTemplates),
+                ),
             )
         }
     }

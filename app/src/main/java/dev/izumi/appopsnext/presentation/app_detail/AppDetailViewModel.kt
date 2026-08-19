@@ -67,6 +67,16 @@ class AppDetailViewModel(
         loadSelectedApp()
     }
 
+    fun refreshIfReady() {
+        if (
+            selectedApp.value != null &&
+            privilegedServiceClient.state.value is
+                PrivilegedServiceState.Connected
+        ) {
+            loadSelectedApp()
+        }
+    }
+
     fun requestModeChange(
         operationName: String,
         scope: AppOpScope,
