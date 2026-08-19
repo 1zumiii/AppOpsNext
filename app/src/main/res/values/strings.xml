@@ -119,6 +119,7 @@
     <string name="action_create">Create</string>
     <string name="action_delete">Delete</string>
     <string name="action_edit">Edit</string>
+    <string name="action_got_it">Got it</string>
     <string name="action_remove">Remove</string>
     <string name="settings_title">Settings</string>
     <string name="settings_hide_system_apps">Hide system apps</string>
@@ -181,8 +182,12 @@
     <string name="templates_title">Permission templates</string>
     <string name="template_create">New</string>
     <string name="template_new_app_policy_title">New app defaults</string>
-    <string name="template_new_app_policy_description">Automatically applies common privacy controls. This template cannot be deleted; missed installs are handled the next time AppOpsNext opens.</string>
+    <string name="template_new_app_policy_description">Automatically applies common privacy controls. This template cannot be deleted; missed installs are handled the next time AppOpsNext opens. A brief result notification is sent when notification permission is available.</string>
     <string name="template_new_app_auto_apply">Automatically apply to new apps</string>
+    <string name="template_new_app_policy_information">About automatic application</string>
+    <string name="new_app_policy_notification_channel">New app policy</string>
+    <string name="new_app_policy_notification_title">Processed new app: %1$s</string>
+    <string name="new_app_policy_notification_result">Permission rules: %1$d succeeded, %2$d failed</string>
     <string name="template_create_title">New permission template</string>
     <string name="template_name">Template name</string>
     <string name="templates_empty">No permission templates yet</string>
