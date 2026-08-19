@@ -133,6 +133,14 @@ class AppDetailViewModel(
                     packageName = request.packageName,
                     uid = app.uid,
                     preferredScope = request.scope,
+                    requestedMode = requestedMode,
+                    readMode = { scope ->
+                        repository.readMode(
+                            packageName = request.packageName,
+                            operation = operation,
+                            scope = scope,
+                        )
+                    },
                 ) { scope ->
                     if (scope == request.scope) {
                         repository.changeMode(

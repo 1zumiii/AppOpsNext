@@ -38,6 +38,19 @@ class BatchOperationsViewModel(
             packageName = target.packageName,
             uid = target.uid,
             preferredScope = target.preferredScope,
+            requestedMode = target.requestedMode,
+            readMode = { scope ->
+                repository.readMode(
+                    packageName = target.packageName,
+                    operation = AppOpIdentifier(
+                        stableName = target.stableOperationName,
+                        shellName = AppOpNames.shellName(
+                            target.stableOperationName,
+                        ),
+                    ),
+                    scope = scope,
+                )
+            },
         ) { scope ->
             repository.applyMode(
                 packageName = target.packageName,
