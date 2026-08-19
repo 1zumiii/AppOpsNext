@@ -50,6 +50,8 @@ AppOps system service, not an interface or technology owned by the legacy app.
 - Create reusable permission templates with editable modes and scopes
 - Add, remove, and long-press drag template rules into a persistent custom order
 - Apply one template to an app or batch-apply it to multiple applications
+- Configure a protected default template for newly installed apps, with
+  optional automatic application, catch-up detection, and result notifications
 - Change several permissions in one app as a verified batch operation
 - Report every batch success and failure in a persistent result dialog
 - Switch between system language, Simplified Chinese, and English
@@ -148,6 +150,8 @@ key makes it impossible to publish updates that install over existing releases.
 - `apps`: application discovery and pure filtering
 - `settings`: typed Preferences DataStore settings
 - `templates`: versioned template persistence and ordering
+- `newapps`: new-install detection, pending work, automatic policy execution,
+  and result notifications
 - `history`: discrete AppOps history parsing, repositories, and statistics
 
 See [Architecture](docs/ARCHITECTURE.md) for package boundaries and maintenance

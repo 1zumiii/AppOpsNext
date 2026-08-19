@@ -7,8 +7,15 @@ import dev.izumi.appopsnext.settings.UserSettingsRepository
 import dev.izumi.appopsnext.shizuku.PrivilegedServiceClient
 import dev.izumi.appopsnext.templates.PermissionTemplateRepository
 import dev.izumi.appopsnext.history.HistoryPermissionSettingsRepository
+import dev.izumi.appopsnext.newapps.NewAppPolicyCoordinator
+import dev.izumi.appopsnext.newapps.NewAppPolicyStateRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 class AppOpsNextApplication : Application() {
+    private val applicationScope =
+        CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val diagnosticLogRepository: DiagnosticLogRepository by lazy {
         DiagnosticLogRepository(this)
     }
@@ -30,6 +37,22 @@ class AppOpsNextApplication : Application() {
             HistoryPermissionSettingsRepository(this)
         }
 
+    private val newAppPolicyStateRepository by lazy {
+        NewAppPolicyStateRepository(this)
+    }
+
+    val newAppPolicyCoordinator by lazy {
+        NewAppPolicyCoordinator(
+            context = this,
+            scope = applicationScope,
+            settingsRepository = userSettingsRepository,
+            stateRepository = newAppPolicyStateRepository,
+            templateRepository = permissionTemplateRepository,
+            privilegedServiceClient = privilegedServiceClient,
+            diagnosticLog = diagnosticLogRepository,
+        )
+    }
+
     override fun onCreate() {
         super.onCreate()
         val environment = DiagnosticEnvironmentCollector.collect(this)
@@ -46,5 +69,6 @@ class AppOpsNextApplication : Application() {
                     "processUid=${environment.processUid}, " +
                     "shizukuManager=${environment.shizukuManagerVersion}",
         )
+        newAppPolicyCoordinator.start()
     }
 }

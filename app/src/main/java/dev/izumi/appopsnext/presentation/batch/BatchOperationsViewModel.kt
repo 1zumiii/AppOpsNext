@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
+import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.appops.AppOpsRepository
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
@@ -12,6 +13,7 @@ import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.batch.BatchAppOpsExecutor
 import dev.izumi.appopsnext.batch.model.BatchOperationTarget
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
+import dev.izumi.appopsnext.templates.NewAppPolicyTemplate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -59,7 +61,13 @@ class BatchOperationsViewModel(
         }
         mutableUiState.value = BatchOperationUiState.Confirming(
             BatchOperationRequest(
-                title = template.name,
+                title = if (NewAppPolicyTemplate.isBuiltIn(template.id)) {
+                    getApplication<Application>().getString(
+                        R.string.template_new_app_policy_title,
+                    )
+                } else {
+                    template.name
+                },
                 targetCount = apps.size,
                 operationCount = targets.size,
                 targets = targets,

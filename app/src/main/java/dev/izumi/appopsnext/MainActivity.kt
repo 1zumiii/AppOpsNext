@@ -103,6 +103,8 @@ class MainActivity : ComponentActivity() {
                     onRemoveTemplateRule = templatesViewModel::removeRule,
                     onTemplateRuleOrderChange =
                         templatesViewModel::setRuleOrder,
+                    onAutoApplyNewAppTemplateChange =
+                        templatesViewModel::setAutoApplyNewAppTemplate,
                     onTemplateApplyRequested =
                         batchOperationsViewModel::requestTemplateApplication,
                     onPermissionBatchRequested =
@@ -120,6 +122,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        (application as AppOpsNextApplication)
+            .newAppPolicyCoordinator
+            .onAppForeground()
+        appListViewModel.refreshAfterResume()
+        appDetailViewModel.refreshIfReady()
         historyViewModel.refresh()
     }
 }
