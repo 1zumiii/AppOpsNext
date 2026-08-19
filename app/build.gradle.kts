@@ -26,7 +26,7 @@ android {
         minSdk = 35
         targetSdk = 35
         versionCode = 24
-        versionName = "1.3.0-dev.1"
+        versionName = "1.3.0"
         buildConfigField(
             "String",
             "SHIZUKU_API_VERSION",
