@@ -7,8 +7,9 @@ import dev.izumi.appopsnext.appops.model.AppOpScope
 data class BatchOperationTarget(
     val packageName: String,
     val appLabel: String,
+    val uid: Int,
     val stableOperationName: String,
-    val scope: AppOpScope,
+    val preferredScope: AppOpScope,
     val requestedMode: AppOpMode,
 )
 

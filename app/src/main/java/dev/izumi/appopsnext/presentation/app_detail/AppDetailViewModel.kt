@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
+import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeExecutor
 import dev.izumi.appopsnext.appops.AppOpsRepository
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
@@ -29,6 +30,12 @@ class AppDetailViewModel(
     private val userSettingsRepository =
         getApplication<AppOpsNextApplication>().userSettingsRepository
     private val repository = AppOpsRepository(privilegedServiceClient)
+    private val adaptiveScopeExecutor = AdaptiveScopeModeChangeExecutor { uid ->
+        getApplication<Application>().packageManager
+            .getPackagesForUid(uid)
+            ?.toList()
+            .orEmpty()
+    }
     private val selectedApp = MutableStateFlow<InstalledApp?>(null)
     private val mutableUiState =
         MutableStateFlow<AppDetailUiState>(AppDetailUiState.Idle)
@@ -112,23 +119,48 @@ class AppDetailViewModel(
 
         mutableModeChangeState.value = AppOpModeChangeUiState.Applying(request)
         modeChangeJob = viewModelScope.launch {
+            val app = selectedApp.value
+                ?.takeIf { it.packageName == request.packageName }
+                ?: return@launch
             val operation = AppOpIdentifier(
                 stableName = request.operationName,
                 shellName = request.operationName,
             )
+            var appliedScope = request.scope
             val outcome = DenyFallbackModeChangeExecutor {
                     requestedMode ->
-                repository.changeMode(
+                val scopeOutcome = adaptiveScopeExecutor.execute(
                     packageName = request.packageName,
-                    operation = operation,
-                    scope = request.scope,
-                    expectedOriginalMode = request.originalMode,
-                    requestedMode = requestedMode,
-                )
+                    uid = app.uid,
+                    preferredScope = request.scope,
+                ) { scope ->
+                    if (scope == request.scope) {
+                        repository.changeMode(
+                            packageName = request.packageName,
+                            operation = operation,
+                            scope = scope,
+                            expectedOriginalMode = request.originalMode,
+                            requestedMode = requestedMode,
+                        )
+                    } else {
+                        repository.applyMode(
+                            packageName = request.packageName,
+                            operation = operation,
+                            scope = scope,
+                            requestedMode = requestedMode,
+                        )
+                    }
+                }
+                appliedScope = scopeOutcome.appliedScope
+                scopeOutcome.result
             }.execute(request.requestedMode)
             val result = outcome.result
+            val resolvedRequest = request.copy(
+                scope = appliedScope,
+                affectedPackages = affectedPackages(app, appliedScope),
+            )
 
-            updateDisplayedMode(request, result)
+            updateDisplayedMode(resolvedRequest, result)
             mutableModeChangeState.value = when (result) {
                 is AppOpModeChangeResult.Success -> {
                     val shouldShowFallbackNotice =
@@ -137,7 +169,9 @@ class AppDetailViewModel(
                                 .first()
                                 .suppressDenyFallbackNotice
                     if (shouldShowFallbackNotice) {
-                        AppOpModeChangeUiState.DenyFallbackApplied(request)
+                        AppOpModeChangeUiState.DenyFallbackApplied(
+                            resolvedRequest,
+                        )
                     } else {
                         AppOpModeChangeUiState.Idle
                     }
@@ -145,7 +179,7 @@ class AppDetailViewModel(
 
                 is AppOpModeChangeResult.Failure ->
                     AppOpModeChangeUiState.Failure(
-                        request = request,
+                        request = resolvedRequest,
                         result = result,
                         denyFallbackAttempted =
                             outcome.denyFallbackAttempted,

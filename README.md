@@ -47,7 +47,8 @@ AppOps system service, not an interface or technology owned by the legacy app.
   per-permission statistics, and app-linked timelines
 - Add or remove monitored AppOps and refresh history automatically while the
   privileged connection remains available
-- Create reusable permission templates with editable modes and scopes
+- Create reusable permission templates with editable modes and automatic
+  AppOps scope fallback
 - Add, remove, and long-press drag template rules into a persistent custom order
 - Apply one template to an app or batch-apply it to multiple applications
 - Configure a protected default template for newly installed apps, with
@@ -77,8 +78,7 @@ revoked, privileged reads and writes remain unavailable until it is restored.
 2. Download the latest APK from
    [GitHub Releases](https://github.com/1zumiii/AppOpsNext/releases).
 3. Install the APK and grant AppOpsNext access when Shizuku asks.
-4. Open an application, inspect its package/UID scope, and confirm every
-   requested change before applying it.
+4. Open an application and confirm every requested change before applying it.
 
 Android runtime permissions and AppOps are separate layers. AppOps can further
 restrict an already granted capability, but it cannot grant a runtime
@@ -98,8 +98,11 @@ read current value
   -> restore and verify the original value after failure
 ```
 
-UID-scoped changes can affect several packages sharing one UID. The
-confirmation UI shows that scope before a write. Batch operations run
+Template writes start with the current app package. If Android rejects that
+scope after the original state has been restored, AppOpsNext retries through
+the UID only when it belongs exclusively to the target package. Explicit UID
+records can still affect several packages sharing one system identity, so the
+confirmation UI lists those affected packages. Batch operations run
 sequentially and retain a result for every target.
 
 ## Development

@@ -5,10 +5,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeExecutor
 import dev.izumi.appopsnext.appops.AppOpsRepository
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
 import dev.izumi.appopsnext.appops.model.AppOpNames
+import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.batch.BatchAppOpsExecutor
 import dev.izumi.appopsnext.batch.model.BatchOperationTarget
@@ -25,18 +27,30 @@ class BatchOperationsViewModel(
     private val repository = AppOpsRepository(
         getApplication<AppOpsNextApplication>().privilegedServiceClient,
     )
+    private val adaptiveScopeExecutor = AdaptiveScopeModeChangeExecutor { uid ->
+        getApplication<Application>().packageManager
+            .getPackagesForUid(uid)
+            ?.toList()
+            .orEmpty()
+    }
     private val executor = BatchAppOpsExecutor { target ->
-        repository.applyMode(
+        adaptiveScopeExecutor.execute(
             packageName = target.packageName,
-            operation = AppOpIdentifier(
-                stableName = target.stableOperationName,
-                shellName = AppOpNames.shellName(
-                    target.stableOperationName,
+            uid = target.uid,
+            preferredScope = target.preferredScope,
+        ) { scope ->
+            repository.applyMode(
+                packageName = target.packageName,
+                operation = AppOpIdentifier(
+                    stableName = target.stableOperationName,
+                    shellName = AppOpNames.shellName(
+                        target.stableOperationName,
+                    ),
                 ),
-            ),
-            scope = target.scope,
-            requestedMode = target.requestedMode,
-        )
+                scope = scope,
+                requestedMode = target.requestedMode,
+            )
+        }.result
     }
     private val mutableUiState =
         MutableStateFlow<BatchOperationUiState>(BatchOperationUiState.Idle)
@@ -53,8 +67,9 @@ class BatchOperationsViewModel(
                 BatchOperationTarget(
                     packageName = app.packageName,
                     appLabel = app.label,
+                    uid = app.uid,
                     stableOperationName = rule.stableOperationName,
-                    scope = rule.scope,
+                    preferredScope = AppOpScope.PACKAGE,
                     requestedMode = rule.mode,
                 )
             }
@@ -85,10 +100,11 @@ class BatchOperationsViewModel(
             BatchOperationTarget(
                 packageName = app.packageName,
                 appLabel = app.label,
+                uid = app.uid,
                 stableOperationName = AppOpNames.stableName(
                     permission.operationName,
                 ),
-                scope = permission.scope,
+                preferredScope = permission.scope,
                 requestedMode = requestedMode,
             )
         }

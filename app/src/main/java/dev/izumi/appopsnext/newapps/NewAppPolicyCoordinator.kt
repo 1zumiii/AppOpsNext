@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeExecutor
 import dev.izumi.appopsnext.appops.AppOpsRepository
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
 import dev.izumi.appopsnext.appops.model.AppOpModeChangePhase
@@ -43,18 +44,27 @@ class NewAppPolicyCoordinator(
 ) {
     private val workMutex = Mutex()
     private val appOpsRepository = AppOpsRepository(privilegedServiceClient)
+    private val adaptiveScopeExecutor = AdaptiveScopeModeChangeExecutor { uid ->
+        context.packageManager.getPackagesForUid(uid)?.toList().orEmpty()
+    }
     private val executor = BatchAppOpsExecutor { target ->
-        appOpsRepository.applyMode(
+        adaptiveScopeExecutor.execute(
             packageName = target.packageName,
-            operation = AppOpIdentifier(
-                stableName = target.stableOperationName,
-                shellName = AppOpNames.shellName(
-                    target.stableOperationName,
+            uid = target.uid,
+            preferredScope = target.preferredScope,
+        ) { scope ->
+            appOpsRepository.applyMode(
+                packageName = target.packageName,
+                operation = AppOpIdentifier(
+                    stableName = target.stableOperationName,
+                    shellName = AppOpNames.shellName(
+                        target.stableOperationName,
+                    ),
                 ),
-            ),
-            scope = target.scope,
-            requestedMode = target.requestedMode,
-        )
+                scope = scope,
+                requestedMode = target.requestedMode,
+            )
+        }.result
     }
     private var started = false
 
