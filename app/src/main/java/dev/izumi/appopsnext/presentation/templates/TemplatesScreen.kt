@@ -62,7 +62,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.appops.command.AppOpMode
-import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 import dev.izumi.appopsnext.presentation.app_detail.KnownAppOp
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
@@ -80,7 +79,6 @@ fun TemplatesScreen(
     onCloseEditor: () -> Unit,
     onDeleteTemplate: (String) -> Unit,
     onRuleModeChange: (String, AppOpMode) -> Unit,
-    onRuleScopeChange: (String, AppOpScope) -> Unit,
     onAddRule: (String) -> Unit,
     onRemoveRule: (String) -> Unit,
     onRuleOrderChange: (List<String>) -> Unit,
@@ -196,7 +194,6 @@ fun TemplatesScreen(
             TemplateEditor(
                 template = selectedTemplate,
                 onRuleModeChange = onRuleModeChange,
-                onRuleScopeChange = onRuleScopeChange,
                 onAddRule = onAddRule,
                 onRemoveRule = onRemoveRule,
                 onRuleOrderChange = onRuleOrderChange,
@@ -462,7 +459,6 @@ internal fun templateDisplayName(template: PermissionTemplate): String =
 private fun TemplateEditor(
     template: PermissionTemplate,
     onRuleModeChange: (String, AppOpMode) -> Unit,
-    onRuleScopeChange: (String, AppOpScope) -> Unit,
     onAddRule: (String) -> Unit,
     onRemoveRule: (String) -> Unit,
     onRuleOrderChange: (List<String>) -> Unit,
@@ -616,7 +612,6 @@ private fun TemplateEditor(
                 rule = rule,
                 knownOperation = knownByStableName[rule.stableOperationName],
                 onModeChange = onRuleModeChange,
-                onScopeChange = onRuleScopeChange,
                 onRemove = onRemoveRule,
                 isDragging = isDragging,
                 modifier = Modifier
@@ -664,7 +659,6 @@ private fun TemplateRuleItem(
     rule: PermissionTemplateRule,
     knownOperation: KnownAppOp?,
     onModeChange: (String, AppOpMode) -> Unit,
-    onScopeChange: (String, AppOpScope) -> Unit,
     onRemove: (String) -> Unit,
     isDragging: Boolean,
     modifier: Modifier = Modifier,
@@ -721,17 +715,6 @@ private fun TemplateRuleItem(
                     mode = rule.mode,
                     onModeChange = {
                         onModeChange(rule.stableOperationName, it)
-                    },
-                )
-            }
-            TemplateSettingRow(
-                title = stringResource(R.string.template_scope_title),
-                description = stringResource(R.string.template_scope_detail),
-            ) {
-                ScopeMenu(
-                    scope = rule.scope,
-                    onScopeChange = {
-                        onScopeChange(rule.stableOperationName, it)
                     },
                 )
             }
@@ -811,42 +794,6 @@ private fun ModeMenu(
                     onClick = {
                         expanded = false
                         onModeChange(candidate)
-                    },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ScopeMenu(
-    scope: AppOpScope,
-    onScopeChange: (AppOpScope) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        TextButton(
-            onClick = { expanded = true },
-        ) {
-            Text(
-                text = stringResource(
-                    R.string.template_dropdown_button,
-                    scopeLabel(scope),
-                ),
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            AppOpScope.entries.forEach { candidate ->
-                DropdownMenuItem(
-                    text = { Text(text = scopeLabel(candidate)) },
-                    enabled = candidate != scope,
-                    onClick = {
-                        expanded = false
-                        onScopeChange(candidate)
                     },
                 )
             }
@@ -972,14 +919,5 @@ private fun modeLabel(mode: AppOpMode): String =
             AppOpMode.DENY -> R.string.app_op_mode_deny
             AppOpMode.DEFAULT -> R.string.app_op_mode_default
             AppOpMode.FOREGROUND -> R.string.app_op_mode_foreground
-        },
-    )
-
-@Composable
-private fun scopeLabel(scope: AppOpScope): String =
-    stringResource(
-        when (scope) {
-            AppOpScope.PACKAGE -> R.string.app_detail_scope_package
-            AppOpScope.UID -> R.string.app_detail_scope_uid
         },
     )

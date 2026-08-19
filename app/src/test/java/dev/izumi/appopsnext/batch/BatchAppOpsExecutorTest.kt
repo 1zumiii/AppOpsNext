@@ -53,8 +53,9 @@ class BatchAppOpsExecutorTest {
     private fun target(operationName: String) = BatchOperationTarget(
         packageName = "example.app",
         appLabel = "Example",
+        uid = 10_123,
         stableOperationName = operationName,
-        scope = AppOpScope.UID,
+        preferredScope = AppOpScope.UID,
         requestedMode = AppOpMode.IGNORE,
     )
 }

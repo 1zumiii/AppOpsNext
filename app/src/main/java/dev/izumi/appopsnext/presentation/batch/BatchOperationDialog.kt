@@ -137,7 +137,7 @@ fun BatchOperationDialog(
                                 listOf(
                                     item.target.packageName,
                                     item.target.stableOperationName,
-                                    item.target.scope.name,
+                                    item.target.preferredScope.name,
                                 ).joinToString(":")
                             },
                         ) { item ->

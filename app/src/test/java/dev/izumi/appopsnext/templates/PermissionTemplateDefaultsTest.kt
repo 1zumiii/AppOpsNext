@@ -19,16 +19,15 @@ class PermissionTemplateDefaultsTest {
     }
 
     @Test
-    fun `privacy operations default to uid scope`() {
-        assertEquals(
-            AppOpScope.UID,
-            PermissionTemplateDefaults.suggestedScope("android:camera"),
-        )
+    fun `template operations default to package scope`() {
         assertEquals(
             AppOpScope.PACKAGE,
-            PermissionTemplateDefaults.suggestedScope(
-                "android:run_in_background",
-            ),
+            PermissionTemplateDefaults.suggestedScope(),
+        )
+        assertTrue(
+            PermissionTemplateDefaults.commonRules.all {
+                it.scope == AppOpScope.PACKAGE
+            },
         )
     }
 }

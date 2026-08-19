@@ -96,17 +96,6 @@ internal fun AppOpListItem(
                 }
             }
         },
-        overlineContent = {
-            Text(
-                text = stringResource(
-                    when (item.scope) {
-                        AppOpScope.UID -> R.string.app_detail_scope_uid
-                        AppOpScope.PACKAGE ->
-                            R.string.app_detail_scope_package
-                    },
-                ),
-            )
-        },
         trailingContent = {
             if (isApplying) {
                 Column(
@@ -208,17 +197,6 @@ internal fun ModeChangeDialog(
                         text = stringResource(
                             R.string.app_detail_mode_confirm_operation,
                             state.request.operationName,
-                        ),
-                    )
-                    Text(
-                        text = stringResource(
-                            when (state.request.scope) {
-                                AppOpScope.UID ->
-                                    R.string.app_detail_mode_scope_uid
-
-                                AppOpScope.PACKAGE ->
-                                    R.string.app_detail_mode_scope_package
-                            },
                         ),
                     )
                     if (

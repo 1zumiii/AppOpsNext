@@ -528,12 +528,6 @@ private fun AppSummaryCard(
                 ),
                 fontWeight = FontWeight.SemiBold,
             )
-            Text(
-                text = stringResource(R.string.app_detail_effective_scope_note),
-                modifier = Modifier.padding(top = 6.dp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall,
-            )
         }
     }
 }
