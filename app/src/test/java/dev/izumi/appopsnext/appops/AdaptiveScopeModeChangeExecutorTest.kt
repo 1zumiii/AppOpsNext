@@ -103,7 +103,7 @@ class AdaptiveScopeModeChangeExecutorTest {
                 rejected()
             }
 
-            assertEquals(listOf(AppOpScope.PACKAGE), appliedScopes)
+            assertEquals(emptyList<AppOpScope>(), appliedScopes)
             assertEquals(listOf(AppOpScope.UID), readScopes)
             assertEquals(AppOpScope.UID, outcome.appliedScope)
             assertEquals(

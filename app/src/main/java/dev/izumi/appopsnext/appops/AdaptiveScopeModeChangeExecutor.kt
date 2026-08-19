@@ -30,8 +30,18 @@ class AdaptiveScopeModeChangeExecutor(
         readMode: suspend (AppOpScope) -> AppOpMode?,
         applyMode: suspend (AppOpScope) -> AppOpModeChangeResult,
     ): AdaptiveScopeModeChangeOutcome {
-        val initialResult = applyMode(preferredScope)
         val alternateScope = preferredScope.alternate()
+        if (
+            preferredScope == AppOpScope.PACKAGE &&
+            readMode(alternateScope) == requestedMode
+        ) {
+            return alreadySatisfied(
+                mode = requestedMode,
+                scope = alternateScope,
+            )
+        }
+
+        val initialResult = applyMode(preferredScope)
         if (!initialResult.isSafeScopeRejection()) {
             return AdaptiveScopeModeChangeOutcome(
                 result = initialResult,
@@ -43,13 +53,9 @@ class AdaptiveScopeModeChangeExecutor(
         if (!canUseScope(packageName, uid, alternateScope)) {
             val alternateMode = readMode(alternateScope)
             if (alternateMode == requestedMode) {
-                return AdaptiveScopeModeChangeOutcome(
-                    result = AppOpModeChangeResult.Success(
-                        originalMode = alternateMode,
-                        appliedMode = alternateMode,
-                    ),
-                    appliedScope = alternateScope,
-                    fallbackAttempted = true,
+                return alreadySatisfied(
+                    mode = alternateMode,
+                    scope = alternateScope,
                 )
             }
             return AdaptiveScopeModeChangeOutcome(
@@ -65,6 +71,18 @@ class AdaptiveScopeModeChangeExecutor(
             fallbackAttempted = true,
         )
     }
+
+    private fun alreadySatisfied(
+        mode: AppOpMode,
+        scope: AppOpScope,
+    ) = AdaptiveScopeModeChangeOutcome(
+        result = AppOpModeChangeResult.Success(
+            originalMode = mode,
+            appliedMode = mode,
+        ),
+        appliedScope = scope,
+        fallbackAttempted = true,
+    )
 
     private fun canUseScope(
         packageName: String,
