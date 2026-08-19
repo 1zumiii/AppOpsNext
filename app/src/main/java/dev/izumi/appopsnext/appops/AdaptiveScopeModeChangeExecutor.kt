@@ -50,6 +50,17 @@ class AdaptiveScopeModeChangeExecutor(
             )
         }
 
+        // An explicit UID mode takes precedence over the package mode. If a
+        // UID write is rejected, changing the covered package record cannot
+        // satisfy the requested effective state.
+        if (preferredScope == AppOpScope.UID) {
+            return AdaptiveScopeModeChangeOutcome(
+                result = initialResult,
+                appliedScope = preferredScope,
+                fallbackAttempted = false,
+            )
+        }
+
         if (!canUseScope(packageName, uid, alternateScope)) {
             val alternateMode = readMode(alternateScope)
             if (alternateMode == requestedMode) {
