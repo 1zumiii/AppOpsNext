@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -79,8 +80,7 @@ fun TemplatesScreen(
     onCloseEditor: () -> Unit,
     onDeleteTemplate: (String) -> Unit,
     onRuleModeChange: (String, AppOpMode) -> Unit,
-    onAddRule: (String) -> Unit,
-    onRemoveRule: (String) -> Unit,
+    onRuleSelectionChange: (List<String>) -> Unit,
     onRuleOrderChange: (List<String>) -> Unit,
     onAutoApplyNewAppTemplateChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -194,8 +194,7 @@ fun TemplatesScreen(
             TemplateEditor(
                 template = selectedTemplate,
                 onRuleModeChange = onRuleModeChange,
-                onAddRule = onAddRule,
-                onRemoveRule = onRemoveRule,
+                onRuleSelectionChange = onRuleSelectionChange,
                 onRuleOrderChange = onRuleOrderChange,
                 modifier = Modifier
                     .fillMaxSize()
@@ -459,12 +458,11 @@ internal fun templateDisplayName(template: PermissionTemplate): String =
 private fun TemplateEditor(
     template: PermissionTemplate,
     onRuleModeChange: (String, AppOpMode) -> Unit,
-    onAddRule: (String) -> Unit,
-    onRemoveRule: (String) -> Unit,
+    onRuleSelectionChange: (List<String>) -> Unit,
     onRuleOrderChange: (List<String>) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var showPermissionPicker by remember(template.id) {
+    var showPermissionManager by remember(template.id) {
         mutableStateOf(false)
     }
     var displayedRules by remember(template.id) {
@@ -612,7 +610,6 @@ private fun TemplateEditor(
                 rule = rule,
                 knownOperation = knownByStableName[rule.stableOperationName],
                 onModeChange = onRuleModeChange,
-                onRemove = onRemoveRule,
                 isDragging = isDragging,
                 modifier = Modifier
                     .zIndex(if (isDragging) 1f else 0f)
@@ -628,28 +625,29 @@ private fun TemplateEditor(
         }
         item {
             FilledTonalButton(
-                onClick = { showPermissionPicker = true },
+                onClick = { showPermissionManager = true },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 12.dp),
             ) {
-                Text(text = stringResource(R.string.template_add_permission))
+                Text(
+                    text = stringResource(
+                        R.string.template_manage_permissions,
+                    ),
+                )
             }
         }
     }
 
-    if (showPermissionPicker) {
-        PermissionPickerDialog(
-            operations = knownOperations.filterNot { operation ->
-                displayedRules.any {
-                    it.stableOperationName == operation.stableName
-                }
+    if (showPermissionManager) {
+        PermissionManagerDialog(
+            operations = knownOperations,
+            currentRules = displayedRules,
+            onConfirm = { operationNames ->
+                onRuleSelectionChange(operationNames)
+                showPermissionManager = false
             },
-            onSelect = { operation ->
-                onAddRule(operation.stableName)
-                showPermissionPicker = false
-            },
-            onDismiss = { showPermissionPicker = false },
+            onDismiss = { showPermissionManager = false },
         )
     }
 }
@@ -659,7 +657,6 @@ private fun TemplateRuleItem(
     rule: PermissionTemplateRule,
     knownOperation: KnownAppOp?,
     onModeChange: (String, AppOpMode) -> Unit,
-    onRemove: (String) -> Unit,
     isDragging: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -717,14 +714,6 @@ private fun TemplateRuleItem(
                         onModeChange(rule.stableOperationName, it)
                     },
                 )
-            }
-            TextButton(
-                onClick = {
-                    onRemove(rule.stableOperationName)
-                },
-                modifier = Modifier.align(Alignment.End),
-            ) {
-                Text(text = stringResource(R.string.action_remove))
             }
         }
     }
@@ -839,26 +828,69 @@ private fun CreateTemplateDialog(
 }
 
 @Composable
-private fun PermissionPickerDialog(
+private fun PermissionManagerDialog(
     operations: List<KnownAppOp>,
-    onSelect: (KnownAppOp) -> Unit,
+    currentRules: List<PermissionTemplateRule>,
+    onConfirm: (List<String>) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
     val context = LocalContext.current
-    val filteredOperations = operations.filter { operation ->
+    val options = remember(operations, currentRules) {
+        val knownNames = operations.mapTo(mutableSetOf()) {
+            it.stableName
+        }
+        buildList {
+            operations.forEach { operation ->
+                add(
+                    TemplatePermissionOption(
+                        stableName = operation.stableName,
+                        knownOperation = operation,
+                    ),
+                )
+            }
+            currentRules.forEach { rule ->
+                if (rule.stableOperationName !in knownNames) {
+                    add(
+                        TemplatePermissionOption(
+                            stableName = rule.stableOperationName,
+                            knownOperation = null,
+                        ),
+                    )
+                    knownNames += rule.stableOperationName
+                }
+            }
+        }
+    }
+    var selectedNames by remember(currentRules) {
+        mutableStateOf(
+            currentRules
+                .map(PermissionTemplateRule::stableOperationName)
+                .toSet(),
+        )
+    }
+    val filteredOperations = options.filter { option ->
         query.isBlank() ||
-            operation.shellName.contains(query, ignoreCase = true) ||
-            operation.stableName.contains(query, ignoreCase = true) ||
-            context.getString(operation.labelRes).contains(
-                query,
-                ignoreCase = true,
-            )
+            option.stableName.contains(query, ignoreCase = true) ||
+            option.knownOperation?.let { operation ->
+                operation.shellName.contains(query, ignoreCase = true) ||
+                    context.getString(operation.labelRes).contains(
+                        query,
+                        ignoreCase = true,
+                    )
+            } == true
+    }
+    val toggleSelection = { operationName: String, selected: Boolean ->
+        selectedNames = if (selected) {
+            selectedNames + operationName
+        } else {
+            selectedNames - operationName
+        }
     }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(text = stringResource(R.string.template_add_permission))
+            Text(text = stringResource(R.string.template_manage_permissions))
         },
         text = {
             Column {
@@ -882,17 +914,35 @@ private fun PermissionPickerDialog(
                 ) {
                     items(
                         filteredOperations,
-                        key = KnownAppOp::stableName,
-                    ) { operation ->
+                        key = TemplatePermissionOption::stableName,
+                    ) { option ->
+                        val selected = option.stableName in selectedNames
                         ListItem(
                             modifier = Modifier.clickable {
-                                onSelect(operation)
+                                toggleSelection(option.stableName, !selected)
+                            },
+                            leadingContent = {
+                                Checkbox(
+                                    checked = selected,
+                                    onCheckedChange = { checked ->
+                                        toggleSelection(
+                                            option.stableName,
+                                            checked,
+                                        )
+                                    },
+                                )
                             },
                             headlineContent = {
-                                Text(text = stringResource(operation.labelRes))
+                                Text(
+                                    text = option.knownOperation?.let {
+                                        stringResource(it.labelRes)
+                                    } ?: option.stableName,
+                                )
                             },
-                            supportingContent = {
-                                Text(text = operation.stableName)
+                            supportingContent = option.knownOperation?.let {
+                                {
+                                    Text(text = option.stableName)
+                                }
                             },
                             colors = ListItemDefaults.colors(
                                 containerColor = Color.Transparent,
@@ -903,12 +953,36 @@ private fun PermissionPickerDialog(
             }
         },
         confirmButton = {
+            TextButton(
+                onClick = {
+                    val currentOrder = currentRules
+                        .map(PermissionTemplateRule::stableOperationName)
+                        .filter(selectedNames::contains)
+                    val currentNames = currentOrder.toSet()
+                    val additions = options
+                        .map(TemplatePermissionOption::stableName)
+                        .filter { operationName ->
+                            operationName in selectedNames &&
+                                operationName !in currentNames
+                        }
+                    onConfirm(currentOrder + additions)
+                },
+            ) {
+                Text(text = stringResource(R.string.action_apply))
+            }
+        },
+        dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(text = stringResource(R.string.action_cancel))
             }
         },
     )
 }
+
+private data class TemplatePermissionOption(
+    val stableName: String,
+    val knownOperation: KnownAppOp?,
+)
 
 @Composable
 private fun modeLabel(mode: AppOpMode): String =
