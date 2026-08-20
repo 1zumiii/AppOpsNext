@@ -50,6 +50,20 @@ class ModeChangeAlternativePolicyTest {
     }
 
     @Test
+    fun `denied runtime permission does not offer foreground`() {
+        assertFalse(
+            ModeChangeAlternativePolicy.canTryForeground(
+                request = request(
+                    originalMode = AppOpMode.IGNORE,
+                    requestedMode = AppOpMode.ALLOW,
+                    runtimePermissionDenied = true,
+                ),
+                result = rejectedMode(),
+            ),
+        )
+    }
+
+    @Test
     fun `unsafe failed restoration never offers foreground`() {
         assertFalse(
             ModeChangeAlternativePolicy.canTryForeground(
@@ -68,6 +82,7 @@ class ModeChangeAlternativePolicyTest {
     private fun request(
         originalMode: AppOpMode,
         requestedMode: AppOpMode,
+        runtimePermissionDenied: Boolean = false,
     ) = AppOpModeChangeRequest(
         packageName = "dev.example.target",
         operationName = "android:camera",
@@ -75,6 +90,7 @@ class ModeChangeAlternativePolicyTest {
         originalMode = originalMode,
         requestedMode = requestedMode,
         affectedPackages = listOf("dev.example.target"),
+        runtimePermissionDenied = runtimePermissionDenied,
     )
 
     private fun rejectedMode(

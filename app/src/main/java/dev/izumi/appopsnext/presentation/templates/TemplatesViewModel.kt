@@ -5,8 +5,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.appops.command.AppOpMode
-import dev.izumi.appopsnext.appops.model.AppOpScope
-import dev.izumi.appopsnext.templates.PermissionTemplateDefaults
 import dev.izumi.appopsnext.templates.NewAppPolicyTemplate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -101,44 +99,15 @@ class TemplatesViewModel(
         }
     }
 
-    fun setRuleScope(stableOperationName: String, scope: AppOpScope) {
-        val template = uiState.value.selectedTemplate ?: return
-        val rule = template.rules.firstOrNull {
-            it.stableOperationName == stableOperationName
-        } ?: return
+    fun setRuleSelection(orderedOperationNames: List<String>) {
+        val templateId = uiState.value.selectedTemplate?.id ?: return
         viewModelScope.launch {
-            repository.updateRule(
-                templateId = template.id,
-                stableOperationName = stableOperationName,
-                mode = rule.mode,
-                scope = scope,
-            )
-        }
-    }
-
-    fun addRule(stableOperationName: String) {
-        val template = uiState.value.selectedTemplate ?: return
-        viewModelScope.launch {
-            repository.updateRule(
-                templateId = template.id,
-                stableOperationName = stableOperationName,
-                mode = AppOpMode.DEFAULT,
-                scope = PermissionTemplateDefaults.suggestedScope(
-                    stableOperationName,
-                ),
-            )
+            repository.setRuleSelection(templateId, orderedOperationNames)
         }
     }
 
     private companion object {
         const val LOG_SOURCE = "Templates"
-    }
-
-    fun removeRule(stableOperationName: String) {
-        val templateId = uiState.value.selectedTemplate?.id ?: return
-        viewModelScope.launch {
-            repository.removeRule(templateId, stableOperationName)
-        }
     }
 
     fun setRuleOrder(orderedOperationNames: List<String>) {

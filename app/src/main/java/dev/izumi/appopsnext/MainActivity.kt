@@ -97,10 +97,8 @@ class MainActivity : ComponentActivity() {
                     onDeleteTemplate = templatesViewModel::deleteTemplate,
                     onTemplateRuleModeChange =
                         templatesViewModel::setRuleMode,
-                    onTemplateRuleScopeChange =
-                        templatesViewModel::setRuleScope,
-                    onAddTemplateRule = templatesViewModel::addRule,
-                    onRemoveTemplateRule = templatesViewModel::removeRule,
+                    onTemplateRuleSelectionChange =
+                        templatesViewModel::setRuleSelection,
                     onTemplateRuleOrderChange =
                         templatesViewModel::setRuleOrder,
                     onAutoApplyNewAppTemplateChange =
