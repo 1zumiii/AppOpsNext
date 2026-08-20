@@ -82,6 +82,9 @@
     <string name="app_detail_mode_item_applying">正在应用</string>
     <string name="app_detail_mode_change_failure">修改未完成</string>
     <string name="app_detail_mode_change_failure_detail">失败阶段：%1$s。恢复状态：%2$s。</string>
+    <string name="app_detail_runtime_permission_required_title">请先授予系统权限</string>
+    <string name="app_detail_runtime_permission_required_detail">该应用当前未获得对应的 Android 运行时权限。AppOps 可以进一步限制已授予的权限，但无法代替 Android 授予权限。请先在该应用的系统设置中允许此权限，再尝试“允许”或“仅前台”。</string>
+    <string name="action_open_app_settings">打开系统设置</string>
     <string name="app_detail_mode_deny_fallback_failed">系统未接受“拒绝”，随后自动尝试的“忽略”也未能完成。</string>
     <string name="app_detail_mode_deny_fallback_applied_title">已自动改用“忽略”</string>
     <string name="app_detail_mode_deny_fallback_applied">系统未接受“拒绝”。AppOpsNext 已恢复原值，并成功将此权限设置为“忽略”。</string>
