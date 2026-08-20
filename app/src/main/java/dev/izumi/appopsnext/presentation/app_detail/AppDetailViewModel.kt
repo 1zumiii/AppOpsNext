@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeExecutor
+import dev.izumi.appopsnext.appops.AppOpRuntimePermissionCatalog
 import dev.izumi.appopsnext.appops.AppOpsRepository
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
@@ -102,6 +103,10 @@ class AppDetailViewModel(
                 originalMode = originalMode,
                 requestedMode = requestedMode,
                 affectedPackages = affectedPackages(app, scope),
+                runtimePermissionDenied = isRuntimePermissionDenied(
+                    packageName = app.packageName,
+                    operationName = operationName,
+                ),
             ),
         )
     }
@@ -251,6 +256,19 @@ class AppDetailViewModel(
                     ?.ifEmpty { listOf(app.packageName) }
                     ?: listOf(app.packageName)
         }
+
+    private fun isRuntimePermissionDenied(
+        packageName: String,
+        operationName: String,
+    ): Boolean {
+        val permission = AppOpRuntimePermissionCatalog.requiredPermission(
+            operationName,
+        ) ?: return false
+        return getApplication<Application>().packageManager.checkPermission(
+            permission,
+            packageName,
+        ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
 
     private fun updateDisplayedMode(
         request: AppOpModeChangeRequest,

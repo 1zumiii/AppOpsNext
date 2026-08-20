@@ -84,6 +84,9 @@
     <string name="app_detail_mode_item_applying">Applying</string>
     <string name="app_detail_mode_change_failure">Change not completed</string>
     <string name="app_detail_mode_change_failure_detail">Failed during: %1$s. Restoration: %2$s.</string>
+    <string name="app_detail_runtime_permission_required_title">Grant the Android permission first</string>
+    <string name="app_detail_runtime_permission_required_detail">This app does not currently have the corresponding Android runtime permission. AppOps can further restrict a granted permission, but it cannot grant a permission denied by Android. Allow it in the app’s system settings before trying Allow or Foreground only.</string>
+    <string name="action_open_app_settings">Open app settings</string>
     <string name="app_detail_mode_deny_fallback_failed">Android rejected Deny, and the automatic Ignore fallback could not be completed either.</string>
     <string name="app_detail_mode_deny_fallback_applied_title">Automatically changed to Ignore</string>
     <string name="app_detail_mode_deny_fallback_applied">Android rejected Deny. AppOpsNext restored the original value and successfully set this permission to Ignore.</string>
