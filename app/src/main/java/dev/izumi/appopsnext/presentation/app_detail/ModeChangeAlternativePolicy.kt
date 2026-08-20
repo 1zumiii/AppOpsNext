@@ -10,7 +10,8 @@ object ModeChangeAlternativePolicy {
         request: AppOpModeChangeRequest,
         result: AppOpModeChangeResult.Failure,
     ): Boolean =
-        request.requestedMode == AppOpMode.ALLOW &&
+        !request.runtimePermissionDenied &&
+            request.requestedMode == AppOpMode.ALLOW &&
             request.originalMode != AppOpMode.FOREGROUND &&
             result.phase in RejectedModePhases &&
             result.restorationStatus == AppOpsRestorationStatus.SUCCEEDED

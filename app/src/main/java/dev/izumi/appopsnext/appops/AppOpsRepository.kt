@@ -308,7 +308,7 @@ class AppOpsRepository(
     ): AppOpMode? =
         readMode(packageName, operation, AppOpScope.PACKAGE)
 
-    private suspend fun readMode(
+    suspend fun readMode(
         packageName: String,
         operation: AppOpIdentifier,
         scope: AppOpScope,

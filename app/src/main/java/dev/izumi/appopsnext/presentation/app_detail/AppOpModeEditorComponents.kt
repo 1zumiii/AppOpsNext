@@ -1,5 +1,8 @@
 package dev.izumi.appopsnext.presentation.app_detail
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -95,17 +98,6 @@ internal fun AppOpListItem(
                     )
                 }
             }
-        },
-        overlineContent = {
-            Text(
-                text = stringResource(
-                    when (item.scope) {
-                        AppOpScope.UID -> R.string.app_detail_scope_uid
-                        AppOpScope.PACKAGE ->
-                            R.string.app_detail_scope_package
-                    },
-                ),
-            )
         },
         trailingContent = {
             if (isApplying) {
@@ -208,17 +200,6 @@ internal fun ModeChangeDialog(
                         text = stringResource(
                             R.string.app_detail_mode_confirm_operation,
                             state.request.operationName,
-                        ),
-                    )
-                    Text(
-                        text = stringResource(
-                            when (state.request.scope) {
-                                AppOpScope.UID ->
-                                    R.string.app_detail_mode_scope_uid
-
-                                AppOpScope.PACKAGE ->
-                                    R.string.app_detail_mode_scope_package
-                            },
                         ),
                     )
                     if (
@@ -346,6 +327,19 @@ private fun ModeChangeFailureDialog(
     onDismiss: () -> Unit,
     onForegroundAlternativeRequested: () -> Unit,
 ) {
+    val runtimePermissionBlocksGrant =
+        state.request.runtimePermissionDenied &&
+            state.request.requestedMode in setOf(
+                AppOpMode.ALLOW,
+                AppOpMode.FOREGROUND,
+            )
+    if (runtimePermissionBlocksGrant) {
+        RuntimePermissionRequiredDialog(
+            packageName = state.request.packageName,
+            onDismiss = onDismiss,
+        )
+        return
+    }
     val canTryForeground =
         ModeChangeAlternativePolicy.canTryForeground(
             request = state.request,
@@ -441,6 +435,56 @@ private fun ModeChangeFailureDialog(
             }
         } else {
             null
+        },
+    )
+}
+
+@Composable
+private fun RuntimePermissionRequiredDialog(
+    packageName: String,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(
+                    R.string.app_detail_runtime_permission_required_title,
+                ),
+                fontWeight = FontWeight.SemiBold,
+            )
+        },
+        text = {
+            Text(
+                text = stringResource(
+                    R.string.app_detail_runtime_permission_required_detail,
+                ),
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    context.startActivity(
+                        Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.fromParts("package", packageName, null),
+                        ),
+                    )
+                    onDismiss()
+                },
+            ) {
+                Text(
+                    text = stringResource(
+                        R.string.action_open_app_settings,
+                    ),
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = stringResource(R.string.action_cancel))
+            }
         },
     )
 }

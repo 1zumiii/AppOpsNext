@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeOutcome
+import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeExecutor
 import dev.izumi.appopsnext.appops.AppOpsRepository
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
 import dev.izumi.appopsnext.appops.model.AppOpModeChangePhase
@@ -11,6 +13,7 @@ import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
 import dev.izumi.appopsnext.appops.model.AppOpNames
 import dev.izumi.appopsnext.batch.BatchAppOpsExecutor
 import dev.izumi.appopsnext.batch.model.BatchOperationReport
+import dev.izumi.appopsnext.batch.model.BatchOperationTarget
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
 import dev.izumi.appopsnext.newapps.model.InstalledPackageRecord
 import dev.izumi.appopsnext.settings.UserSettingsRepository
@@ -20,6 +23,7 @@ import dev.izumi.appopsnext.templates.NewAppPolicyTemplate
 import dev.izumi.appopsnext.templates.PermissionTemplateRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
@@ -43,18 +47,39 @@ class NewAppPolicyCoordinator(
 ) {
     private val workMutex = Mutex()
     private val appOpsRepository = AppOpsRepository(privilegedServiceClient)
+    private val adaptiveScopeExecutor = AdaptiveScopeModeChangeExecutor { uid ->
+        context.packageManager.getPackagesForUid(uid)?.toList().orEmpty()
+    }
     private val executor = BatchAppOpsExecutor { target ->
-        appOpsRepository.applyMode(
-            packageName = target.packageName,
-            operation = AppOpIdentifier(
-                stableName = target.stableOperationName,
-                shellName = AppOpNames.shellName(
-                    target.stableOperationName,
-                ),
-            ),
-            scope = target.scope,
-            requestedMode = target.requestedMode,
+        val operation = AppOpIdentifier(
+            stableName = target.stableOperationName,
+            shellName = AppOpNames.shellName(target.stableOperationName),
         )
+        val outcome = adaptiveScopeExecutor.execute(
+            packageName = target.packageName,
+            uid = target.uid,
+            preferredScope = target.preferredScope,
+            requestedMode = target.requestedMode,
+            readMode = { scope ->
+                appOpsRepository.readMode(
+                    packageName = target.packageName,
+                    operation = operation,
+                    scope = scope,
+                )
+            },
+        ) { scope ->
+            appOpsRepository.applyMode(
+                packageName = target.packageName,
+                operation = operation,
+                scope = scope,
+                requestedMode = target.requestedMode,
+            )
+        }
+        diagnosticLog.info(
+            source = LOG_SOURCE,
+            message = outcome.toDiagnosticMessage(target),
+        )
+        outcome.result
     }
     private var started = false
 
@@ -68,6 +93,7 @@ class NewAppPolicyCoordinator(
             }
             val packageName = intent.data?.schemeSpecificPart ?: return
             scope.launch {
+                delay(NEW_PACKAGE_SETTLE_DELAY_MS)
                 runSafely("package_added:$packageName") {
                     reconcileAndProcess("package_added:$packageName")
                 }
@@ -272,7 +298,27 @@ class NewAppPolicyCoordinator(
                 failure.originalMode == null
         }
 
+    private fun AdaptiveScopeModeChangeOutcome.toDiagnosticMessage(
+        target: BatchOperationTarget,
+    ): String {
+        val resultSummary = when (val modeResult = result) {
+            is AppOpModeChangeResult.Success ->
+                "success:${modeResult.appliedMode.name}"
+
+            is AppOpModeChangeResult.Failure ->
+                "failure:${modeResult.phase.name}:" +
+                    modeResult.restorationStatus.name
+        }
+        return "New-app rule completed. " +
+            "package=${target.packageName}, " +
+            "operation=${target.stableOperationName}, " +
+            "preferredScope=${target.preferredScope.name}, " +
+            "resolvedScope=${appliedScope.name}, " +
+            "fallback=$fallbackAttempted, result=$resultSummary"
+    }
+
     private companion object {
         const val LOG_SOURCE = "NewAppPolicy"
+        const val NEW_PACKAGE_SETTLE_DELAY_MS = 2_000L
     }
 }

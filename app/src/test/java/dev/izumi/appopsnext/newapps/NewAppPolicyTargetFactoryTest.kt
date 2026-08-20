@@ -2,6 +2,7 @@ package dev.izumi.appopsnext.newapps
 
 import dev.izumi.appopsnext.newapps.model.InstalledPackageFingerprint
 import dev.izumi.appopsnext.newapps.model.InstalledPackageRecord
+import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.templates.NewAppPolicyTemplate
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -34,5 +35,10 @@ class NewAppPolicyTargetFactoryTest {
             targets.map { it.packageName }.toSet(),
         )
         assertEquals(setOf("New app"), targets.map { it.appLabel }.toSet())
+        assertEquals(setOf(10_123), targets.map { it.uid }.toSet())
+        assertEquals(
+            setOf(AppOpScope.PACKAGE),
+            targets.map { it.preferredScope }.toSet(),
+        )
     }
 }

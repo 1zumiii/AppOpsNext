@@ -74,9 +74,7 @@ fun AppOpsRootScreen(
     onCloseTemplateEditor: () -> Unit,
     onDeleteTemplate: (String) -> Unit,
     onTemplateRuleModeChange: (String, AppOpMode) -> Unit,
-    onTemplateRuleScopeChange: (String, AppOpScope) -> Unit,
-    onAddTemplateRule: (String) -> Unit,
-    onRemoveTemplateRule: (String) -> Unit,
+    onTemplateRuleSelectionChange: (List<String>) -> Unit,
     onTemplateRuleOrderChange: (List<String>) -> Unit,
     onAutoApplyNewAppTemplateChange: (Boolean) -> Unit,
     onTemplateApplyRequested:
@@ -187,9 +185,7 @@ fun AppOpsRootScreen(
                 onCloseEditor = onCloseTemplateEditor,
                 onDeleteTemplate = onDeleteTemplate,
                 onRuleModeChange = onTemplateRuleModeChange,
-                onRuleScopeChange = onTemplateRuleScopeChange,
-                onAddRule = onAddTemplateRule,
-                onRemoveRule = onRemoveTemplateRule,
+                onRuleSelectionChange = onTemplateRuleSelectionChange,
                 onRuleOrderChange = onTemplateRuleOrderChange,
                 onAutoApplyNewAppTemplateChange =
                     onAutoApplyNewAppTemplateChange,

@@ -6,7 +6,7 @@ import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.templates.model.PermissionTemplateRule
 
 object PermissionTemplateDefaults {
-    private val uidScopedOperations = setOf(
+    private val commonOperationNames = listOf(
         "CAMERA",
         "RECORD_AUDIO",
         "COARSE_LOCATION",
@@ -17,18 +17,13 @@ object PermissionTemplateDefaults {
     )
 
     val commonRules: List<PermissionTemplateRule> =
-        uidScopedOperations.map { operationName ->
+        commonOperationNames.map { operationName ->
             PermissionTemplateRule(
                 stableOperationName = AppOpNames.stableName(operationName),
                 mode = AppOpMode.DEFAULT,
-                scope = AppOpScope.UID,
+                scope = AppOpScope.PACKAGE,
             )
         }
 
-    fun suggestedScope(operationName: String): AppOpScope =
-        if (AppOpNames.shellName(operationName) in uidScopedOperations) {
-            AppOpScope.UID
-        } else {
-            AppOpScope.PACKAGE
-        }
+    fun suggestedScope(): AppOpScope = AppOpScope.PACKAGE
 }
