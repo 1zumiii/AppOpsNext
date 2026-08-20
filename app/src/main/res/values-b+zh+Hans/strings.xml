@@ -195,7 +195,7 @@
     <string name="template_mode_title">权限模式</string>
     <string name="template_mode_detail">套用模板时设置的 AppOps 状态</string>
     <string name="template_dropdown_button">%1$s ▾</string>
-    <string name="template_add_permission">添加其他权限</string>
+    <string name="template_manage_permissions">管理权限</string>
     <string name="template_permission_search">搜索系统权限名称</string>
     <string name="template_delete_title">删除模板？</string>
     <string name="template_delete_message">“%1$s”及其全部规则将被删除。</string>

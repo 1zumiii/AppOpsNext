@@ -101,16 +101,16 @@ class PermissionTemplateRepository(
         }
     }
 
-    suspend fun removeRule(
+    suspend fun setRuleSelection(
         templateId: String,
-        stableOperationName: String,
+        orderedOperationNames: List<String>,
     ) {
-        val normalizedName = AppOpNames.stableName(stableOperationName)
         updateTemplate(templateId) { template ->
             template.copy(
-                rules = template.rules.filterNot {
-                    it.stableOperationName == normalizedName
-                },
+                rules = PermissionTemplateRuleSelection.apply(
+                    currentRules = template.rules,
+                    selectedOperationNames = orderedOperationNames,
+                ),
             )
         }
     }

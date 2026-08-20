@@ -197,7 +197,7 @@
     <string name="template_mode_title">Permission mode</string>
     <string name="template_mode_detail">AppOps state applied by this rule</string>
     <string name="template_dropdown_button">%1$s ▾</string>
-    <string name="template_add_permission">Add another permission</string>
+    <string name="template_manage_permissions">Manage permissions</string>
     <string name="template_permission_search">Search system permission names</string>
     <string name="template_delete_title">Delete template?</string>
     <string name="template_delete_message">“%1$s” and all of its rules will be deleted.</string>
