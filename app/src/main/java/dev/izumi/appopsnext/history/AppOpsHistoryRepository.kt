@@ -1,5 +1,8 @@
 package dev.izumi.appopsnext.history
 
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import dev.izumi.appopsnext.appops.PrivilegedAppOpsGateway
 import dev.izumi.appopsnext.history.model.AppOpHistoryFailureReason
 import dev.izumi.appopsnext.history.model.AppOpHistoryLoadResult
@@ -18,7 +21,7 @@ class AppOpsHistoryRepository(
     ): AppOpHistoryLoadResult {
         val result = runCatching {
             privilegedGateway.getHistory(operationName)
-        }.getOrElse {
+        }.onFailure { if (it is CancellationException) throw it }.getOrElse {
             return AppOpHistoryLoadResult.Failure(
                 AppOpHistoryFailureReason.BACKEND_UNAVAILABLE,
             )
@@ -35,14 +38,16 @@ class AppOpsHistoryRepository(
             )
         }
 
-        val discreteEvents = discreteParser.parse(
-            operationName,
-            result.stdout,
-        )
-        return AppOpHistoryLoadResult.Success(
-            events = discreteEvents.ifEmpty {
-                aggregatedParser.parse(operationName, result.stdout)
-            },
-        )
+        return withContext(Dispatchers.Default) {
+            val discreteEvents = discreteParser.parse(
+                operationName,
+                result.stdout,
+            )
+            AppOpHistoryLoadResult.Success(
+                events = discreteEvents.ifEmpty {
+                    aggregatedParser.parse(operationName, result.stdout)
+                },
+            )
+        }
     }
 }

@@ -4,7 +4,6 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
-import dev.izumi.appopsnext.apps.InstalledAppsRepository
 import dev.izumi.appopsnext.history.AppOpsHistoryRepository
 import dev.izumi.appopsnext.history.HistoryPermissionOrdering
 import dev.izumi.appopsnext.history.model.AppOpHistoryFailureReason
@@ -13,12 +12,15 @@ import dev.izumi.appopsnext.history.model.HistoryPermission
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 import dev.izumi.appopsnext.settings.UserSettingsDefaults
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
-import kotlin.time.Duration.Companion.minutes
-import kotlinx.coroutines.delay
+import dev.izumi.appopsnext.history.HistoryRefreshController
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class HistoryViewModel(
@@ -32,7 +34,7 @@ class HistoryViewModel(
     private val userSettingsRepository = app.userSettingsRepository
     private val historyRepository =
         AppOpsHistoryRepository(privilegedServiceClient)
-    private val installedAppsRepository = InstalledAppsRepository(application)
+    private val installedAppsRepository = app.installedAppsRepository
     private val availablePermissions =
         AppOpDisplayCatalog.knownOperations().map {
             HistoryPermission(it.shellName)
@@ -46,8 +48,18 @@ class HistoryViewModel(
     private var selectedPermissions = emptyList<HistoryPermission>()
     private var hideSystemApps =
         UserSettingsDefaults.HIDE_SYSTEM_APPS
-    private var refreshInProgress = false
-    private var refreshPending = false
+    private val refreshController = HistoryRefreshController(
+        scope = viewModelScope,
+        intervalMillis = AUTO_REFRESH_INTERVAL_MINUTES * 60_000L,
+    ) {
+        if (selectedPermissions.isNotEmpty()) {
+            try {
+                loadSelectedPermissions(selectedPermissions)
+            } finally {
+                mutableUiState.value = mutableUiState.value.copy(isLoading = false)
+            }
+        }
+    }
 
     val uiState: StateFlow<HistoryUiState> = mutableUiState.asStateFlow()
 
@@ -81,20 +93,13 @@ class HistoryViewModel(
         }
         viewModelScope.launch {
             privilegedServiceClient.state.collect { state ->
-                if (state is PrivilegedServiceState.Connected) {
-                    refresh()
-                } else {
+                refreshController.setConnected(state is PrivilegedServiceState.Connected)
+                if (state !is PrivilegedServiceState.Connected) {
                     mutableUiState.value = mutableUiState.value.copy(
                         isLoading = false,
                         waitingForBackend = true,
                     )
                 }
-            }
-        }
-        viewModelScope.launch {
-            while (isActive) {
-                delay(AUTO_REFRESH_INTERVAL)
-                refresh()
             }
         }
     }
@@ -125,36 +130,14 @@ class HistoryViewModel(
         }
     }
 
-    fun refresh() {
-        if (
-            selectedPermissions.isEmpty() ||
-            privilegedServiceClient.state.value
-                !is PrivilegedServiceState.Connected
-        ) {
-            return
-        }
-        if (refreshInProgress) {
-            refreshPending = true
-            return
-        }
-
-        refreshInProgress = true
-        viewModelScope.launch {
-            try {
-                loadSelectedPermissions(selectedPermissions)
-            } finally {
-                refreshInProgress = false
-                if (refreshPending) {
-                    refreshPending = false
-                    refresh()
-                }
-            }
-        }
-    }
+    fun setVisible(visible: Boolean) = refreshController.setVisible(visible)
+    fun setForeground(foreground: Boolean) = refreshController.setForeground(foreground)
+    fun refresh() = refreshController.requestRefresh()
 
     private suspend fun loadSelectedPermissions(
         permissions: List<HistoryPermission>,
     ) {
+        val requestedHideSystemApps = hideSystemApps
         mutableUiState.value = mutableUiState.value.copy(
             isLoading = true,
             waitingForBackend = false,
@@ -163,7 +146,7 @@ class HistoryViewModel(
 
         val apps = runCatching {
             installedAppsRepository.loadInstalledApps()
-        }.getOrDefault(emptyList())
+        }.onFailure { if (it is CancellationException) throw it }.getOrDefault(emptyList())
         val permissionHistories = permissions.map { permission ->
             when (
                 val result = historyRepository.loadOperationHistory(
@@ -171,11 +154,13 @@ class HistoryViewModel(
                 )
             ) {
                 is AppOpHistoryLoadResult.Success -> {
-                    val resolvedEvents = HistoryEventResolver.resolve(
-                        events = result.events,
-                        installedApps = apps,
-                        hideSystemApps = hideSystemApps,
-                    )
+                    val resolvedEvents = withContext(Dispatchers.Default) {
+                        HistoryEventResolver.resolve(
+                            events = result.events,
+                            installedApps = apps,
+                            hideSystemApps = requestedHideSystemApps,
+                        )
+                    }
                     PermissionHistory(
                         permission = permission,
                         events = resolvedEvents,
@@ -193,6 +178,8 @@ class HistoryViewModel(
             PermissionHistory::failureReason,
         )
 
+        currentCoroutineContext().ensureActive()
+        if (permissions != selectedPermissions || requestedHideSystemApps != hideSystemApps) return
         mutableUiState.value = HistoryUiState(
             isLoading = false,
             waitingForBackend = false,
@@ -210,6 +197,5 @@ class HistoryViewModel(
 
     private companion object {
         const val AUTO_REFRESH_INTERVAL_MINUTES = 5
-        val AUTO_REFRESH_INTERVAL = AUTO_REFRESH_INTERVAL_MINUTES.minutes
     }
 }

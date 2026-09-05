@@ -152,7 +152,7 @@
     <string name="history_no_matching_permissions">No matching permissions.</string>
     <string name="history_management_selected_count">%1$d permissions selected. Changes are saved only after you apply them.</string>
     <string name="history_no_selected_permissions">No permissions are monitored. Use the manage button in the top-right corner.</string>
-    <string name="history_auto_refresh_summary">Refreshes every %1$d minutes while the app process is alive and Shizuku is connected, and whenever you return to the app. Last updated: %2$s</string>
+    <string name="history_auto_refresh_summary">Refreshes every %1$d minutes while this history screen is visible, the app is in the foreground, and Shizuku is connected. Last updated: %2$s</string>
     <string name="history_never_updated">Not updated yet</string>
     <string name="history_waiting_for_backend">History loads automatically after System AppOps connects.</string>
     <string name="history_partial_failure">History for %1$d permissions could not be loaded. Other results remain available.</string>

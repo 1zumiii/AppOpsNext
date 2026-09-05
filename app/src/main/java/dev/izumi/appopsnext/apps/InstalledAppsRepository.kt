@@ -6,6 +6,8 @@ import android.content.pm.PackageManager
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import java.text.Collator
 import java.util.Locale
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -14,17 +16,33 @@ class InstalledAppsRepository(
 ) {
     private val packageManager = context.packageManager
 
-    suspend fun loadInstalledApps(): List<InstalledApp> =
+    private val cacheMutex = Mutex()
+    private var cached: List<InstalledApp>? = null
+    private var cachedLocale: Locale? = null
+    private var cachedAtNanos = 0L
+
+    suspend fun loadInstalledApps(forceRefresh: Boolean = false): List<InstalledApp> =
         withContext(Dispatchers.IO) {
-            val labelCollator = Collator.getInstance(Locale.getDefault())
-            packageManager
-                .getInstalledApplications(
-                    PackageManager.ApplicationInfoFlags.of(0),
-                )
-                .map(::toInstalledApp)
-                .sortedWith { left, right ->
-                    labelCollator.compare(left.label, right.label)
-                }
+            cacheMutex.withLock {
+                val locale = Locale.getDefault()
+                val now = System.nanoTime()
+                val previous = cached
+                if (!forceRefresh && previous != null && cachedLocale == locale &&
+                    now - cachedAtNanos < 60_000_000_000L) return@withLock previous
+                val labelCollator = Collator.getInstance(Locale.getDefault())
+                val loaded = packageManager
+                    .getInstalledApplications(
+                        PackageManager.ApplicationInfoFlags.of(0),
+                    )
+                    .map(::toInstalledApp)
+                    .sortedWith { left, right ->
+                        labelCollator.compare(left.label, right.label)
+                    }
+                cached = loaded
+                cachedLocale = locale
+                cachedAtNanos = System.nanoTime()
+                loaded
+            }
         }
 
     private fun toInstalledApp(applicationInfo: ApplicationInfo): InstalledApp {
