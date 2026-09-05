@@ -19,9 +19,11 @@ class NewAppPolicyNotifier(
 
     fun notifyCompleted(
         packageName: String,
+        firstInstallTimeMillis: Long,
         appLabel: String,
         successCount: Int,
         failureCount: Int,
+        pendingCount: Int,
     ) {
         if (
             context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
@@ -32,8 +34,11 @@ class NewAppPolicyNotifier(
         createChannel()
         val openAppIntent = PendingIntent.getActivity(
             context,
-            NOTIFICATION_REQUEST_CODE,
+            packageName.hashCode(),
             Intent(context, MainActivity::class.java).apply {
+                data = android.net.Uri.parse("appopsnext://new-app/$firstInstallTimeMillis/$packageName")
+                putExtra(EXTRA_PACKAGE, packageName)
+                putExtra(EXTRA_INSTALL_TIME, firstInstallTimeMillis)
                 flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or
                     Intent.FLAG_ACTIVITY_SINGLE_TOP
             },
@@ -44,7 +49,8 @@ class NewAppPolicyNotifier(
             .setSmallIcon(R.drawable.ic_notification_new_app)
             .setContentTitle(
                 context.getString(
-                    R.string.new_app_policy_notification_title,
+                    if (pendingCount > 0) R.string.new_app_policy_notification_pending_title
+                    else R.string.new_app_policy_notification_title,
                     appLabel,
                 ),
             )
@@ -76,10 +82,11 @@ class NewAppPolicyNotifier(
         )
     }
 
-    private companion object {
+    companion object {
+        const val EXTRA_PACKAGE = "new_app_result_package"
+        const val EXTRA_INSTALL_TIME = "new_app_result_install_time"
         // A new ID upgrades existing installs because Android preserves the
         // importance selected when a notification channel is first created.
         const val CHANNEL_ID = "new_app_policy_results_heads_up"
-        const val NOTIFICATION_REQUEST_CODE = 2_201
     }
 }

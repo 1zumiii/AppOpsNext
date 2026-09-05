@@ -1,6 +1,10 @@
 package dev.izumi.appopsnext
 
 import android.os.Bundle
+import android.content.Intent
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import dev.izumi.appopsnext.newapps.NewAppPolicyNotifier
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -28,6 +32,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         DevelopmentWindowPolicy.apply(window)
+        showNewAppResult(intent)
 
         setContent {
             val diagnosticsUiState =
@@ -115,6 +120,22 @@ class MainActivity : ComponentActivity() {
                     },
                 )
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        showNewAppResult(intent)
+    }
+
+    private fun showNewAppResult(intent: Intent) {
+        val packageName = intent.getStringExtra(NewAppPolicyNotifier.EXTRA_PACKAGE) ?: return
+        val installedAt = intent.getLongExtra(NewAppPolicyNotifier.EXTRA_INSTALL_TIME, -1)
+        intent.removeExtra(NewAppPolicyNotifier.EXTRA_PACKAGE)
+        lifecycleScope.launch {
+            (application as AppOpsNextApplication).newAppPolicyCoordinator
+                .reportFor(packageName, installedAt)?.let(batchOperationsViewModel::showReport)
         }
     }
 
