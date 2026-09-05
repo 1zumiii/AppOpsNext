@@ -7,8 +7,6 @@ import java.io.BufferedWriter
 import java.io.Closeable
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 internal class NativeDaemonConnection private constructor(
     private val process: RemoteProcessHandle,
@@ -16,59 +14,28 @@ internal class NativeDaemonConnection private constructor(
     private val writer: BufferedWriter,
     val info: NativeDaemonInfo,
 ) : Closeable {
-    private val ioLock = Any()
-    @Volatile
-    private var closed = false
-
-    suspend fun execute(
-        command: NativeDaemonCommand,
-    ): ShellCommandResult =
-        withContext(Dispatchers.IO) {
-            synchronized(ioLock) {
-                check(!closed && process.isAlive()) {
-                    "Native daemon is unavailable"
-                }
-                writer.write(command.encode())
-                writer.flush()
-                NativeDaemonProtocol.decodeResult(
-                    requireNotNull(reader.readLine()) {
-                        "Native daemon closed without a command response"
-                    },
-                )
+    private val channel = NativeDaemonChannel(
+        exchange = { line ->
+            check(process.isAlive()) { "Native daemon is unavailable" }
+            writer.write(line)
+            writer.flush()
+            requireNotNull(reader.readLine()) {
+                "Native daemon closed without a command response"
             }
-        }
+        },
+        abort = process::destroy,
+    )
+
+    suspend fun execute(command: NativeDaemonCommand): ShellCommandResult =
+        NativeDaemonProtocol.decodeResult(channel.request(command.encode()))
 
     suspend fun ping() {
-        withContext(Dispatchers.IO) {
-            synchronized(ioLock) {
-                check(!closed && process.isAlive()) {
-                    "Native daemon is unavailable"
-                }
-                writer.write(NativeDaemonProtocol.PING_REQUEST)
-                writer.flush()
-                check(
-                    reader.readLine() ==
-                        NativeDaemonProtocol.PING_RESPONSE,
-                ) {
-                    "Native daemon returned an invalid probe response"
-                }
-            }
+        check(channel.request(NativeDaemonProtocol.PING_REQUEST) == NativeDaemonProtocol.PING_RESPONSE) {
+            "Native daemon returned an invalid probe response"
         }
     }
 
-    override fun close() {
-        synchronized(ioLock) {
-            if (closed) return
-            closed = true
-            runCatching {
-                if (process.isAlive()) {
-                    writer.write(NativeDaemonProtocol.EXIT_REQUEST)
-                    writer.flush()
-                }
-            }
-            process.destroy()
-        }
-    }
+    override fun close() = channel.close()
 
     companion object {
         fun open(
