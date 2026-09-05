@@ -69,6 +69,29 @@ read and compare the original mode
     -> restore and verify the original mode after failure
 ```
 
+`AppOpsNextApplication` owns the shared `AppOpsRepository`. Every repository
+also defaults to the same process-wide `AppOpsWriteCoordinator`, so independent
+callers cannot interleave writes even if another repository is introduced.
+The queue covers the original read/check, write, verification, and restoration.
+Manual, batch, and new-app policy callers use `withWriteTransaction` to keep
+scope retries (and the manual deny fallback) inside that same queue. Inside the
+block, write through its supplied `WriteTransaction`; calling the repository's
+standalone write methods there would try to acquire the queue again. Reads can
+still run independently. This coordinates this app's writers, not other apps
+or system services changing AppOps concurrently.
+
+A `DEFAULT` request resets the record in the selected scope. Missing/default
+state in the other scope must never short-circuit that reset or turn its failure
+into a reported success.
+
+Cancellation before the first possible write propagates without modifying
+AppOps. After a possible side effect, the repository retains the queue while
+attempting restoration and read-back in `NonCancellable`, then rethrows the
+cancellation. Cleanup has a 25-second cooperative timeout; interrupting a stuck
+blocking pipe remains the responsibility of the backend. Cancellation cleanup
+results, including unconfirmed restoration, go to the application's diagnostic
+log even if the requesting screen has gone away.
+
 Once the original value has been confirmed, every later failure path attempts
 restoration. Failure state distinguishes “no write occurred,” “restored,” and
 “restore could not be confirmed.” The temporary in-app write-test card was

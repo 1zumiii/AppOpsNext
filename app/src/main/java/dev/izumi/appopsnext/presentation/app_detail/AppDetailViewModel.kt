@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeExecutor
 import dev.izumi.appopsnext.appops.AppOpRuntimePermissionCatalog
-import dev.izumi.appopsnext.appops.AppOpsRepository
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
 import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
@@ -30,7 +29,7 @@ class AppDetailViewModel(
         getApplication<AppOpsNextApplication>().privilegedServiceClient
     private val userSettingsRepository =
         getApplication<AppOpsNextApplication>().userSettingsRepository
-    private val repository = AppOpsRepository(privilegedServiceClient)
+    private val repository = getApplication<AppOpsNextApplication>().appOpsRepository
     private val adaptiveScopeExecutor = AdaptiveScopeModeChangeExecutor { uid ->
         getApplication<Application>().packageManager
             .getPackagesForUid(uid)

@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeExecutor
-import dev.izumi.appopsnext.appops.AppOpsRepository
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
 import dev.izumi.appopsnext.appops.model.AppOpNames
@@ -24,9 +23,8 @@ import kotlinx.coroutines.launch
 class BatchOperationsViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
-    private val repository = AppOpsRepository(
-        getApplication<AppOpsNextApplication>().privilegedServiceClient,
-    )
+    private val repository =
+        getApplication<AppOpsNextApplication>().appOpsRepository
     private val adaptiveScopeExecutor = AdaptiveScopeModeChangeExecutor { uid ->
         getApplication<Application>().packageManager
             .getPackagesForUid(uid)

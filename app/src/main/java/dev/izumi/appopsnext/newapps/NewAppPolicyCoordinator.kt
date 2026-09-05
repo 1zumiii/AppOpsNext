@@ -40,13 +40,13 @@ class NewAppPolicyCoordinator(
     private val templateRepository: PermissionTemplateRepository,
     private val privilegedServiceClient: PrivilegedServiceClient,
     private val diagnosticLog: DiagnosticLogRepository,
+    private val appOpsRepository: AppOpsRepository,
     private val scanner: InstalledPackageScanner =
         InstalledPackageScanner(context),
     private val notifier: NewAppPolicyNotifier =
         NewAppPolicyNotifier(context),
 ) {
     private val workMutex = Mutex()
-    private val appOpsRepository = AppOpsRepository(privilegedServiceClient)
     private val adaptiveScopeExecutor = AdaptiveScopeModeChangeExecutor { uid ->
         context.packageManager.getPackagesForUid(uid)?.toList().orEmpty()
     }

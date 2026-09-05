@@ -12,7 +12,14 @@ import dev.izumi.appopsnext.appops.model.PackageOpsLoadResult
 import dev.izumi.appopsnext.appops.model.PackageOpsSnapshot
 import dev.izumi.appopsnext.appops.model.ShellCommandResult
 import dev.izumi.appopsnext.appops.parser.PackageOpsParser
+import dev.izumi.appopsnext.appops.model.CancelledAppOpsWrite
 import java.util.Locale
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -20,6 +27,8 @@ class AppOpsRepository(
     private val privilegedGateway: PrivilegedAppOpsGateway,
     private val parser: PackageOpsParser = PackageOpsParser(),
     private val writeCoordinator: AppOpsWriteCoordinator = AppOpsWriteCoordinator.Shared,
+    private val cancellationRecoveryTimeoutMillis: Long = 25_000L,
+    private val onCancelledWrite: (CancelledAppOpsWrite) -> Unit = {},
 ) {
     suspend fun readPackageOps(
         packageName: String,
@@ -40,7 +49,7 @@ class AppOpsRepository(
         packageName: String,
         uid: Int? = null,
     ): PackageOpsLoadResult {
-        val commandResult = runCatching {
+        val commandResult = catchBackendFailure {
             privilegedGateway.getPackageOps(packageName)
         }.getOrElse {
             return PackageOpsLoadResult.Failure(
@@ -86,7 +95,7 @@ class AppOpsRepository(
         snapshot: PackageOpsSnapshot,
         uid: Int,
     ): PackageOpsSnapshot? {
-        val result = runCatching {
+        val result = catchBackendFailure {
             privilegedGateway.getUidOps(uid)
         }.getOrNull()
         if (result?.isSuccessful != true) return null
@@ -125,7 +134,7 @@ class AppOpsRepository(
         val resolvedEntries = snapshot.entries
             .distinctBy { it.name.lowercase(Locale.ROOT) }
             .flatMap { discoveredEntry ->
-                val result = runCatching {
+                val result = catchBackendFailure {
                     privilegedGateway.getPackageOp(
                         packageName = snapshot.packageName,
                         operationName = discoveredEntry.name,
@@ -309,33 +318,63 @@ class AppOpsRepository(
             )
         }
 
-        if (!setMode(packageName, operation, scope, requestedMode)) {
-            return restoreAfterFailedChange(
-                packageName = packageName,
-                operation = operation,
-                scope = scope,
-                originalMode = originalMode,
-                primaryFailure = AppOpModeChangePhase.APPLY_REQUESTED,
-                observedMode = null,
-            )
-        }
+        // Before the first possible side effect, cancellation needs no rollback.
+        currentCoroutineContext().ensureActive()
+        var failurePhase = AppOpModeChangePhase.APPLY_REQUESTED
+        try {
+            if (!setMode(packageName, operation, scope, requestedMode)) {
+                return restoreAfterFailedChange(
+                    packageName = packageName,
+                    operation = operation,
+                    scope = scope,
+                    originalMode = originalMode,
+                    primaryFailure = AppOpModeChangePhase.APPLY_REQUESTED,
+                    observedMode = null,
+                )
+            }
 
-        val observedMode = readMode(packageName, operation, scope)
-        if (observedMode != requestedMode) {
-            return restoreAfterFailedChange(
-                packageName = packageName,
-                operation = operation,
-                scope = scope,
-                originalMode = originalMode,
-                primaryFailure = AppOpModeChangePhase.VERIFY_REQUESTED,
-                observedMode = observedMode,
-            )
-        }
+            failurePhase = AppOpModeChangePhase.VERIFY_REQUESTED
+            val observedMode = readMode(packageName, operation, scope)
+            if (observedMode != requestedMode) {
+                return restoreAfterFailedChange(
+                    packageName = packageName,
+                    operation = operation,
+                    scope = scope,
+                    originalMode = originalMode,
+                    primaryFailure = AppOpModeChangePhase.VERIFY_REQUESTED,
+                    observedMode = observedMode,
+                )
+            }
 
-        return AppOpModeChangeResult.Success(
-            originalMode = originalMode,
-            appliedMode = observedMode,
-        )
+            return AppOpModeChangeResult.Success(
+                originalMode = originalMode,
+                appliedMode = observedMode,
+            )
+        } catch (cancelled: CancellationException) {
+            // Keep the shared write queue until cleanup finishes. A cancelled
+            // caller must not cancel restoration or let another writer overtake it.
+            val recovery = withContext(NonCancellable) {
+                withTimeoutOrNull(cancellationRecoveryTimeoutMillis) {
+                    restoreAfterFailedChange(
+                        packageName = packageName,
+                        operation = operation,
+                        scope = scope,
+                        originalMode = originalMode,
+                        primaryFailure = failurePhase,
+                        observedMode = null,
+                    )
+                } ?: AppOpModeChangeResult.Failure(
+                    phase = AppOpModeChangePhase.RESTORE_ORIGINAL,
+                    originalMode = originalMode,
+                    observedMode = null,
+                    restorationStatus = AppOpsRestorationStatus.FAILED,
+                )
+            }
+            onCancelledWrite(
+                CancelledAppOpsWrite(packageName, operation, scope, recovery),
+            )
+            throw cancelled
+        }
     }
 
     private suspend fun restoreAfterFailedChange(
@@ -345,7 +384,7 @@ class AppOpsRepository(
         originalMode: AppOpMode,
         primaryFailure: AppOpModeChangePhase,
         observedMode: AppOpMode?,
-    ): AppOpModeChangeResult {
+    ): AppOpModeChangeResult.Failure {
         if (!setMode(packageName, operation, scope, originalMode)) {
             return AppOpModeChangeResult.Failure(
                 phase = AppOpModeChangePhase.RESTORE_ORIGINAL,
@@ -384,7 +423,7 @@ class AppOpsRepository(
         operation: AppOpIdentifier,
         scope: AppOpScope,
     ): AppOpMode? {
-        val result = runCatching {
+        val result = catchBackendFailure {
             privilegedGateway.getPackageOp(packageName, operation.shellName)
         }.getOrNull() ?: return null
         if (!result.isSuccessful) return null
@@ -406,7 +445,7 @@ class AppOpsRepository(
         operation: AppOpIdentifier,
         mode: AppOpMode,
     ): Boolean =
-        runCatching {
+        catchBackendFailure {
             privilegedGateway.setPackageOpMode(
                 packageName = packageName,
                 operationName = operation.shellName,
@@ -425,13 +464,18 @@ class AppOpsRepository(
                 setPackageMode(packageName, operation, mode)
 
             AppOpScope.UID ->
-                runCatching {
+                catchBackendFailure {
                     privilegedGateway.setUidOpMode(
                         packageName = packageName,
                         operationName = operation.shellName,
                         mode = mode,
                     )
                 }.getOrNull()?.isSuccessful == true
+        }
+
+    private inline fun <T> catchBackendFailure(action: () -> T): Result<T> =
+        runCatching(action).onFailure { error ->
+            if (error is CancellationException) throw error
         }
 
     private val ShellCommandResult.isSuccessful: Boolean

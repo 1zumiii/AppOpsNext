@@ -5,7 +5,6 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
-import dev.izumi.appopsnext.appops.AppOpsRepository
 import dev.izumi.appopsnext.appops.model.AppOpsReadState
 import dev.izumi.appopsnext.diagnostics.DiagnosticEnvironmentCollector
 import dev.izumi.appopsnext.diagnostics.DiagnosticReportComposer
@@ -30,7 +29,7 @@ class DiagnosticsViewModel(
         ShizukuController(application, diagnosticLog)
     private val privilegedServiceClient =
         getApplication<AppOpsNextApplication>().privilegedServiceClient
-    private val appOpsRepository = AppOpsRepository(privilegedServiceClient)
+    private val appOpsRepository = getApplication<AppOpsNextApplication>().appOpsRepository
     private val appOpsReadState =
         MutableStateFlow<AppOpsReadState>(AppOpsReadState.WaitingForBackend)
 
