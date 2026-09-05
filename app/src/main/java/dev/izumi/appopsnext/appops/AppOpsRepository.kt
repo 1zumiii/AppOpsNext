@@ -13,10 +13,13 @@ import dev.izumi.appopsnext.appops.model.PackageOpsSnapshot
 import dev.izumi.appopsnext.appops.model.ShellCommandResult
 import dev.izumi.appopsnext.appops.parser.PackageOpsParser
 import java.util.Locale
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class AppOpsRepository(
     private val privilegedGateway: PrivilegedAppOpsGateway,
     private val parser: PackageOpsParser = PackageOpsParser(),
+    private val writeCoordinator: AppOpsWriteCoordinator = AppOpsWriteCoordinator.Shared,
 ) {
     suspend fun readPackageOps(
         packageName: String,
@@ -169,7 +172,75 @@ class AppOpsRepository(
         )
     }
 
+    /**
+     * Keep retries in one transaction. Inside this block use the supplied writer,
+     * not the repository's standalone write methods (which acquire the queue).
+     */
+    suspend fun <T> withWriteTransaction(
+        action: suspend (WriteTransaction) -> T,
+    ): T = writeCoordinator.serialize {
+        val transaction = WriteTransaction()
+        try {
+            action(transaction)
+        } finally {
+            transaction.finish()
+        }
+    }
+
+    inner class WriteTransaction internal constructor() {
+        private val operationMutex = Mutex()
+        private var active = true
+
+        internal fun finish() {
+            active = false
+        }
+
+        suspend fun changeMode(
+            packageName: String,
+            operation: AppOpIdentifier,
+            scope: AppOpScope,
+            expectedOriginalMode: AppOpMode,
+            requestedMode: AppOpMode,
+        ): AppOpModeChangeResult = operationMutex.withLock {
+            check(active) { "Write transaction has finished" }
+            changeModeInTransaction(
+                packageName, operation, scope, expectedOriginalMode, requestedMode,
+            )
+        }
+
+        suspend fun applyMode(
+            packageName: String,
+            operation: AppOpIdentifier,
+            scope: AppOpScope,
+            requestedMode: AppOpMode,
+        ): AppOpModeChangeResult = operationMutex.withLock {
+            check(active) { "Write transaction has finished" }
+            applyModeInTransaction(packageName, operation, scope, requestedMode)
+        }
+    }
+
     suspend fun changeMode(
+        packageName: String,
+        operation: AppOpIdentifier,
+        scope: AppOpScope,
+        expectedOriginalMode: AppOpMode,
+        requestedMode: AppOpMode,
+    ): AppOpModeChangeResult = withWriteTransaction { transaction ->
+        transaction.changeMode(
+            packageName, operation, scope, expectedOriginalMode, requestedMode,
+        )
+    }
+
+    suspend fun applyMode(
+        packageName: String,
+        operation: AppOpIdentifier,
+        scope: AppOpScope,
+        requestedMode: AppOpMode,
+    ): AppOpModeChangeResult = withWriteTransaction { transaction ->
+        transaction.applyMode(packageName, operation, scope, requestedMode)
+    }
+
+    private suspend fun changeModeInTransaction(
         packageName: String,
         operation: AppOpIdentifier,
         scope: AppOpScope,
@@ -202,7 +273,7 @@ class AppOpsRepository(
         )
     }
 
-    suspend fun applyMode(
+    private suspend fun applyModeInTransaction(
         packageName: String,
         operation: AppOpIdentifier,
         scope: AppOpScope,

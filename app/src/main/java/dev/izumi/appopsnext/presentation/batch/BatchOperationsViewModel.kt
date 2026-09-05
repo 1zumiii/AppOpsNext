@@ -34,13 +34,26 @@ class BatchOperationsViewModel(
             .orEmpty()
     }
     private val executor = BatchAppOpsExecutor { target ->
-        adaptiveScopeExecutor.execute(
-            packageName = target.packageName,
-            uid = target.uid,
-            preferredScope = target.preferredScope,
-            requestedMode = target.requestedMode,
-            readMode = { scope ->
-                repository.readMode(
+        repository.withWriteTransaction { transaction ->
+            adaptiveScopeExecutor.execute(
+                packageName = target.packageName,
+                uid = target.uid,
+                preferredScope = target.preferredScope,
+                requestedMode = target.requestedMode,
+                readMode = { scope ->
+                    repository.readMode(
+                        packageName = target.packageName,
+                        operation = AppOpIdentifier(
+                            stableName = target.stableOperationName,
+                            shellName = AppOpNames.shellName(
+                                target.stableOperationName,
+                            ),
+                        ),
+                        scope = scope,
+                    )
+                },
+            ) { scope ->
+                transaction.applyMode(
                     packageName = target.packageName,
                     operation = AppOpIdentifier(
                         stableName = target.stableOperationName,
@@ -49,21 +62,10 @@ class BatchOperationsViewModel(
                         ),
                     ),
                     scope = scope,
+                    requestedMode = target.requestedMode,
                 )
-            },
-        ) { scope ->
-            repository.applyMode(
-                packageName = target.packageName,
-                operation = AppOpIdentifier(
-                    stableName = target.stableOperationName,
-                    shellName = AppOpNames.shellName(
-                        target.stableOperationName,
-                    ),
-                ),
-                scope = scope,
-                requestedMode = target.requestedMode,
-            )
-        }.result
+            }.result
+        }
     }
     private val mutableUiState =
         MutableStateFlow<BatchOperationUiState>(BatchOperationUiState.Idle)

@@ -132,41 +132,43 @@ class AppDetailViewModel(
                 shellName = request.operationName,
             )
             var appliedScope = request.scope
-            val outcome = DenyFallbackModeChangeExecutor {
-                    requestedMode ->
-                val scopeOutcome = adaptiveScopeExecutor.execute(
-                    packageName = request.packageName,
-                    uid = app.uid,
-                    preferredScope = request.scope,
-                    requestedMode = requestedMode,
-                    readMode = { scope ->
-                        repository.readMode(
-                            packageName = request.packageName,
-                            operation = operation,
-                            scope = scope,
-                        )
-                    },
-                ) { scope ->
-                    if (scope == request.scope) {
-                        repository.changeMode(
-                            packageName = request.packageName,
-                            operation = operation,
-                            scope = scope,
-                            expectedOriginalMode = request.originalMode,
-                            requestedMode = requestedMode,
-                        )
-                    } else {
-                        repository.applyMode(
-                            packageName = request.packageName,
-                            operation = operation,
-                            scope = scope,
-                            requestedMode = requestedMode,
-                        )
+            val outcome = repository.withWriteTransaction { transaction ->
+                DenyFallbackModeChangeExecutor {
+                        requestedMode ->
+                    val scopeOutcome = adaptiveScopeExecutor.execute(
+                        packageName = request.packageName,
+                        uid = app.uid,
+                        preferredScope = request.scope,
+                        requestedMode = requestedMode,
+                        readMode = { scope ->
+                            repository.readMode(
+                                packageName = request.packageName,
+                                operation = operation,
+                                scope = scope,
+                            )
+                        },
+                    ) { scope ->
+                        if (scope == request.scope) {
+                            transaction.changeMode(
+                                packageName = request.packageName,
+                                operation = operation,
+                                scope = scope,
+                                expectedOriginalMode = request.originalMode,
+                                requestedMode = requestedMode,
+                            )
+                        } else {
+                            transaction.applyMode(
+                                packageName = request.packageName,
+                                operation = operation,
+                                scope = scope,
+                                requestedMode = requestedMode,
+                            )
+                        }
                     }
-                }
-                appliedScope = scopeOutcome.appliedScope
-                scopeOutcome.result
-            }.execute(request.requestedMode)
+                    appliedScope = scopeOutcome.appliedScope
+                    scopeOutcome.result
+                }.execute(request.requestedMode)
+            }
             val result = outcome.result
             val resolvedRequest = request.copy(
                 scope = appliedScope,
