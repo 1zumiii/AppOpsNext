@@ -8,11 +8,11 @@ import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeOutcome
 import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeExecutor
 import dev.izumi.appopsnext.appops.AppOpsRepository
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
-import dev.izumi.appopsnext.appops.model.AppOpModeChangePhase
 import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
 import dev.izumi.appopsnext.appops.model.AppOpNames
 import dev.izumi.appopsnext.batch.BatchAppOpsExecutor
 import dev.izumi.appopsnext.batch.model.BatchOperationReport
+import dev.izumi.appopsnext.newapps.model.InstalledPackageFingerprint
 import dev.izumi.appopsnext.batch.model.BatchOperationTarget
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
 import dev.izumi.appopsnext.newapps.model.InstalledPackageRecord
@@ -241,34 +241,42 @@ class NewAppPolicyCoordinator(
                 continue
             }
 
-            val report = executor.execute(
-                title = NewAppPolicyTemplate.INTERNAL_NAME,
-                targets = targets,
-            )
-            if (report.isBackendUnavailable()) {
-                diagnosticLog.warning(
-                    source = LOG_SOURCE,
-                    message =
-                        "New-app policy is waiting for the backend. " +
-                            "package=${fingerprint.packageName}",
+            val previous = stateRepository.progress(fingerprint)
+            val results = NewAppPolicyRuleRunner(
+                apply = { target ->
+                    executor.execute(
+                        title = NewAppPolicyTemplate.INTERNAL_NAME,
+                        targets = listOf(target),
+                    ).results.single().result
+                },
+                save = stateRepository::recordProgress,
+                canContinue = {
+                    isEnabled() && privilegedServiceClient.state.value is PrivilegedServiceState.Connected
+                },
+            ).run(fingerprint, targets, previous)
+            val complete = targets.all { target ->
+                results[target.stableOperationName]?.retryable == false
+            }
+            val report = BatchOperationReport(app.label, targets.mapNotNull { results[it.stableOperationName]?.item })
+            if (complete) stateRepository.markProcessed(fingerprint)
+            if (report.results.isNotEmpty()) {
+                notifier.notifyCompleted(
+                    packageName = fingerprint.packageName,
+                    firstInstallTimeMillis = fingerprint.firstInstallTimeMillis,
+                    appLabel = app.label,
+                    successCount = report.successCount,
+                    failureCount = report.failureCount,
+                    pendingCount = targets.count { target ->
+                        results[target.stableOperationName]?.retryable != false
+                    },
                 )
-                return
             }
             diagnosticLog.info(
                 source = LOG_SOURCE,
-                message =
-                    "New-app policy completed. " +
-                        "package=${fingerprint.packageName}, " +
-                        "success=${report.successCount}, " +
-                        "failure=${report.failureCount}",
+                message = "New-app policy progress. package=${fingerprint.packageName}, " +
+                    "success=${report.successCount}, failure=${report.failureCount}, complete=$complete",
             )
-            notifier.notifyCompleted(
-                packageName = fingerprint.packageName,
-                appLabel = app.label,
-                successCount = report.successCount,
-                failureCount = report.failureCount,
-            )
-            stateRepository.markProcessed(fingerprint)
+
         }
     }
 
@@ -292,13 +300,11 @@ class NewAppPolicyCoordinator(
         }
     }
 
-    private fun BatchOperationReport.isBackendUnavailable(): Boolean =
-        results.isNotEmpty() && results.all { item ->
-            val failure = item.result as? AppOpModeChangeResult.Failure
-                ?: return@all false
-            failure.phase == AppOpModeChangePhase.READ_ORIGINAL &&
-                failure.originalMode == null
-        }
+    suspend fun reportFor(packageName: String, installedAt: Long): BatchOperationReport? {
+        val records = stateRepository.progress(InstalledPackageFingerprint(packageName, installedAt))
+        if (records.isEmpty()) return null
+        return BatchOperationReport(records.first().item.target.appLabel, records.map { it.item })
+    }
 
     private fun AdaptiveScopeModeChangeOutcome.toDiagnosticMessage(
         target: BatchOperationTarget,

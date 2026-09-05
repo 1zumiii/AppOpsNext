@@ -55,11 +55,36 @@ class NewAppPolicyStateRepository(
         decode(dataStore.data.first()[Keys.PENDING_INSTALLATIONS])
             .sortedBy(InstalledPackageFingerprint::firstInstallTimeMillis)
 
+    suspend fun progress(fingerprint: InstalledPackageFingerprint): List<NewAppRuleProgress> =
+        dataStore.data.first()[Keys.RULE_PROGRESS].orEmpty()
+            .mapNotNull(NewAppRuleProgressCodec::decode)
+            .filter { it.installation == fingerprint }
+
+    suspend fun recordProgress(progress: NewAppRuleProgress) {
+        dataStore.edit { preferences ->
+            val current = preferences[Keys.RULE_PROGRESS].orEmpty()
+                .mapNotNull(NewAppRuleProgressCodec::decode)
+                .filterNot {
+                    it.installation == progress.installation &&
+                        it.item.target.stableOperationName == progress.item.target.stableOperationName
+                }
+            preferences[Keys.RULE_PROGRESS] = (current + progress)
+                .mapTo(mutableSetOf(), NewAppRuleProgressCodec::encode)
+        }
+    }
+
     suspend fun markProcessed(fingerprint: InstalledPackageFingerprint) {
         dataStore.edit { preferences ->
             val pending = decode(preferences[Keys.PENDING_INSTALLATIONS])
             preferences[Keys.PENDING_INSTALLATIONS] =
                 encode(pending - fingerprint)
+            val records = preferences[Keys.RULE_PROGRESS].orEmpty()
+                .mapNotNull(NewAppRuleProgressCodec::decode)
+            val retained = records.map { it.installation }.distinct()
+                .sortedByDescending { it.firstInstallTimeMillis }.take(50).toSet() +
+                (pending - fingerprint)
+            preferences[Keys.RULE_PROGRESS] = records.filter { it.installation in retained }
+                .mapTo(mutableSetOf(), NewAppRuleProgressCodec::encode)
         }
     }
 
@@ -68,6 +93,7 @@ class NewAppPolicyStateRepository(
             preferences.remove(Keys.BASELINE_INITIALIZED)
             preferences.remove(Keys.SEEN_INSTALLATIONS)
             preferences.remove(Keys.PENDING_INSTALLATIONS)
+            preferences.remove(Keys.RULE_PROGRESS)
         }
     }
 
@@ -95,6 +121,7 @@ class NewAppPolicyStateRepository(
     }
 
     private object Keys {
+        val RULE_PROGRESS = stringSetPreferencesKey("rule_progress_v1")
         val BASELINE_INITIALIZED =
             booleanPreferencesKey("baseline_initialized")
         val SEEN_INSTALLATIONS =

@@ -12,6 +12,7 @@ import dev.izumi.appopsnext.appops.model.AppOpNames
 import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.batch.BatchAppOpsExecutor
+import dev.izumi.appopsnext.batch.model.BatchOperationReport
 import dev.izumi.appopsnext.batch.model.BatchOperationTarget
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
 import dev.izumi.appopsnext.templates.NewAppPolicyTemplate
@@ -155,9 +156,21 @@ class BatchOperationsViewModel(
         }
     }
 
+    private var deferredReport: BatchOperationReport? = null
+
+    fun showReport(report: BatchOperationReport) {
+        if (mutableUiState.value is BatchOperationUiState.Idle) {
+            mutableUiState.value = BatchOperationUiState.Finished(report)
+        } else {
+            deferredReport = report
+        }
+    }
+
     fun dismiss() {
         if (mutableUiState.value !is BatchOperationUiState.Running) {
-            mutableUiState.value = BatchOperationUiState.Idle
+            mutableUiState.value = deferredReport?.let { BatchOperationUiState.Finished(it) }
+                ?: BatchOperationUiState.Idle
+            deferredReport = null
         }
     }
 }
