@@ -55,25 +55,27 @@ class NewAppPolicyCoordinator(
             stableName = target.stableOperationName,
             shellName = AppOpNames.shellName(target.stableOperationName),
         )
-        val outcome = adaptiveScopeExecutor.execute(
-            packageName = target.packageName,
-            uid = target.uid,
-            preferredScope = target.preferredScope,
-            requestedMode = target.requestedMode,
-            readMode = { scope ->
-                appOpsRepository.readMode(
+        val outcome = appOpsRepository.withWriteTransaction { transaction ->
+            adaptiveScopeExecutor.execute(
+                packageName = target.packageName,
+                uid = target.uid,
+                preferredScope = target.preferredScope,
+                requestedMode = target.requestedMode,
+                readMode = { scope ->
+                    appOpsRepository.readMode(
+                        packageName = target.packageName,
+                        operation = operation,
+                        scope = scope,
+                    )
+                },
+            ) { scope ->
+                transaction.applyMode(
                     packageName = target.packageName,
                     operation = operation,
                     scope = scope,
+                    requestedMode = target.requestedMode,
                 )
-            },
-        ) { scope ->
-            appOpsRepository.applyMode(
-                packageName = target.packageName,
-                operation = operation,
-                scope = scope,
-                requestedMode = target.requestedMode,
-            )
+            }
         }
         diagnosticLog.info(
             source = LOG_SOURCE,
