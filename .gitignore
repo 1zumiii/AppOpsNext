@@ -9,3 +9,6 @@ captures/
 .cxx/
 **/build/
 .signing/
+
+# Local project review notes
+[Rr][Ee][Vv][Ii][Ee][Ww].md

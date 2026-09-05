@@ -33,6 +33,7 @@ class AdaptiveScopeModeChangeExecutor(
         val alternateScope = preferredScope.alternate()
         if (
             preferredScope == AppOpScope.PACKAGE &&
+            requestedMode != AppOpMode.DEFAULT &&
             readMode(alternateScope) == requestedMode
         ) {
             return alreadySatisfied(
@@ -53,7 +54,9 @@ class AdaptiveScopeModeChangeExecutor(
         // An explicit UID mode takes precedence over the package mode. If a
         // UID write is rejected, changing the covered package record cannot
         // satisfy the requested effective state.
-        if (preferredScope == AppOpScope.UID) {
+        // DEFAULT clears a record in the requested scope. An absent/default
+        // alternate record cannot prove that this reset succeeded.
+        if (preferredScope == AppOpScope.UID || requestedMode == AppOpMode.DEFAULT) {
             return AdaptiveScopeModeChangeOutcome(
                 result = initialResult,
                 appliedScope = preferredScope,

@@ -171,6 +171,48 @@ class AdaptiveScopeModeChangeExecutorTest {
         assertFalse(outcome.fallbackAttempted)
     }
 
+    @Test
+    fun `default request resets package record even when uid reads default`() = runBlocking {
+        val scopes = mutableListOf<AppOpScope>()
+        var packageMode = AppOpMode.IGNORE
+        val outcome = executorFor("example.app").execute(
+            packageName = "example.app",
+            uid = 10_123,
+            preferredScope = AppOpScope.PACKAGE,
+            requestedMode = AppOpMode.DEFAULT,
+            readMode = { AppOpMode.DEFAULT },
+        ) { scope ->
+            scopes += scope
+            val original = packageMode
+            packageMode = AppOpMode.DEFAULT
+            AppOpModeChangeResult.Success(original, packageMode)
+        }
+        assertEquals(listOf(AppOpScope.PACKAGE), scopes)
+        assertEquals(AppOpMode.DEFAULT, packageMode)
+        assertEquals(AppOpScope.PACKAGE, outcome.appliedScope)
+        assertFalse(outcome.fallbackAttempted)
+    }
+
+    @Test
+    fun `failed default reset cannot fall back to an unrelated uid record`() = runBlocking {
+        for (packages in listOf(listOf("example.app"), listOf("example.app", "sibling.app"))) {
+            val scopes = mutableListOf<AppOpScope>()
+            val outcome = AdaptiveScopeModeChangeExecutor { packages }.execute(
+                packageName = "example.app",
+                uid = 10_123,
+                preferredScope = AppOpScope.PACKAGE,
+                requestedMode = AppOpMode.DEFAULT,
+                readMode = { AppOpMode.DEFAULT },
+            ) { scope ->
+                scopes += scope
+                rejected()
+            }
+            assertEquals(listOf(AppOpScope.PACKAGE), scopes)
+            assertEquals(rejected(), outcome.result)
+            assertFalse(outcome.fallbackAttempted)
+        }
+    }
+
     private fun executorFor(packageName: String) =
         AdaptiveScopeModeChangeExecutor { listOf(packageName) }
 
