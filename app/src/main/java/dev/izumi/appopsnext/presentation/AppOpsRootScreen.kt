@@ -2,6 +2,7 @@ package dev.izumi.appopsnext.presentation
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +53,7 @@ fun AppOpsRootScreen(
     onAppSearchQueryChange: (String) -> Unit,
     onRefreshApps: () -> Unit,
     onRefreshHistory: () -> Unit,
+    onHistoryVisibilityChanged: (Boolean) -> Unit,
     onHistoryPermissionsChanged: (List<String>) -> Unit,
     onHistoryPermissionOrderChanged: (List<String>) -> Unit,
     onAppSelected: (InstalledApp) -> Unit,
@@ -99,6 +101,11 @@ fun AppOpsRootScreen(
     }
     val selectedHistoryPermission = selectedHistoryPermissionName?.let {
         HistoryPermission(it)
+    }
+    val historyVisible = selectedDestination == MainDestination.HISTORY && selectedApp == null
+    DisposableEffect(historyVisible) {
+        onHistoryVisibilityChanged(historyVisible)
+        onDispose { onHistoryVisibilityChanged(false) }
     }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current

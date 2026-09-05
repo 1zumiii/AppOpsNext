@@ -5,7 +5,6 @@ import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.apps.AppListFilter
-import dev.izumi.appopsnext.apps.InstalledAppsRepository
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.AppOpsNextApplication
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +16,7 @@ import kotlinx.coroutines.launch
 class AppListViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
-    private val repository = InstalledAppsRepository(application)
+    private val repository = getApplication<AppOpsNextApplication>().installedAppsRepository
     private val settingsRepository =
         getApplication<AppOpsNextApplication>().userSettingsRepository
     private val diagnosticLog =
@@ -76,7 +75,7 @@ class AppListViewModel(
                 message = "Loading installed applications.",
             )
             runCatching {
-                repository.loadInstalledApps()
+                repository.loadInstalledApps(forceRefresh = true)
             }.onSuccess { apps ->
                 installedApps.value = apps
                 diagnosticLog.info(

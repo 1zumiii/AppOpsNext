@@ -74,6 +74,7 @@ class MainActivity : ComponentActivity() {
                     onAppSearchQueryChange = appListViewModel::updateSearchQuery,
                     onRefreshApps = appListViewModel::refresh,
                     onRefreshHistory = historyViewModel::refresh,
+                    onHistoryVisibilityChanged = historyViewModel::setVisible,
                     onHistoryPermissionsChanged =
                         historyViewModel::setPermissions,
                     onHistoryPermissionOrderChanged =
@@ -139,6 +140,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onPause() {
+        historyViewModel.setForeground(false)
+        super.onPause()
+    }
+
     override fun onResume() {
         super.onResume()
         (application as AppOpsNextApplication)
@@ -146,6 +152,6 @@ class MainActivity : ComponentActivity() {
             .onAppForeground()
         appListViewModel.refreshAfterResume()
         appDetailViewModel.refreshIfReady()
-        historyViewModel.refresh()
+        historyViewModel.setForeground(true)
     }
 }

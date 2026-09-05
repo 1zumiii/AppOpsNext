@@ -207,3 +207,31 @@ the activity. Permission labels remain resource identifiers, while stored
 templates and AppOps commands continue to use locale-independent stable names.
 The manifest locale configuration also exposes the two supported languages to
 Android system settings.
+
+## Connection shutdown and interrupted new-app work
+
+Native requests use a serial worker with a 12-second client deadline in addition
+to the daemon's own command deadline. Closing invalidates the channel and cancels
+the waiter immediately; process destruction runs separately without acquiring
+the request lock or writing EXIT to a possibly blocked pipe. A failed native
+channel is removed only if it is still the current connection, so an old response
+cannot disconnect a replacement backend.
+
+Automatic new-app work persists each rule outcome in the existing, backup-excluded
+new-app policy DataStore. Verified successes and terminal failures are skipped
+on resume. An unavailable original read stops the pass and leaves that rule and
+unattempted rules pending. Unconfirmed restoration is terminal and is never
+silently retried. Installation fingerprints and requested mode/scope keep an old
+result from satisfying a different installation or changed rule. Notifications
+open the persisted rule results through the existing batch result dialog. The
+most recent 50 installation reports plus all pending installations are retained.
+
+## History refresh lifecycle
+
+History polling requires a visible history screen, a foreground activity, and an
+available backend. Losing any of these conditions cancels the current refresh
+and timer; returning schedules a fresh read. Refresh requests are conflated and
+never run concurrently. Parsing and event resolution run on Dispatchers.Default.
+Results from obsolete permission/filter selections are discarded. App-list and
+history ViewModels share a locale-aware, 60-second application metadata cache;
+explicit app-list refresh bypasses it.

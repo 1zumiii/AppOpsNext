@@ -46,7 +46,7 @@ AppOps system service, not an interface or technology owned by the legacy app.
 - Review camera, microphone, and location system history with summary charts,
   per-permission statistics, and app-linked timelines
 - Add or remove monitored AppOps and refresh history automatically while the
-  privileged connection remains available
+  history screen is visible in the foreground and the privileged connection is available
 - Create reusable permission templates with editable modes and automatic
   AppOps scope fallback
 - Add, remove, and long-press drag template rules into a persistent custom order

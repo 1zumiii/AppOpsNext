@@ -25,6 +25,10 @@ class AppOpsNextApplication : Application() {
         PrivilegedServiceClient(this, diagnosticLogRepository)
     }
 
+    val installedAppsRepository by lazy {
+        dev.izumi.appopsnext.apps.InstalledAppsRepository(this)
+    }
+
     val appOpsRepository: AppOpsRepository by lazy {
         AppOpsRepository(
             privilegedGateway = privilegedServiceClient,
