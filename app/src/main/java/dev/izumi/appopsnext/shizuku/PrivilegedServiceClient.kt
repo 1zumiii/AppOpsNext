@@ -306,7 +306,7 @@ class PrivilegedServiceClient(
 
     override suspend fun getPackageOps(packageName: String): ShellCommandResult =
         withContext(Dispatchers.IO) {
-            nativeGateway?.getPackageOps(packageName)
+            executeNative { it.getPackageOps(packageName) }
                 ?: service?.getPackageOps(packageName)
                 ?: throw IllegalStateException("Privileged service is unavailable")
         }
@@ -316,14 +316,14 @@ class PrivilegedServiceClient(
         operationName: String,
     ): ShellCommandResult =
         withContext(Dispatchers.IO) {
-            nativeGateway?.getPackageOp(packageName, operationName)
+            executeNative { it.getPackageOp(packageName, operationName) }
                 ?: service?.getPackageOp(packageName, operationName)
                 ?: throw IllegalStateException("Privileged service is unavailable")
         }
 
     override suspend fun getUidOps(uid: Int): ShellCommandResult =
         withContext(Dispatchers.IO) {
-            nativeGateway?.getUidOps(uid)
+            executeNative { it.getUidOps(uid) }
                 ?: service?.getUidOps(uid)
                 ?: throw IllegalStateException("Privileged service is unavailable")
         }
@@ -332,7 +332,7 @@ class PrivilegedServiceClient(
         operationName: String,
     ): ShellCommandResult =
         withContext(Dispatchers.IO) {
-            nativeGateway?.getHistory(operationName)
+            executeNative { it.getHistory(operationName) }
                 ?: service?.getHistory(operationName)
                 ?: throw IllegalStateException("Privileged service is unavailable")
         }
@@ -343,11 +343,7 @@ class PrivilegedServiceClient(
         mode: AppOpMode,
     ): ShellCommandResult =
         withContext(Dispatchers.IO) {
-            nativeGateway?.setPackageOpMode(
-                packageName,
-                operationName,
-                mode,
-            ) ?: service?.setPackageOpMode(
+            executeNative { it.setPackageOpMode(packageName, operationName, mode) } ?: service?.setPackageOpMode(
                     packageName,
                     operationName,
                     mode.shellValue,
@@ -361,17 +357,40 @@ class PrivilegedServiceClient(
         mode: AppOpMode,
     ): ShellCommandResult =
         withContext(Dispatchers.IO) {
-            nativeGateway?.setUidOpMode(
-                packageName,
-                operationName,
-                mode,
-            ) ?: service?.setUidOpMode(
+            executeNative { it.setUidOpMode(packageName, operationName, mode) } ?: service?.setUidOpMode(
                     packageName,
                     operationName,
                     mode.shellValue,
                 )
                 ?: throw IllegalStateException("Privileged service is unavailable")
         }
+
+    private suspend fun executeNative(
+        action: suspend (NativeDaemonGateway) -> ShellCommandResult,
+    ): ShellCommandResult? {
+        val gateway = nativeGateway ?: return null
+        try {
+            return action(gateway)
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            gateway.close()
+            connectionScope.launch {
+                // An old command must never disconnect a newly established backend.
+                if (nativeGateway === gateway) {
+                    nativeGateway = null
+                    mutableState.value = PrivilegedServiceState.Failure(
+                        PrivilegedServiceFailureReason.INITIALIZATION_FAILED,
+                    )
+                    diagnosticLog.warning(
+                        source = NATIVE_LOG_SOURCE,
+                        message = "Native command connection lost: ${error.message}",
+                    )
+                }
+            }
+            throw error
+        }
+    }
 
     private companion object {
         const val TAG = "PrivilegedService"
