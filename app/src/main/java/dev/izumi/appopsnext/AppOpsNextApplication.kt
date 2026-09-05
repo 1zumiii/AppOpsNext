@@ -1,6 +1,7 @@
 package dev.izumi.appopsnext
 
 import android.app.Application
+import dev.izumi.appopsnext.appops.AppOpsRepository
 import dev.izumi.appopsnext.diagnostics.DiagnosticEnvironmentCollector
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
 import dev.izumi.appopsnext.settings.UserSettingsRepository
@@ -22,6 +23,23 @@ class AppOpsNextApplication : Application() {
 
     val privilegedServiceClient: PrivilegedServiceClient by lazy {
         PrivilegedServiceClient(this, diagnosticLogRepository)
+    }
+
+    val appOpsRepository: AppOpsRepository by lazy {
+        AppOpsRepository(
+            privilegedGateway = privilegedServiceClient,
+            onCancelledWrite = { write ->
+                diagnosticLogRepository.warning(
+                    source = "AppOpsWrite",
+                    message = "Cancelled write cleanup. " +
+                        "package=${write.packageName}, " +
+                        "operation=${write.operation.stableName}, " +
+                        "scope=${write.scope.name}, " +
+                        "phase=${write.result.phase.name}, " +
+                        "restoration=${write.result.restorationStatus.name}",
+                )
+            },
+        )
     }
 
     val userSettingsRepository: UserSettingsRepository by lazy {
@@ -50,6 +68,7 @@ class AppOpsNextApplication : Application() {
             templateRepository = permissionTemplateRepository,
             privilegedServiceClient = privilegedServiceClient,
             diagnosticLog = diagnosticLogRepository,
+            appOpsRepository = appOpsRepository,
         )
     }
 
