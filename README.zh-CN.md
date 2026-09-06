@@ -2,148 +2,176 @@
 
 [English](README.md) | **简体中文**
 
-AppOpsNext 是一款面向 Android 15+、基于
-[Shizuku](https://shizuku.rikka.app/) 的现代 AppOps 管理工具，采用
-clean-room 方式独立实现。
+管理 Android AppOps、复用权限模板、查看系统权限历史。
+使用 Kotlin 与 Jetpack Compose 构建原生界面，通过
+[Shizuku](https://shizuku.rikka.app/) 执行特权操作。
 
-AppOpsNext 用于读取和修改 Android 系统内置的 AppOps 状态。
+[下载 APK](https://github.com/1zumiii/AppOpsNext/releases/latest) ·
+[反馈问题](https://github.com/1zumiii/AppOpsNext/issues) ·
+[构建状态](https://github.com/1zumiii/AppOpsNext/actions/workflows/ci.yml)
 
-> [!IMPORTANT]
-> Android 15（API 35）的开发和验证设备为 ASUS AI2302；原生后端还经过一位
-> 用户在运行 HyperOS 3 / Android 16（API 36）的 Xiaomi 24117RN76G 上独立
-> 验证。对这些已测试设备和系统版本之外环境的支持尚不明确。
+## 主要功能
 
-## 与旧版 App Ops 的关系
+| 功能 | 说明 |
+| --- | --- |
+| 应用列表 | 浏览当前用户的应用，搜索应用名称和包名，按需显示系统应用。 |
+| AppOps 管理 | 查看应用包与 UID 作用域的模式，按本地化名称或系统名称搜索权限，修改后回读验证。 |
+| 模板与批量操作 | 创建和排序可复用规则，将模板应用到多个应用，或一次修改单个应用的多项权限。 |
+| 新装应用管理 | 按需开启自动套用模板，补处理待完成的安装任务，查看保存的逐项执行结果。 |
+| 权限历史 | 查看权限使用分布、应用统计和时间线，自选并排序要查看的权限。 |
+| 设置与诊断 | 支持简体中文、英文和跟随系统语言，提供连接状态与诊断报告。 |
 
-AppOpsNext 只是沿用了旧版 App Ops（包名 `rikka.appops`）的产品思路和
-部分使用流程，并以 clean-room 方式重新实现相关功能。它不是旧版应用的
-fork、移植版、修改版、破解版或官方续作。
+## 安装与上手
 
-- 项目没有使用旧版应用的源码、反编译代码、资源、品牌素材或配置数据。
-- AppOpsNext 不会连接旧版应用，不提供配置迁移或互操作，也不要求安装旧版应用。
-- AppOpsNext 与 RikkaApps 及旧版 App Ops 原作者不存在开发、维护、授权、
-  背书或支持关系。
-- AppOpsNext 将 Shizuku 作为独立发布的特权桥接工具使用。这项技术依赖不代表
-  AppOpsNext 与 Shizuku 或旧版 App Ops 的维护者存在从属或官方合作关系。
+### 运行要求
 
-文中出现的第三方项目名称仅用于说明兼容性和项目背景。本项目名称中的
-“AppOps”指 Android 系统内置的 AppOps 服务，并非旧版应用专有的接口或技术。
+- **Android 15 或更高版本**（API 35+）。
+- **Shizuku 13 或更高版本**，已启动并向 AppOpsNext 授权。
+- 内置原生后端面向 **ARM64**，其他 CPU 架构尚未验证。
 
-## 功能
+通过 ADB 或无线调试启动 Shizuku 时，无需 Root。
+AppOpsNext 的特权操作仍依赖 Shizuku。
 
-- 浏览当前用户的应用，并显示包名、UID 和系统应用信息
-- 默认隐藏系统应用，也可以在设置中持久切换
-- 按本地化名称或原始系统名称搜索应用和权限
-- 分别读取应用包作用域和 UID 作用域的 AppOps
-- 修改 AppOps 模式前检查状态是否过期，写入后独立回读验证
-- 写入验证失败时自动尝试恢复原始模式
-- 只显示当前权限条目的处理进度，不重新加载整个详情页
-- 以简洁、本地化的格式显示最近使用时间
-- 查看相机、麦克风和位置权限的系统历史，包括汇总图表、分类统计和可跳转至
-  应用详情的时间线
-- 自行增删要监测的 AppOps，并在历史页面可见、应用位于前台且特权连接可用时自动刷新历史
-- 创建可复用的权限模板，自定义模式并自动回退 AppOps 写入作用域
-- 添加、移除模板规则，通过长按拖动持久调整顺序
-- 给单个应用套用模板，或批量给多个应用套用模板
-- 配置不可删除的新装应用默认模板，并按需启用自动套用、补检测和结果通知
-- 在单个应用内批量修改多个权限
-- 通过结果弹窗完整报告每一项批量操作的成功或失败
-- 支持跟随系统、简体中文和英文
-- 通过内置原生守护进程执行 AppOps 命令，并保留 Shizuku UserService 作为
-  自动回退后端
+1. 安装并启动 [Shizuku](https://shizuku.rikka.app/)。
+2. 从[最新 Release](https://github.com/1zumiii/AppOpsNext/releases/latest)
+   下载并安装 `app-release.apk`。
+3. 打开 AppOpsNext，在 Shizuku 提示时允许访问。
+4. 选择目标应用和权限，阅读确认信息后执行修改。
 
-## 运行要求
+在**模板**页配置可复用规则，在**历史**页查看系统记录。
+新装应用自动套用模板是可选功能，请先配置规则，再启用自动执行。
+首次检测会建立已有应用基线，不会追溯地向所有已安装应用套用模板。
 
-- Android 15（API 35）或更高版本
-- Shizuku 13 或更高版本
-- 非 Root 设备需要通过 ADB 或无线调试启动 Shizuku
+更新时直接覆盖安装新的 Release APK，即可保留设置。
+如果设备重启后 Shizuku 未运行，或授权被撤销，需要恢复连接后才能重新读取或修改
+系统状态；已保存的历史记录仍可查看。
 
-Shizuku 以 shell 身份启动 AppOpsNext 内置的原生守护进程，应用随后通过私有
-进程管道与其通信，从而避开在部分 Android 16 / HyperOS 设备上可能失效的
-UserService 回调路径。如果原生后端启动失败，AppOpsNext 会自动尝试 Shizuku
-UserService 后端。设备重启后若 Shizuku 未运行，或用户撤销授权，特权读取和
-修改功能将不可用，直到重新建立连接。
+### 已验证环境
 
-## 安装
+| 设备 | 系统 | 验证范围 |
+| --- | --- | --- |
+| ASUS AI2302 | Android 15 / API 35 | 主要开发与真机测试环境。 |
+| Xiaomi 24117RN76G | HyperOS 3 / Android 16 / API 36 | 用户独立验证了原生后端、读取与写入、权限历史以及相机权限限制。 |
 
-1. 安装并启动 Shizuku。
-2. 从 [GitHub Releases](https://github.com/1zumiii/AppOpsNext/releases)
-   下载最新 APK。
-3. 安装 APK，并在 Shizuku 请求时授权 AppOpsNext。
-4. 打开目标应用，确认需要修改的权限，再执行修改。
+以上是已测试环境的结果，不代表所有厂商 ROM 均兼容。
+具体证据与已知限制参见[后端兼容性说明](docs/PRIVILEGED_BACKENDS.md)。
 
-Android 运行时权限与 AppOps 是不同层级。AppOps 可以进一步限制已经授予的能力，
-但无法授予被 Android 运行时权限或厂商策略拒绝的能力。因此，系统可能会归一化或
-拒绝某些模式；遇到回读结果不一致时，AppOpsNext 会报告验证失败，而不会显示为成功。
+## 历史记录如何工作
 
-## 安全机制
+历史数据来自 Android 保留的系统记录。AppOpsNext 优先显示逐次访问记录；
+对于剪贴板等可能不提供逐次记录的权限，则使用系统按时间段汇总的统计。
+记录保留时间和时间戳精度由设备决定，它不是一份独立采集的完整审计日志。
 
-每次单项或批量写入都采用相同的有限事务：
+- 每项权限最后一次成功读取的结果会保存到本地，重新打开应用时恢复，并显示更新时间。
+- **五分钟内**返回页面会复用新鲜结果。较旧或尚未读取的结果，只在历史页面可见、
+  应用位于前台且后端已连接时读取；周期刷新也遵循这些条件。
+- 手动刷新会跳过缓存新鲜度检查，各项权限读取完成后陆续更新。
+  读取失败时保留上次结果，并显示错误提示。
+- 首次成功读取之前，页面会区分“尚未读取”和真正的零记录。
+
+本地保存的是最近一次成功读取的缓存，不是永久历史档案。
+缓存存放在应用私有目录中，不参与 Android 备份；清除应用数据或卸载应用会将其移除。
+
+## 理解 AppOps 修改
+
+**AppOps 与 Android 运行时权限是两个层级。** 将某个 AppOp 设为“允许”，
+无法授予尚未取得的运行时权限。Android 或厂商策略也可能归一化、拒绝所请求的模式。
+AppOpsNext 会解释运行时权限相关的失败，并提供前往该应用系统设置的入口。
+
+每次修改都经过验证事务：
 
 ```text
-读取当前值
-  -> 确认当前值没有变化
-  -> 写入请求的类型化模式
-  -> 回读并验证
-  -> 失败时恢复并验证原始值
+读取并检查原始状态
+  → 写入请求的模式
+  → 回读并验证
+  → 失败时尝试恢复原始状态，再验证恢复结果
 ```
 
-模板会先写入当前应用包；如果 Android 拒绝该作用域，并且原始状态已经安全恢复，
-AppOpsNext 只会在 UID 唯一属于目标应用时自动改用 UID 写入。已经明确存在的 UID
-记录仍可能影响共用同一系统身份的多个应用，因此确认界面会列出受影响的应用。
-批量操作会按顺序执行，并为每个目标保留独立结果。
+手动修改、批量操作和自动模板共用串行事务队列。
+命令执行结束不等于修改成功；应用会分别报告验证与恢复结果。
+恢复是失败后的补救尝试，并不保证一定成功。
 
-## 开发
+UID 作用域的修改可能影响共用同一 UID 的多个应用，确认界面会列出这些应用。
+自动切换写入作用域也受限制，以免静默扩大影响范围。
+批量操作会为每个目标分别报告结果。
 
-项目需要 JDK 17、Go 1.24 或更高版本以及 Android SDK。Gradle 会通过
-`GOOS=android` 和 `CGO_ENABLED=0` 交叉编译内置的 ARM64 守护进程。
-主要测试环境是通过 USB 调试连接的 Android 15 实体设备。如果 `go` 不在
-`PATH` 中，可以通过 `GO_EXECUTABLE` 指定其路径。
+## 常见问题
 
-构建 Debug 应用：
+- **无法连接：** 确认 Shizuku 正在运行且 AppOpsNext 已获授权，再到
+  **设置 → 连接与诊断**查看详情。应用优先使用内置原生后端，启动失败时自动尝试
+  Shizuku UserService。
+- **某个模式无法生效：** 检查 Android 运行时权限和回读验证结果。
+  部分系统限制无法通过 AppOps 覆盖。
+- **历史记录较旧或不完整：** 检查保存时间，尝试手动刷新并确认后端连接。
+  可读取哪些记录由 Android 决定。
+- **反馈问题：** 请提供设备、Android / ROM 版本、复现步骤，以及设置页中的诊断报告。
+  公开提交 Issue 前，请先检查报告并删去不希望公开的信息。
+
+## 从源码构建
+
+准备 **JDK 17**、**Go 1.24+** 和安装了 **Platform 36 的 Android SDK**。
+仓库已包含 Gradle Wrapper。将 `JAVA_HOME` 指向 JDK 17，并通过
+`local.properties` 中的 `sdk.dir` 或 `ANDROID_HOME` 指定 SDK 路径。
 
 ```shell
+# 可选：如果 Go 不在 PATH 中，指定其绝对路径。
+# export GO_EXECUTABLE="/absolute/path/to/go"
+
 ./gradlew :app:assembleDebug
 ```
 
-运行本地验证：
+产物：`app/build/outputs/apk/debug/app-debug.apk`。
+Gradle 同时会为 Android ARM64 交叉编译内置守护进程，无需单独进行 NDK 构建。
+Debug 版本在应用前台时保持屏幕常亮，签名与公开发布的 Release 版本不同。
+
+运行与 [Android CI](.github/workflows/ci.yml) 相同的检查：
 
 ```shell
-(cd daemon && go test ./...)
-./gradlew :app:testDebugUnitTest :app:lintDebug \
-  :app:assembleDebug
+(cd daemon && "${GO_EXECUTABLE:-go}" test ./...)
+./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug --no-daemon
 ```
 
-Debug 构建只会在 AppOpsNext 位于前台时保持屏幕常亮。Release 构建不会修改
-系统休眠时间。
+### Release 签名构建
 
-### Release 签名
-
-Release 密钥库不会提交到 Git。构建 Release 版本需要
-`.signing/appopsnext-release.keystore` 和以下环境变量：
+公开发行版的签名材料不会提交到 Git。当前 Release 构建配置要求提供
+`.signing/appopsnext-release.keystore`，使用别名 `appopsnext`，并在环境中设置
+`APPOPSNEXT_STORE_PASSWORD` 和 `APPOPSNEXT_KEY_PASSWORD`：
 
 ```shell
-export APPOPSNEXT_STORE_PASSWORD="<密钥库密码>"
-export APPOPSNEXT_KEY_PASSWORD="<密钥密码>"
 ./gradlew :app:assembleRelease
 ```
 
-请离线备份密钥库和密码。签名密钥丢失后，将无法发布能够覆盖安装现有版本的更新。
+产物：`app/build/outputs/apk/release/app-release.apk`。
+自行分发时请使用自己的密钥库。覆盖更新已有安装必须使用相同的签名身份。
+维护者的验证和发布流程参见[发布检查清单](docs/RELEASE.md)。
 
-## 项目结构
+## 代码与文档
 
-- `presentation`：Compose 界面、状态和可复用 UI
-- `appops`：命令适配、解析、仓库和验证写入
-- `nativebackend`：原生守护进程启动、私有管道协议和网关
-- `shizuku`：授权、进程启动和 UserService 回退
-- `daemon`：使用 Go 构建、只执行白名单命令的 ARM64 shell 守护进程
-- `apps`：应用发现和纯函数过滤
-- `settings`：类型化 Preferences DataStore 设置
-- `templates`：版本化模板持久化和排序
-- `newapps`：新装应用检测、待处理任务、自动策略执行和结果通知
-- `history`：离散 AppOps 历史解析、仓库和统计
+Android 代码位于 `app/src/main/java/dev/izumi/appopsnext/`。
 
-详细维护约束参见[架构说明](docs/ARCHITECTURE.md)，后端选择和兼容性证据参见
-[特权后端说明](docs/PRIVILEGED_BACKENDS.md)，实体设备行为记录参见
-[Android 15 设备验证结果](docs/DEVICE_FINDINGS.md)。发布 APK 前请同时遵循
+| 路径 | 职责 |
+| --- | --- |
+| `presentation/` | Compose 界面、ViewModel 和 UI 状态。 |
+| `appops/` | 命令、解析、作用域处理与验证写入事务。 |
+| `nativebackend/`、`shizuku/` | 特权连接、原生管道和 UserService 回退。 |
+| `apps/`、`settings/` | 应用发现、元数据缓存和用户偏好。 |
+| `templates/`、`newapps/` | 模板持久化、新装应用检测和可恢复的规则执行。 |
+| `history/` | 系统历史解析、刷新调度和本地快照。 |
+| `diagnostics/` | 环境与连接报告。 |
+| 仓库根目录下的 [`daemon/`](daemon/) | 使用 Go 编写、仅接受白名单命令的守护进程。 |
+
+进一步阅读：[架构说明](docs/ARCHITECTURE.md) ·
+[特权后端](docs/PRIVILEGED_BACKENDS.md) ·
+[设备验证记录](docs/DEVICE_FINDINGS.md) ·
 [发布检查清单](docs/RELEASE.md)。
+
+## 项目背景
+
+AppOpsNext 受旧版 App Ops（`rikka.appops`）的产品思路和使用流程启发，
+以 clean-room 方式独立实现。它不是旧版应用的 fork、移植版、修改版或官方续作。
+
+项目未包含旧版应用的源码、反编译代码、资源、品牌素材或配置数据，
+不依赖旧版应用，也不提供其配置迁移功能。
+AppOpsNext 与 RikkaApps 及旧版 App Ops 作者不存在开发、背书或支持关系；
+使用 Shizuku 也不代表与其维护者存在从属关系。
+名称中的“AppOps”指 Android 内置的系统服务。

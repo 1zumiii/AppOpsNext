@@ -230,8 +230,25 @@ most recent 50 installation reports plus all pending installations are retained.
 
 History polling requires a visible history screen, a foreground activity, and an
 available backend. Losing any of these conditions cancels the current refresh
-and timer; returning schedules a fresh read. Refresh requests are conflated and
-never run concurrently. Parsing and event resolution run on Dispatchers.Default.
-Results from obsolete permission/filter selections are discarded. App-list and
-history ViewModels share a locale-aware, 60-second application metadata cache;
-explicit app-list refresh bypasses it.
+and timer. Returning schedules a refresh check: per-operation snapshots less
+than five minutes old are reused; manual refresh bypasses this freshness check.
+Refresh requests are conflated and never run concurrently. Parsing and event
+resolution run on `Dispatchers.Default`.
+
+`AppOpsNextApplication` owns a shared `HistorySnapshotStore`. Each successful
+operation read saves resolved events and its fetch timestamp in memory and in a
+versioned, bounded binary file under `noBackupFilesDir`. File I/O runs on
+`Dispatchers.IO`, with atomic replacement. A corrupt or unsupported file falls
+back to empty cache, and write failures leave the in-memory result usable.
+Snapshots hydrate before the ViewModel builds the selected permission list, so
+reopening the app can show saved results even without a privileged connection.
+
+Snapshots retain system-app events; presentation applies the current selection,
+order, and hide-system-apps filter. Each completed operation updates the page.
+Failed reads retain the previous snapshot and timestamp alongside an error;
+a successful empty result replaces the old snapshot. A missing timestamp marks
+an operation that has never loaded, rather than a verified zero count. This is
+a cache of the last successful read, not an append-only archive of system history.
+
+App-list and history ViewModels share a locale-aware, 60-second application
+metadata cache; explicit app-list refresh bypasses it.
