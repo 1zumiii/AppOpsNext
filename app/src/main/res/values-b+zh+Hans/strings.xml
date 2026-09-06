@@ -284,4 +284,6 @@
     <string name="app_op_usage_minutes">%1$d 分</string>
     <string name="app_op_usage_seconds">%1$d 秒</string>
     <string name="new_app_policy_notification_pending_title">仍有规则待处理：%1$s</string>
+    <string name="history_not_loaded">历史记录尚未读取</string>
+    <string name="history_snapshot_updated">已保存的结果 · 更新于 %1$s</string>
 </resources>
