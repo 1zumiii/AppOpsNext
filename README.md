@@ -1,165 +1,194 @@
 # AppOpsNext
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+**English** | [简体中文](README.zh-CN.md)
 
-A modern, clean-room AppOps manager for Android 15+, powered by
+Manage Android AppOps, reuse permission templates, and review system permission
+history — with a native Kotlin and Jetpack Compose interface powered by
 [Shizuku](https://shizuku.rikka.app/).
 
-AppOpsNext reads and changes Android's built-in AppOps state.
+[Download APK](https://github.com/1zumiii/AppOpsNext/releases/latest) ·
+[Report an issue](https://github.com/1zumiii/AppOpsNext/issues) ·
+[Build status](https://github.com/1zumiii/AppOpsNext/actions/workflows/ci.yml)
 
-> [!IMPORTANT]
-> Android 15 (API 35) development and verification use an ASUS AI2302. The
-> native backend has also been independently verified on a Xiaomi 24117RN76G
-> running HyperOS 3 / Android 16 (API 36). Support outside these tested devices
-> and system versions remains unknown.
+## What you can do
 
-## Relationship to the legacy App Ops
+| Area | Features |
+| --- | --- |
+| Applications | Browse current-user apps, search names and packages, and choose whether to show system apps. |
+| AppOps | Inspect package and UID modes, search operations by localized or system name, and verify changes by reading them back. |
+| Templates and batches | Create reusable rules, reorder them, apply a template to multiple apps, or change several operations in one app. |
+| Newly installed apps | Opt in to automatic template application, catch up on pending installations, and inspect saved per-rule results. |
+| History | Explore permission distribution, app statistics, and timelines; choose and reorder the operations you follow. |
+| Settings and diagnostics | Switch between English, Simplified Chinese, or the system language, and inspect connection status and diagnostic reports. |
 
-AppOpsNext is an independent clean-room reimplementation inspired by the
-general product idea and workflows of the historical App Ops application
-(`rikka.appops`). It is not a fork, port, patched build, or official successor.
+## Install and get started
 
-- No source code, decompiled code, assets, branding, or configuration data from
-  the legacy application is included.
-- AppOpsNext does not connect to, migrate from, interoperate with, or require
-  the legacy application.
-- AppOpsNext is not developed, endorsed, maintained, or supported by RikkaApps
-  or the original App Ops author.
-- AppOpsNext uses Shizuku as an independently published privilege bridge. That
-  technical dependency does not imply affiliation with or endorsement by the
-  Shizuku or legacy App Ops maintainers.
+### Requirements
 
-Names of third-party projects are used only to explain compatibility and
-project history. “AppOps” in this project's name refers to Android's built-in
-AppOps system service, not an interface or technology owned by the legacy app.
+- **Android 15 or later** (API 35+).
+- **Shizuku 13 or later**, running and authorized for AppOpsNext.
+- The bundled native backend targets **ARM64**. Other CPU architectures have
+  not been verified.
 
-## Features
+Root is not required when Shizuku is started through ADB or wireless debugging.
+AppOpsNext still needs Shizuku for privileged operations.
 
-- Browse current-user applications with package, UID, and system-app metadata
-- Hide system applications by default, with a persistent Settings toggle
-- Search applications and permissions by localized or raw system names
-- Read package-scoped and UID-scoped AppOps independently
-- Change AppOps modes with stale-state checks and independent read-back
-- Restore the original mode automatically when a write cannot be verified
-- Show per-operation progress without reloading the complete detail screen
-- Display compact, localized recent-use timestamps
-- Review camera, microphone, and location system history with summary charts,
-  per-permission statistics, and app-linked timelines
-- Add or remove monitored AppOps and refresh history automatically while the
-  history screen is visible in the foreground and the privileged connection is available
-- Create reusable permission templates with editable modes and automatic
-  AppOps scope fallback
-- Add, remove, and long-press drag template rules into a persistent custom order
-- Apply one template to an app or batch-apply it to multiple applications
-- Configure a protected default template for newly installed apps, with
-  optional automatic application, catch-up detection, and result notifications
-- Change several permissions in one app as a verified batch operation
-- Report every batch success and failure in a persistent result dialog
-- Switch between system language, Simplified Chinese, and English
-- Run AppOps commands through a bundled native daemon, with Shizuku UserService
-  retained as an automatic fallback
+1. Install and start [Shizuku](https://shizuku.rikka.app/).
+2. Download `app-release.apk` from the
+   [latest release](https://github.com/1zumiii/AppOpsNext/releases/latest) and install it.
+3. Open AppOpsNext and grant access when Shizuku prompts you.
+4. Choose an app, select an operation, and review the confirmation before applying a change.
 
-## Requirements
+Use **Templates** for reusable rules and **History** to review system records.
+Automatic template application for newly installed apps is optional; configure
+its rules before enabling it. The first reconciliation establishes an existing-app
+baseline; it does not retroactively apply the template to every installed app.
 
-- Android 15 (API 35) or newer
-- Shizuku 13 or newer
-- ADB or wireless debugging to start Shizuku on a non-rooted device
+For updates, install the new release APK over the existing app to retain its
+settings. If Shizuku stops after a reboot or authorization is revoked, restore
+the connection before making new privileged reads or changes. Saved history
+remains viewable without that connection.
 
-Shizuku starts AppOpsNext's bundled native daemon with the shell identity. The
-app then communicates with that daemon through private process pipes, avoiding
-the UserService callback path that can fail on some Android 16 / HyperOS
-devices. If native startup fails, AppOpsNext automatically tries its Shizuku
-UserService backend. If Shizuku stops after a reboot or authorization is
-revoked, privileged reads and writes remain unavailable until it is restored.
+### Tested environments
 
-## Installation
+| Device | System | Validation |
+| --- | --- | --- |
+| ASUS AI2302 | Android 15 / API 35 | Primary development and physical-device test environment. |
+| Xiaomi 24117RN76G | HyperOS 3 / Android 16 / API 36 | Independent user verification of the native backend, reads/writes, history, and camera enforcement. |
 
-1. Install and start Shizuku.
-2. Download the latest APK from
-   [GitHub Releases](https://github.com/1zumiii/AppOpsNext/releases).
-3. Install the APK and grant AppOpsNext access when Shizuku asks.
-4. Open an application and confirm every requested change before applying it.
+These results describe the tested environments, not compatibility with every
+OEM ROM. See [backend compatibility notes](docs/PRIVILEGED_BACKENDS.md) for the
+evidence and known limitations.
 
-Android runtime permissions and AppOps are separate layers. AppOps can further
-restrict an already granted capability, but it cannot grant a runtime
-permission denied by Android or an OEM policy. Some modes may therefore be
-normalized or rejected by the system; AppOpsNext reports this as a failed
-verification instead of claiming success.
+## How history works
 
-## Safety model
+History comes from records retained by Android. AppOpsNext prefers individual
+access records and falls back to time-bucketed system statistics where needed,
+such as for clipboard access. Retention and timestamp precision depend on the
+device; this is not a complete, independently recorded audit log.
 
-Every single or batched write follows the same bounded transaction:
+- Each operation's last successful result is saved locally and restored when
+  the app reopens, with its update time shown on the page.
+- Returning within **five minutes** reuses fresh results. Older or missing
+  results are read when the history screen is visible, the app is in the
+  foreground, and the backend is connected; periodic refresh follows the same conditions.
+- Manual refresh bypasses the freshness check. Results update as each operation
+  finishes, and a failed read keeps the previous result with an error message.
+- Before the first successful read, the page distinguishes unloaded history
+  from a genuine zero count.
+
+The saved result is a cache of the latest successful read, not a permanent
+archive. It is stored in the app's private storage and excluded from Android
+backup; clearing app data or uninstalling removes it.
+
+## What an AppOps change means
+
+**AppOps and Android runtime permissions are separate layers.** Setting an
+AppOp to Allow cannot grant a missing runtime permission. Android or an OEM
+policy may also normalize or reject a requested mode. AppOpsNext explains
+runtime-permission failures and provides a route to the app's system settings.
+
+Changes use a verified transaction:
 
 ```text
-read current value
-  -> confirm it has not changed
-  -> write the requested typed mode
-  -> read back and verify
-  -> restore and verify the original value after failure
+Read and check the original state
+  → Write the requested mode
+  → Read back and verify
+  → On failure, attempt to restore and verify the original state
 ```
 
-Template writes start with the current app package. If Android rejects that
-scope after the original state has been restored, AppOpsNext retries through
-the UID only when it belongs exclusively to the target package. Explicit UID
-records can still affect several packages sharing one system identity, so the
-confirmation UI lists those affected packages. Batch operations run
-sequentially and retain a result for every target.
+Manual, batch, and automatic-template writes share a serialized transaction
+queue. A command completing is not sufficient to report success; verification
+and restoration outcomes are surfaced separately. Restoration is attempted,
+not guaranteed.
 
-## Development
+UID-scoped changes can affect multiple apps sharing that UID. The confirmation
+screen identifies those packages. Automatic scope fallback is constrained to
+avoid silently extending a change to other apps. Batch results report each
+target separately.
 
-The project requires JDK 17, Go 1.24 or newer, and an Android SDK. Gradle
-cross-compiles the bundled ARM64 daemon with `GOOS=android` and `CGO_ENABLED=0`.
-A physical Android 15 device with USB debugging is the primary test
-environment. Set `GO_EXECUTABLE` when `go` is not available on `PATH`.
+## Troubleshooting
 
-Build the debug app:
+- **Cannot connect:** confirm Shizuku is running and AppOpsNext is authorized,
+  then check **Settings → Connection and diagnostics**. The app tries its
+  bundled native backend first and Shizuku UserService if native startup fails.
+- **A mode will not apply:** check the Android runtime permission and the
+  reported verification result. Some system restrictions cannot be overridden
+  through AppOps.
+- **History looks old or incomplete:** check the saved update time, refresh
+  manually, and verify the connection. Android controls which records exist.
+- **Reporting a problem:** include the device, Android/ROM version, reproduction
+  steps, and a diagnostic report from Settings. Review and redact that report
+  before posting it in a public issue.
+
+## Build from source
+
+Use **JDK 17**, **Go 1.24+**, and the **Android SDK with platform 36** installed.
+The repository includes the Gradle wrapper. Set `JAVA_HOME` to JDK 17 and point
+`local.properties` (`sdk.dir`) or `ANDROID_HOME` to your SDK installation.
 
 ```shell
+# Optional: set this if Go is not on PATH.
+# export GO_EXECUTABLE="/absolute/path/to/go"
+
 ./gradlew :app:assembleDebug
 ```
 
-Run local verification:
+Output: `app/build/outputs/apk/debug/app-debug.apk`.
+Gradle also cross-compiles the bundled daemon for Android ARM64; a separate NDK
+build is not required. Debug builds keep the screen awake while the app is in
+the foreground and use a different signing identity from public releases.
+
+Run the same checks as [Android CI](.github/workflows/ci.yml):
 
 ```shell
-(cd daemon && go test ./...)
-./gradlew :app:testDebugUnitTest :app:lintDebug \
-  :app:assembleDebug
+(cd daemon && "${GO_EXECUTABLE:-go}" test ./...)
+./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug --no-daemon
 ```
 
-Debug builds keep the screen awake only while AppOpsNext is in the foreground.
-Release builds do not change the system screen timeout.
+### Signed release builds
 
-### Release signing
-
-The release keystore is intentionally excluded from Git. Release builds require
-`.signing/appopsnext-release.keystore` and these environment variables:
+Public release signing material is excluded from Git. The configured release
+build expects `.signing/appopsnext-release.keystore`, alias `appopsnext`, and
+`APPOPSNEXT_STORE_PASSWORD` / `APPOPSNEXT_KEY_PASSWORD` in the environment:
 
 ```shell
-export APPOPSNEXT_STORE_PASSWORD="<keystore password>"
-export APPOPSNEXT_KEY_PASSWORD="<key password>"
 ./gradlew :app:assembleRelease
 ```
 
-Keep an offline backup of the keystore and its passwords. Losing the signing
-key makes it impossible to publish updates that install over existing releases.
+Output: `app/build/outputs/apk/release/app-release.apk`.
+For your own distribution, supply your own keystore. Updating an existing
+installation requires the same signing identity. Maintainer validation and
+publishing steps are in the [release checklist](docs/RELEASE.md).
 
-## Project structure
+## Code and documentation
 
-- `presentation`: Compose screens, state, and reusable UI
-- `appops`: command adapters, parsing, repositories, and verified writes
-- `nativebackend`: native-daemon bootstrap, private pipe protocol, and gateway
-- `shizuku`: authorization, process bootstrap, and UserService fallback
-- `daemon`: allowlisted ARM64 shell daemon built with Go
-- `apps`: application discovery and pure filtering
-- `settings`: typed Preferences DataStore settings
-- `templates`: versioned template persistence and ordering
-- `newapps`: new-install detection, pending work, automatic policy execution,
-  and result notifications
-- `history`: discrete AppOps history parsing, repositories, and statistics
+Android packages live under `app/src/main/java/dev/izumi/appopsnext/`.
 
-See [Architecture](docs/ARCHITECTURE.md) for package boundaries and maintenance
-rules, [Privileged backends](docs/PRIVILEGED_BACKENDS.md) for backend selection
-and compatibility evidence, and
-[Android 15 device findings](docs/DEVICE_FINDINGS.md) for behavior verified on
-the reference device. Maintainers should also follow the
-[release checklist](docs/RELEASE.md) before publishing an APK.
+| Location | Responsibility |
+| --- | --- |
+| `presentation/` | Compose screens, ViewModels, and UI state. |
+| `appops/` | Commands, parsers, scope handling, and verified write transactions. |
+| `nativebackend/`, `shizuku/` | Privileged connections, native pipes, and UserService fallback. |
+| `apps/`, `settings/` | App discovery, metadata caching, and preferences. |
+| `templates/`, `newapps/` | Template persistence, installation detection, and resumable rule execution. |
+| `history/` | System-history parsing, refresh scheduling, and local snapshots. |
+| `diagnostics/` | Environment and connection reports. |
+| [`daemon/`](daemon/) at the repository root | Go daemon with an allowlisted command protocol. |
+
+Further reading: [Architecture](docs/ARCHITECTURE.md) ·
+[Privileged backends](docs/PRIVILEGED_BACKENDS.md) ·
+[Device findings](docs/DEVICE_FINDINGS.md) ·
+[Release checklist](docs/RELEASE.md).
+
+## Project background
+
+AppOpsNext is an independent clean-room implementation inspired by the general
+product idea and workflows of the historical App Ops application (`rikka.appops`).
+It is not a fork, port, modified build, or official successor.
+
+It includes no legacy application source, decompiled code, assets, branding,
+or configuration data, and does not require or provide migration from that app.
+AppOpsNext is not developed, endorsed, or supported by RikkaApps or the original
+App Ops author. Its use of Shizuku does not imply affiliation with its maintainers.
+“AppOps” refers to Android's built-in system service.
