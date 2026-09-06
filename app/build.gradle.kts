@@ -25,7 +25,7 @@ android {
         applicationId = "dev.izumi.appopsnext"
         minSdk = 35
         targetSdk = 35
-        versionCode = 29
+        versionCode = 30
         versionName = "1.3.2"
         buildConfigField(
             "String",

@@ -19,6 +19,7 @@ data class HistoryUiState(
 data class PermissionHistory(
     val permission: HistoryPermission,
     val events: List<ResolvedHistoryEvent>,
+    val lastUpdatedAtMillis: Long? = null,
     val failureReason: AppOpHistoryFailureReason? = null,
 ) {
     val recordCount: Int

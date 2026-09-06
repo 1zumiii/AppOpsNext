@@ -12,6 +12,7 @@ import dev.izumi.appopsnext.history.model.HistoryPermission
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 import dev.izumi.appopsnext.settings.UserSettingsDefaults
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
+import dev.izumi.appopsnext.history.HistorySnapshot
 import dev.izumi.appopsnext.history.HistoryRefreshController
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +46,10 @@ class HistoryViewModel(
             autoRefreshIntervalMinutes = AUTO_REFRESH_INTERVAL_MINUTES,
         ),
     )
+    private val snapshotStore = app.historySnapshotStore
+    private var snapshots = emptyMap<String, HistorySnapshot>()
+    private var failures = emptyMap<String, AppOpHistoryFailureReason>()
+    private var forceRefreshRequested = false
     private var selectedPermissions = emptyList<HistoryPermission>()
     private var hideSystemApps =
         UserSettingsDefaults.HIDE_SYSTEM_APPS
@@ -65,29 +70,19 @@ class HistoryViewModel(
 
     init {
         viewModelScope.launch {
+            snapshots = snapshotStore.read()
             permissionSettingsRepository.selectedPermissions.collect {
                 selectedPermissions = it
-                val previousByOperation =
-                    mutableUiState.value.permissions.associateBy {
-                        history -> history.permission.shellOperationName
-                    }
-                mutableUiState.value = mutableUiState.value.copy(
-                    permissions = it.map { permission ->
-                        previousByOperation[permission.shellOperationName]
-                            ?: PermissionHistory(
-                                permission = permission,
-                                events = emptyList(),
-                            )
-                    },
-                )
-                refresh()
+                publishSnapshots()
+                refreshController.requestRefresh()
             }
         }
         viewModelScope.launch {
             userSettingsRepository.settings.collect { settings ->
                 if (hideSystemApps != settings.hideSystemApps) {
                     hideSystemApps = settings.hideSystemApps
-                    refresh()
+                    publishSnapshots()
+                    refreshController.requestRefresh()
                 }
             }
         }
@@ -132,67 +127,73 @@ class HistoryViewModel(
 
     fun setVisible(visible: Boolean) = refreshController.setVisible(visible)
     fun setForeground(foreground: Boolean) = refreshController.setForeground(foreground)
-    fun refresh() = refreshController.requestRefresh()
+    fun refresh() {
+        forceRefreshRequested = true
+        refreshController.requestRefresh()
+    }
+
+    private fun publishSnapshots() {
+        val histories = HistorySnapshotPresentation.resolve(
+            selectedPermissions, snapshots, failures, hideSystemApps,
+        )
+        val failed = histories.mapNotNull(PermissionHistory::failureReason)
+        mutableUiState.value = mutableUiState.value.copy(
+            permissions = histories,
+            failureReason = failed.firstOrNull().takeIf { failed.size == histories.size },
+            partialFailureCount = failed.size.takeIf { it < histories.size } ?: 0,
+            lastUpdatedAtMillis = histories.mapNotNull { it.lastUpdatedAtMillis }.minOrNull(),
+        )
+    }
 
     private suspend fun loadSelectedPermissions(
         permissions: List<HistoryPermission>,
     ) {
-        val requestedHideSystemApps = hideSystemApps
-        mutableUiState.value = mutableUiState.value.copy(
-            isLoading = true,
-            waitingForBackend = false,
-            failureReason = null,
-        )
-
-        val apps = runCatching {
-            installedAppsRepository.loadInstalledApps()
-        }.onFailure { if (it is CancellationException) throw it }.getOrDefault(emptyList())
-        val permissionHistories = permissions.map { permission ->
-            when (
-                val result = historyRepository.loadOperationHistory(
-                    permission.shellOperationName,
-                )
-            ) {
-                is AppOpHistoryLoadResult.Success -> {
-                    val resolvedEvents = withContext(Dispatchers.Default) {
-                        HistoryEventResolver.resolve(
-                            events = result.events,
-                            installedApps = apps,
-                            hideSystemApps = requestedHideSystemApps,
-                        )
-                    }
-                    PermissionHistory(
-                        permission = permission,
-                        events = resolvedEvents,
-                    )
-                }
-
-                is AppOpHistoryLoadResult.Failure -> PermissionHistory(
-                    permission = permission,
-                    events = emptyList(),
-                    failureReason = result.reason,
-                )
-            }
+        val force = forceRefreshRequested
+        forceRefreshRequested = false
+        val now = System.currentTimeMillis()
+        val pending = permissions.filter { permission ->
+            force || !HistorySnapshotFreshness.isFresh(
+                snapshots[permission.shellOperationName]?.fetchedAtMillis,
+                now,
+                AUTO_REFRESH_INTERVAL_MINUTES * 60_000L,
+            )
         }
-        val failures = permissionHistories.mapNotNull(
-            PermissionHistory::failureReason,
-        )
+        mutableUiState.value = mutableUiState.value.copy(waitingForBackend = false)
+        if (pending.isEmpty()) return
+        mutableUiState.value = mutableUiState.value.copy(isLoading = true)
 
-        currentCoroutineContext().ensureActive()
-        if (permissions != selectedPermissions || requestedHideSystemApps != hideSystemApps) return
-        mutableUiState.value = HistoryUiState(
-            isLoading = false,
-            waitingForBackend = false,
-            permissions = permissionHistories,
-            availablePermissions = availablePermissions,
-            failureReason = failures.firstOrNull()
-                .takeIf { failures.size == permissionHistories.size },
-            partialFailureCount = failures.size
-                .takeIf { failures.size < permissionHistories.size }
-                ?: 0,
-            lastUpdatedAtMillis = System.currentTimeMillis(),
-            autoRefreshIntervalMinutes = AUTO_REFRESH_INTERVAL_MINUTES,
-        )
+        // Metadata failure must not turn real history into a successful empty snapshot.
+        val apps = try {
+            installedAppsRepository.loadInstalledApps()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            failures = failures + pending.associate {
+                it.shellOperationName to AppOpHistoryFailureReason.BACKEND_UNAVAILABLE
+            }
+            publishSnapshots()
+            return
+        }
+        for (permission in pending) {
+            currentCoroutineContext().ensureActive()
+            val operation = permission.shellOperationName
+            when (val result = historyRepository.loadOperationHistory(operation)) {
+                is AppOpHistoryLoadResult.Success -> {
+                    val resolved = withContext(Dispatchers.Default) {
+                        HistoryEventResolver.resolve(result.events, apps, hideSystemApps = false)
+                    }
+                    val snapshot = HistorySnapshot(resolved, System.currentTimeMillis())
+                    snapshotStore.put(operation, snapshot)
+                    snapshots = snapshots + (operation to snapshot)
+                    failures = failures - operation
+                }
+                is AppOpHistoryLoadResult.Failure -> {
+                    failures = failures + (operation to result.reason)
+                }
+            }
+            currentCoroutineContext().ensureActive()
+            publishSnapshots()
+        }
     }
 
     private companion object {

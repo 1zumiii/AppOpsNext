@@ -327,7 +327,8 @@ private fun HistoryOverviewContent(
                     showProgress = true,
                 )
             }
-        } else {
+        }
+        if (uiState.permissions.isNotEmpty() || !uiState.waitingForBackend) {
             uiState.failureReason?.let { failureReason ->
                 item {
                     HistoryStatusCard(
@@ -354,10 +355,12 @@ private fun HistoryOverviewContent(
                     )
                 }
             } else {
-                item {
-                    PermissionDistributionChart(
-                        permissions = uiState.permissions,
-                    )
+                if (uiState.permissions.any { it.lastUpdatedAtMillis != null }) {
+                    item {
+                        PermissionDistributionChart(
+                            permissions = uiState.permissions.filter { it.lastUpdatedAtMillis != null },
+                        )
+                    }
                 }
                 item {
                     Text(
@@ -382,7 +385,9 @@ private fun HistoryOverviewContent(
                     PermissionHistoryCard(
                         history = history,
                         onClick = {
-                            onPermissionSelected(history.permission)
+                            if (history.lastUpdatedAtMillis != null) {
+                                onPermissionSelected(history.permission)
+                            }
                         },
                         isDragging = isDragging,
                         modifier = Modifier
@@ -678,13 +683,26 @@ private fun PermissionHistoryCard(
                 )
             }
             Text(
-                text = stringResource(
+                text = if (history.lastUpdatedAtMillis == null) {
+                    stringResource(R.string.history_not_loaded)
+                } else stringResource(
                     R.string.history_permission_summary,
                     history.recordCount,
                     history.appCount,
                 ),
                 style = MaterialTheme.typography.bodyMedium,
             )
+            history.lastUpdatedAtMillis?.let { updatedAt ->
+                Text(
+                    text = stringResource(
+                        R.string.history_snapshot_updated,
+                        DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+                            .format(Date(updatedAt)),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Text(
                 text = stringResource(
                     R.string.history_latest_record,

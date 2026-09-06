@@ -25,6 +25,12 @@ class AppOpsNextApplication : Application() {
         PrivilegedServiceClient(this, diagnosticLogRepository)
     }
 
+    val historySnapshotStore by lazy {
+        dev.izumi.appopsnext.history.HistorySnapshotStore(
+            java.io.File(noBackupFilesDir, "history-snapshots-v1.bin"),
+        )
+    }
+
     val installedAppsRepository by lazy {
         dev.izumi.appopsnext.apps.InstalledAppsRepository(this)
     }
