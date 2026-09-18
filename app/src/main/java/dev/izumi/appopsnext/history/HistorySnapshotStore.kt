@@ -33,6 +33,7 @@ class HistorySnapshotStore(
 ) {
     private val mutex = Mutex()
     private var cache: Map<String, HistorySnapshot>? = null
+    private var pendingWrite = false
 
     suspend fun read(): Map<String, HistorySnapshot> = mutex.withLock {
         cache ?: withContext(Dispatchers.IO) {
@@ -43,13 +44,31 @@ class HistorySnapshotStore(
     suspend fun put(
         operationName: String,
         snapshot: HistorySnapshot,
+    ) {
+        stage(operationName, snapshot)
+        flush()
+    }
+
+    /**
+     * Records a snapshot in memory without touching the disk. Writing serializes every
+     * operation at once, so a caller updating several of them stages each one and
+     * flushes a single time.
+     */
+    suspend fun stage(
+        operationName: String,
+        snapshot: HistorySnapshot,
     ) = mutex.withLock {
-        val updated = (cache ?: withContext(Dispatchers.IO) { readFromDisk() }) +
+        cache = (cache ?: withContext(Dispatchers.IO) { readFromDisk() }) +
             (operationName to snapshot.copy(events = snapshot.events.toList()))
-        cache = updated
+        pendingWrite = true
+    }
+
+    /** Persists staged snapshots. Does nothing when there is nothing to write. */
+    suspend fun flush() = mutex.withLock {
+        val staged = cache?.takeIf { pendingWrite } ?: return@withLock
         withContext(Dispatchers.IO) {
             try {
-                writeToDisk(updated)
+                if (writeToDisk(staged)) pendingWrite = false
             } catch (_: IOException) {
                 // A failed cache write must not discard the usable in-memory snapshot.
             }
@@ -81,14 +100,14 @@ class HistorySnapshotStore(
     }
 
     @Throws(IOException::class)
-    private fun writeToDisk(snapshots: Map<String, HistorySnapshot>) {
-        if (snapshots.size > MAX_OPERATIONS) return
+    private fun writeToDisk(snapshots: Map<String, HistorySnapshot>): Boolean {
+        if (snapshots.size > MAX_OPERATIONS) return false
         var totalEvents = 0
         snapshots.values.forEach {
-            if (it.events.size > MAX_EVENTS - totalEvents) return
+            if (it.events.size > MAX_EVENTS - totalEvents) return false
             totalEvents += it.events.size
         }
-        val parent = file.parentFile ?: return
+        val parent = file.parentFile ?: return false
         Files.createDirectories(parent.toPath())
         val temp = File.createTempFile("${file.name}.", ".tmp", parent)
         try {
@@ -107,6 +126,7 @@ class HistorySnapshotStore(
         } finally {
             Files.deleteIfExists(temp.toPath())
         }
+        return true
     }
 
     private fun DataInputStream.readResolvedEvent(): ResolvedHistoryEvent = ResolvedHistoryEvent(

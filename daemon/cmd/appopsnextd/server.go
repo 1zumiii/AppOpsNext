@@ -48,17 +48,13 @@ type commandResult struct {
 
 func serve(reader *bufio.Reader, writer *bufio.Writer) error {
 	for {
-		request, err := reader.ReadString('\n')
+		request, err := readRequest(reader)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				return nil
 			}
-			return fmt.Errorf("read request: %w", err)
+			return err
 		}
-		if len(request) > maxRequestLength {
-			return errors.New("request exceeds protocol limit")
-		}
-		request = strings.TrimSuffix(request, "\n")
 		if request == "PING" {
 			if err := writeLine(writer, "PONG"); err != nil {
 				return err
@@ -75,6 +71,30 @@ func serve(reader *bufio.Reader, writer *bufio.Writer) error {
 		}
 		if err := writeResult(writer, execute(command)); err != nil {
 			return err
+		}
+	}
+}
+
+// readRequest returns one request line without buffering more than the protocol
+// allows. The length is checked as the line is consumed rather than afterwards,
+// so an unterminated stream cannot grow the buffer without bound.
+func readRequest(reader *bufio.Reader) (string, error) {
+	var request strings.Builder
+	for {
+		chunk, err := reader.ReadSlice('\n')
+		if request.Len()+len(chunk) > maxRequestLength {
+			return "", errors.New("request exceeds protocol limit")
+		}
+		request.Write(chunk)
+		switch {
+		case err == nil:
+			return strings.TrimSuffix(request.String(), "\n"), nil
+		case errors.Is(err, bufio.ErrBufferFull):
+			continue
+		case errors.Is(err, io.EOF):
+			return "", io.EOF
+		default:
+			return "", fmt.Errorf("read request: %w", err)
 		}
 	}
 }

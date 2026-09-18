@@ -129,7 +129,7 @@
     <string name="diagnostic_log_title">诊断报告</string>
     <string name="diagnostic_log_summary">包含设备环境、连接状态和最近 %1$d 条应用事件</string>
     <string name="diagnostic_report_title">可分享诊断报告</string>
-    <string name="diagnostic_report_privacy_warning">报告可能包含设备型号、系统版本、构建信息、Shizuku 版本、UID/PID 和错误内容。分享前请自行检查并脱敏，也可以借助你信任的 AI 工具辅助脱敏。</string>
+    <string name="diagnostic_report_privacy_warning">报告可能包含设备型号、系统版本、构建信息、Shizuku 版本、UID/PID 和错误内容。分享前请自行检查，并用你习惯的方式对不希望公开的内容脱敏。</string>
     <string name="diagnostic_report_copy">复制报告</string>
     <string name="diagnostic_log_clear">清空事件日志</string>
     <string name="diagnostic_report_clip_label">AppOpsNext 诊断报告</string>

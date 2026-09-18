@@ -49,6 +49,8 @@ object AppOpDisplayCatalog {
                     isImplicitDefault = false,
                 )
             }
+        // Labels come from resources, so each one is resolved once here instead of
+        // once per filter test and once per sort comparison.
         return metadataByOperation
             .map { (operationName, metadata) ->
                 explicitItems[operationName] ?: AppOpDisplayItem(
@@ -66,31 +68,49 @@ object AppOpDisplayCatalog {
                     .filterKeys { it !in metadataByOperation }
                     .values,
             )
-            .filter { item ->
+            .map { item ->
+                LabelledAppOp(
+                    item = item,
+                    label = item.labelRes?.let(labelResolver),
+                    alternateLabel = if (normalizedQuery.isEmpty()) {
+                        null
+                    } else {
+                        item.labelRes?.let(alternateLabelResolver)
+                    },
+                )
+            }
+            .filter { labelled ->
                 normalizedQuery.isEmpty() ||
-                    item.operationName.contains(
+                    labelled.item.operationName.contains(
                         normalizedQuery,
                         ignoreCase = true,
                     ) ||
-                    item.labelRes?.let(labelResolver)?.contains(
+                    labelled.label?.contains(
                         normalizedQuery,
                         ignoreCase = true,
                     ) == true ||
-                    item.labelRes?.let(alternateLabelResolver)?.contains(
+                    labelled.alternateLabel?.contains(
                         normalizedQuery,
                         ignoreCase = true,
                     ) == true
             }
             .sortedWith(
-                compareBy<AppOpDisplayItem> { it.priority }
-                    .thenBy(String.CASE_INSENSITIVE_ORDER) { item ->
-                        item.labelRes?.let(labelResolver) ?: item.operationName
+                compareBy<LabelledAppOp> { it.item.priority }
+                    .thenBy(String.CASE_INSENSITIVE_ORDER) { labelled ->
+                        labelled.label ?: labelled.item.operationName
                     }
                     .thenBy(String.CASE_INSENSITIVE_ORDER) {
-                        it.operationName
+                        it.item.operationName
                     },
             )
+            .map(LabelledAppOp::item)
     }
+
+    private data class LabelledAppOp(
+        val item: AppOpDisplayItem,
+        val label: String?,
+        val alternateLabel: String?,
+    )
 
     fun knownOperations(): List<KnownAppOp> =
         metadataByOperation

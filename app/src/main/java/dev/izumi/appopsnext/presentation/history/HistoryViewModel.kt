@@ -16,6 +16,7 @@ import dev.izumi.appopsnext.history.HistorySnapshot
 import dev.izumi.appopsnext.history.HistoryRefreshController
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -174,25 +175,32 @@ class HistoryViewModel(
             publishSnapshots()
             return
         }
-        for (permission in pending) {
-            currentCoroutineContext().ensureActive()
-            val operation = permission.shellOperationName
-            when (val result = historyRepository.loadOperationHistory(operation)) {
-                is AppOpHistoryLoadResult.Success -> {
-                    val resolved = withContext(Dispatchers.Default) {
-                        HistoryEventResolver.resolve(result.events, apps, hideSystemApps = false)
+        // Each operation is staged as it arrives and the whole set is written once,
+        // because a write serializes every stored operation. The flush also runs when
+        // the refresh is cancelled, so results already read are not lost.
+        try {
+            for (permission in pending) {
+                currentCoroutineContext().ensureActive()
+                val operation = permission.shellOperationName
+                when (val result = historyRepository.loadOperationHistory(operation)) {
+                    is AppOpHistoryLoadResult.Success -> {
+                        val resolved = withContext(Dispatchers.Default) {
+                            HistoryEventResolver.resolve(result.events, apps, hideSystemApps = false)
+                        }
+                        val snapshot = HistorySnapshot(resolved, System.currentTimeMillis())
+                        snapshotStore.stage(operation, snapshot)
+                        snapshots = snapshots + (operation to snapshot)
+                        failures = failures - operation
                     }
-                    val snapshot = HistorySnapshot(resolved, System.currentTimeMillis())
-                    snapshotStore.put(operation, snapshot)
-                    snapshots = snapshots + (operation to snapshot)
-                    failures = failures - operation
+                    is AppOpHistoryLoadResult.Failure -> {
+                        failures = failures + (operation to result.reason)
+                    }
                 }
-                is AppOpHistoryLoadResult.Failure -> {
-                    failures = failures + (operation to result.reason)
-                }
+                currentCoroutineContext().ensureActive()
+                publishSnapshots()
             }
-            currentCoroutineContext().ensureActive()
-            publishSnapshots()
+        } finally {
+            withContext(NonCancellable) { snapshotStore.flush() }
         }
     }
 

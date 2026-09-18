@@ -2,14 +2,17 @@ package dev.izumi.appopsnext
 
 import android.app.Application
 import dev.izumi.appopsnext.appops.AppOpsRepository
+import dev.izumi.appopsnext.apps.InstalledAppsRepository
 import dev.izumi.appopsnext.diagnostics.DiagnosticEnvironmentCollector
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
 import dev.izumi.appopsnext.settings.UserSettingsRepository
 import dev.izumi.appopsnext.shizuku.PrivilegedServiceClient
 import dev.izumi.appopsnext.templates.PermissionTemplateRepository
 import dev.izumi.appopsnext.history.HistoryPermissionSettingsRepository
+import dev.izumi.appopsnext.history.HistorySnapshotStore
 import dev.izumi.appopsnext.newapps.NewAppPolicyCoordinator
 import dev.izumi.appopsnext.newapps.NewAppPolicyStateRepository
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,14 +28,14 @@ class AppOpsNextApplication : Application() {
         PrivilegedServiceClient(this, diagnosticLogRepository)
     }
 
-    val historySnapshotStore by lazy {
-        dev.izumi.appopsnext.history.HistorySnapshotStore(
-            java.io.File(noBackupFilesDir, "history-snapshots-v1.bin"),
+    val historySnapshotStore: HistorySnapshotStore by lazy {
+        HistorySnapshotStore(
+            File(noBackupFilesDir, "history-snapshots-v1.bin"),
         )
     }
 
-    val installedAppsRepository by lazy {
-        dev.izumi.appopsnext.apps.InstalledAppsRepository(this)
+    val installedAppsRepository: InstalledAppsRepository by lazy {
+        InstalledAppsRepository(this)
     }
 
     val appOpsRepository: AppOpsRepository by lazy {
