@@ -32,11 +32,11 @@ func authenticate(
 	reader *bufio.Reader,
 	writer *bufio.Writer,
 ) error {
-	request, err := reader.ReadString('\n')
+	request, err := readRequest(reader)
 	if err != nil {
 		return fmt.Errorf("read handshake: %w", err)
 	}
-	expected := fmt.Sprintf("HELLO %d\n", protocolVersion)
+	expected := fmt.Sprintf("HELLO %d", protocolVersion)
 	if request != expected {
 		return errors.New("invalid handshake")
 	}

@@ -3,9 +3,10 @@ package dev.izumi.appopsnext.presentation
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalFocusManager
@@ -92,7 +93,9 @@ fun AppOpsRootScreen(
     var selectedDestination by rememberSaveable {
         mutableStateOf(MainDestination.APPS)
     }
-    var selectedApp by remember { mutableStateOf<InstalledApp?>(null) }
+    var selectedApp by rememberSaveable(stateSaver = InstalledAppStateSaver) {
+        mutableStateOf<InstalledApp?>(null)
+    }
     var selectedHistoryPermissionName by rememberSaveable {
         mutableStateOf<String?>(null)
     }
@@ -101,6 +104,11 @@ fun AppOpsRootScreen(
     }
     val selectedHistoryPermission = selectedHistoryPermissionName?.let {
         HistoryPermission(it)
+    }
+    // The detail view model starts empty after the process is recreated, so a
+    // restored selection is re-applied once. Later selections notify it directly.
+    LaunchedEffect(Unit) {
+        selectedApp?.let(onAppSelected)
     }
     val historyVisible = selectedDestination == MainDestination.HISTORY && selectedApp == null
     DisposableEffect(historyVisible) {
@@ -267,3 +275,24 @@ fun AppOpsRootScreen(
         onDismiss = onBatchOperationDismiss,
     )
 }
+
+/** Keeps the opened app across activity recreation, such as a rotation. */
+private val InstalledAppStateSaver = listSaver<InstalledApp?, Any>(
+    save = { app ->
+        app?.let {
+            listOf(it.label, it.packageName, it.uid, it.isSystemApp)
+        }.orEmpty()
+    },
+    restore = { values ->
+        values.takeIf { it.size == SAVED_APP_FIELD_COUNT }?.let {
+            InstalledApp(
+                label = it[0] as String,
+                packageName = it[1] as String,
+                uid = it[2] as Int,
+                isSystemApp = it[3] as Boolean,
+            )
+        }
+    },
+)
+
+private const val SAVED_APP_FIELD_COUNT = 4

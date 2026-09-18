@@ -290,18 +290,23 @@ private fun ReadyContent(
             },
         )
     }
-    val displayItems = AppOpDisplayCatalog.build(
-        entries = state.snapshot.entries,
-        query = searchQuery,
-        labelResolver = context::getString,
-        alternateLabelResolver = alternateContext::getString,
-    )
-    val totalOperationCount = AppOpDisplayCatalog.build(
-        entries = state.snapshot.entries,
-        query = "",
-        labelResolver = context::getString,
-        alternateLabelResolver = alternateContext::getString,
-    ).size
+    val entries = state.snapshot.entries
+    val displayItems = remember(entries, searchQuery, context, alternateContext) {
+        AppOpDisplayCatalog.build(
+            entries = entries,
+            query = searchQuery,
+            labelResolver = context::getString,
+            alternateLabelResolver = alternateContext::getString,
+        )
+    }
+    val totalOperationCount = remember(entries, context, alternateContext) {
+        AppOpDisplayCatalog.build(
+            entries = entries,
+            query = "",
+            labelResolver = context::getString,
+            alternateLabelResolver = alternateContext::getString,
+        ).size
+    }
     LazyColumn(
         modifier = modifier,
         contentPadding = DetailContentPadding,

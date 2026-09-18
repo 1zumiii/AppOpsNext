@@ -51,33 +51,50 @@ object DiagnosticLogFormatter {
     private const val MAX_MESSAGE_LENGTH = 1_200
 }
 
-class DiagnosticLogRepository(
-    context: Context,
+class DiagnosticLogRepository internal constructor(
+    private val logFile: File,
     private val clock: Clock = Clock.systemDefaultZone(),
+    persistenceScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
 ) {
-    private val logFile = File(context.filesDir, LOG_FILE_NAME)
+    constructor(context: Context, clock: Clock = Clock.systemDefaultZone()) :
+        this(File(context.filesDir, LOG_FILE_NAME), clock)
+
     private val persistenceRequests =
-        Channel<List<String>>(capacity = Channel.UNLIMITED)
-    private val persistenceScope =
-        CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        Channel<PersistenceRequest>(capacity = Channel.UNLIMITED)
     private val lock = Any()
-    private val mutableLines = MutableStateFlow(loadExistingLines())
+    private val mutableLines = MutableStateFlow<List<String>>(emptyList())
+
+    @Volatile
+    private var discardStoredLines = false
 
     val lines: StateFlow<List<String>> = mutableLines.asStateFlow()
 
     init {
         persistenceScope.launch {
-            for (snapshot in persistenceRequests) {
+            // Reading the existing log here keeps it off the caller's thread, which is
+            // the main thread during application start-up. Requests recorded meanwhile
+            // are still queued, so the file cannot contain them yet and nothing is
+            // duplicated by this merge.
+            val persistedLines = ArrayDeque<String>()
+            var storedLineCount = restoreStoredLines(persistedLines)
+            for (request in persistenceRequests) {
                 runCatching {
-                    if (snapshot.isEmpty()) {
-                        logFile.delete()
-                    } else {
-                        logFile.writeText(
-                            snapshot.joinToString(
-                                separator = "\n",
-                                postfix = "\n",
-                            ),
-                        )
+                    when (request) {
+                        is PersistenceRequest.Append -> {
+                            logFile.appendText(request.line + "\n")
+                            persistedLines.addLast(request.line)
+                            while (persistedLines.size > MAX_LINES) persistedLines.removeFirst()
+                            storedLineCount++
+                            if (storedLineCount > COMPACTION_THRESHOLD_LINES) {
+                                storedLineCount = compact(persistedLines)
+                            }
+                        }
+
+                        is PersistenceRequest.Clear -> {
+                            java.nio.file.Files.deleteIfExists(logFile.toPath())
+                            persistedLines.clear()
+                            storedLineCount = 0
+                        }
                     }
                 }
             }
@@ -104,9 +121,10 @@ class DiagnosticLogRepository(
     }
 
     fun clear() {
+        discardStoredLines = true
         synchronized(lock) {
             mutableLines.value = emptyList()
-            persistenceRequests.trySend(emptyList())
+            persistenceRequests.trySend(PersistenceRequest.Clear)
         }
     }
 
@@ -122,24 +140,51 @@ class DiagnosticLogRepository(
             message = message,
         )
         synchronized(lock) {
-            val updated =
+            mutableLines.value =
                 (mutableLines.value + line).takeLast(MAX_LINES)
-            mutableLines.value = updated
-            persistenceRequests.trySend(updated)
+            persistenceRequests.trySend(PersistenceRequest.Append(line))
         }
     }
 
-    private fun loadExistingLines(): List<String> =
-        runCatching {
-            if (logFile.isFile) {
-                logFile.readLines().takeLast(MAX_LINES)
-            } else {
-                emptyList()
-            }
+    /** Merges the persisted log into the state flow and reports the file's line count. */
+    private fun restoreStoredLines(persistedLines: ArrayDeque<String>): Int {
+        val stored = runCatching {
+            if (logFile.isFile) logFile.readLines() else emptyList()
         }.getOrDefault(emptyList())
+        if (stored.isEmpty()) return 0
+        persistedLines.addAll(stored.takeLast(MAX_LINES))
+        synchronized(lock) {
+            if (discardStoredLines) return 0
+            mutableLines.value =
+                (stored.takeLast(MAX_LINES) + mutableLines.value)
+                    .takeLast(MAX_LINES)
+        }
+        return stored.size
+    }
+
+    /** Rewrites the file down to the retained window and reports its new line count. */
+    private fun compact(retained: ArrayDeque<String>): Int {
+        // Only compact events already processed by this writer. UI state may
+        // contain newer events that are still queued for append (or a clear).
+        if (retained.isEmpty()) {
+            logFile.delete()
+            return 0
+        }
+        logFile.writeText(
+            retained.joinToString(separator = "\n", postfix = "\n"),
+        )
+        return retained.size
+    }
+
+    private sealed interface PersistenceRequest {
+        data class Append(val line: String) : PersistenceRequest
+
+        data object Clear : PersistenceRequest
+    }
 
     private companion object {
         const val LOG_FILE_NAME = "appopsnext-diagnostic.log"
         const val MAX_LINES = 300
+        const val COMPACTION_THRESHOLD_LINES = MAX_LINES * 4
     }
 }

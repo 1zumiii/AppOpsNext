@@ -70,6 +70,9 @@ internal class NativeDaemonBootstrapper(
         val executablePath = "$installDirectory/$DAEMON_FILE_NAME"
         val temporaryPath =
             "$installDirectory/$DAEMON_FILE_NAME.$instanceId.tmp"
+        // Installation is gated by `|| exit 1`, so the sweep that follows only runs
+        // once the current daemon is in place. Its own failures are not fatal:
+        // leaving a stale directory behind must not block a working install.
         val installScript = buildString {
             append("umask 077; ")
             append("mkdir -p ")
@@ -82,6 +85,13 @@ internal class NativeDaemonBootstrapper(
             append(temporaryPath)
             append(' ')
             append(executablePath)
+            append(" || exit 1; ")
+            append("for stale in ")
+            append(INSTALL_ROOT)
+            append("/*; do [ \"\$stale\" = \"")
+            append(installDirectory)
+            append("\" ] || rm -rf \"\$stale\"; done; ")
+            append("exit 0")
         }
         val process = processLauncher.launch(
             arguments = listOf(

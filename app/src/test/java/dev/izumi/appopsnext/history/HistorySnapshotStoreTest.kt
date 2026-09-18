@@ -7,11 +7,56 @@ import java.io.DataOutputStream
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HistorySnapshotStoreTest {
+    @Test fun `staging updates memory and one flush persists the full batch`() = runBlocking {
+        withSnapshotFile { file ->
+            val store = HistorySnapshotStore(file)
+            val camera = HistorySnapshot(listOf(resolvedEvent()), 1L)
+            val audio = HistorySnapshot(emptyList(), 2L)
+            store.stage("CAMERA", camera)
+            store.stage("RECORD_AUDIO", audio)
+            assertEquals(mapOf("CAMERA" to camera, "RECORD_AUDIO" to audio), store.read())
+            assertTrue(!file.exists())
+            store.flush()
+            assertEquals(store.read(), HistorySnapshotStore(file).read())
+        }
+    }
+
+    @Test fun `failed flush remains pending and can be retried without staging again`() = runBlocking {
+        withSnapshotFile { parent ->
+            parent.writeText("blocks directory creation")
+            val file = File(parent, "snapshot.bin")
+            val store = HistorySnapshotStore(file)
+            store.stage("CAMERA", HistorySnapshot(emptyList(), 1L))
+            store.flush()
+            assertTrue(!file.exists())
+            parent.delete()
+            parent.mkdir()
+            store.flush()
+            assertEquals(store.read(), HistorySnapshotStore(file).read())
+            file.delete()
+        }
+    }
+
+    @Test fun `cancelled flush leaves staged snapshots available for a later flush`() = runBlocking {
+        withSnapshotFile { file ->
+            val store = HistorySnapshotStore(file)
+            store.stage("CAMERA", HistorySnapshot(emptyList(), 1L))
+            launch {
+                coroutineContext.cancel()
+                store.flush()
+            }.join()
+            store.flush()
+            assertEquals(store.read(), HistorySnapshotStore(file).read())
+        }
+    }
+
     @Test fun `round trips all resolved event fields through a new store instance`() = runBlocking {
         withSnapshotFile { file ->
             val snapshot = HistorySnapshot(

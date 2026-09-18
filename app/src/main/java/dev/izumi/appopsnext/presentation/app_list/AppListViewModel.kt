@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class AppListViewModel(
@@ -25,6 +26,7 @@ class AppListViewModel(
     private val searchQuery = MutableStateFlow("")
     private val isLoading = MutableStateFlow(true)
     private val loadFailed = MutableStateFlow(false)
+    private var loadJob: Job? = null
 
     val uiState = combine(
         installedApps,
@@ -63,10 +65,22 @@ class AppListViewModel(
         searchQuery.value = query
     }
 
-    fun refresh() {
-        if (isLoading.value && installedApps.value.isNotEmpty()) return
+    fun refresh() = load(forceRefresh = true)
 
-        viewModelScope.launch {
+    /**
+     * Installed packages rarely change while the user is away, so a resume reuses
+     * the repository cache instead of enumerating and labelling every package again.
+     */
+    fun refreshAfterResume() {
+        if (installedApps.value.isNotEmpty()) {
+            load(forceRefresh = false)
+        }
+    }
+
+    private fun load(forceRefresh: Boolean) {
+        if (loadJob?.isActive == true) return
+
+        loadJob = viewModelScope.launch {
             isLoading.value = true
             loadFailed.value = false
             val startedAt = SystemClock.elapsedRealtime()
@@ -75,7 +89,7 @@ class AppListViewModel(
                 message = "Loading installed applications.",
             )
             runCatching {
-                repository.loadInstalledApps(forceRefresh = true)
+                repository.loadInstalledApps(forceRefresh = forceRefresh)
             }.onSuccess { apps ->
                 installedApps.value = apps
                 diagnosticLog.info(
@@ -96,12 +110,6 @@ class AppListViewModel(
                 )
             }
             isLoading.value = false
-        }
-    }
-
-    fun refreshAfterResume() {
-        if (installedApps.value.isNotEmpty()) {
-            refresh()
         }
     }
 

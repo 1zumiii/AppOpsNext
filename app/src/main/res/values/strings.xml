@@ -131,7 +131,7 @@
     <string name="diagnostic_log_title">Diagnostic report</string>
     <string name="diagnostic_log_summary">Device environment, connection state, and the latest %1$d app events</string>
     <string name="diagnostic_report_title">Shareable diagnostic report</string>
-    <string name="diagnostic_report_privacy_warning">This report may contain the device model, OS and build details, Shizuku version, UID/PID values, and error messages. Review and redact it before sharing. You may also use an AI tool you trust to help with redaction.</string>
+    <string name="diagnostic_report_privacy_warning">This report may contain the device model, OS and build details, Shizuku version, UID/PID values, and error messages. Review it and redact anything you do not want to share, using whatever method you prefer.</string>
     <string name="diagnostic_report_copy">Copy report</string>
     <string name="diagnostic_log_clear">Clear event log</string>
     <string name="diagnostic_report_clip_label">AppOpsNext diagnostic report</string>
