@@ -165,6 +165,19 @@ Android 代码位于 `app/src/main/java/dev/izumi/appopsnext/`。
 [设备验证记录](docs/DEVICE_FINDINGS.md) ·
 [发布检查清单](docs/RELEASE.md)。
 
+## 授权协议
+
+AppOpsNext 是自由软件：你可以依据自由软件基金会发布的 GNU 通用公共许可证
+第 3 版，或（依你选择）任何更新的版本，重新分发和修改本软件。
+
+分发本程序是希望它能派上用场，但**不附带任何担保**，甚至不包含适销性或
+特定用途适用性的默示担保。详见 [GNU 通用公共许可证](LICENSE)。
+
+Copyright (C) 2026 1zumiii.
+
+第三方组件保留各自的授权：Shizuku API 为 MIT，AndroidX 与 Jetpack Compose
+为 Apache-2.0，两者均与 GPL-3.0 兼容。
+
 ## 项目背景
 
 AppOpsNext 受旧版 App Ops（`rikka.appops`）的产品思路和使用流程启发，
