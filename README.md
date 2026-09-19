@@ -181,6 +181,24 @@ Further reading: [Architecture](docs/ARCHITECTURE.md) ·
 [Device findings](docs/DEVICE_FINDINGS.md) ·
 [Release checklist](docs/RELEASE.md).
 
+## License
+
+AppOpsNext is free software: you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the [GNU General Public License](LICENSE) for more
+details.
+
+Copyright (C) 2026 1zumiii.
+
+Third-party components keep their own licenses: the Shizuku API is MIT, and the
+AndroidX and Jetpack Compose libraries are Apache-2.0. Both are compatible with
+GPL-3.0.
+
 ## Project background
 
 AppOpsNext is an independent clean-room implementation inspired by the general
