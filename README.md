@@ -144,6 +144,12 @@ entirely your decision.
 - **The monitor stops after a force stop:** a force stop removes its service
   and prevents Android from restarting it. Opening AppOpsNext again brings it
   back while the switch is still on.
+- **The monitor stops after the screen has been off for a while:** some vendors'
+  battery optimisation or background management ends the app's process, and a
+  foreground service does not survive it either. This is outside the app's
+  control. To run the monitor for long periods, exclude AppOpsNext from battery
+  optimisation in system settings and lock it in the recents list. Opening the
+  app again restores the monitor.
 - **Reporting a problem:** include the device, Android/ROM version, reproduction
   steps, and a diagnostic report from Settings. Review and redact that report
   before posting it in a public issue.
