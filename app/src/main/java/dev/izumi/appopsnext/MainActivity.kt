@@ -158,7 +158,15 @@ class MainActivity : ComponentActivity() {
                 application.userSettingsRepository.settings.first().backgroundMonitor
             }.getOrDefault(false)
             if (enabled && !application.appOpsMonitorController.isRunning) {
-                runCatching { AppOpsMonitorService.start(this@MainActivity) }
+                runCatching {
+                    AppOpsMonitorService.start(this@MainActivity)
+                }.onFailure { error ->
+                    application.diagnosticLogRepository.error(
+                        source = "Monitor",
+                        message = "Unable to restore the background monitor.",
+                        error = error,
+                    )
+                }
             }
         }
     }

@@ -332,4 +332,5 @@
     <string name="update_checking">Checking…</string>
     <string name="update_failed">Check failed · retry</string>
     <string name="update_available_description">A new version is available</string>
+    <string name="monitor_not_running">Not running · retried the next time you open the app</string>
 </resources>
