@@ -5,9 +5,20 @@ on:
     branches:
       - main
       - "Dev/**"
+    # Documentation-only changes cannot break the build, so they do not spend a
+    # run. A push that also touches anything else still triggers one.
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+      - ".gitignore"
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+      - ".gitignore"
+  workflow_dispatch:
 
 permissions:
   contents: read
