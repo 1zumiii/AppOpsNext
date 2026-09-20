@@ -10,6 +10,8 @@ import dev.izumi.appopsnext.shizuku.PrivilegedServiceClient
 import dev.izumi.appopsnext.templates.PermissionTemplateRepository
 import dev.izumi.appopsnext.history.HistoryPermissionSettingsRepository
 import dev.izumi.appopsnext.history.HistorySnapshotStore
+import dev.izumi.appopsnext.monitor.AppOpsMonitorController
+import dev.izumi.appopsnext.monitor.MonitorTargetsRepository
 import dev.izumi.appopsnext.newapps.NewAppPolicyCoordinator
 import dev.izumi.appopsnext.newapps.NewAppPolicyStateRepository
 import java.io.File
@@ -82,6 +84,21 @@ class AppOpsNextApplication : Application() {
             privilegedServiceClient = privilegedServiceClient,
             diagnosticLog = diagnosticLogRepository,
             appOpsRepository = appOpsRepository,
+        )
+    }
+
+    val monitorTargetsRepository: MonitorTargetsRepository by lazy {
+        MonitorTargetsRepository(this)
+    }
+
+    val appOpsMonitorController: AppOpsMonitorController by lazy {
+        AppOpsMonitorController(
+            context = this,
+            scope = applicationScope,
+            installedAppsRepository = installedAppsRepository,
+            targetsRepository = monitorTargetsRepository,
+            settingsRepository = userSettingsRepository,
+            diagnosticLog = diagnosticLogRepository,
         )
     }
 

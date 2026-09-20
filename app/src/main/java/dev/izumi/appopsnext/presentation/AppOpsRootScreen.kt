@@ -25,6 +25,10 @@ import dev.izumi.appopsnext.presentation.batch.PermissionBatchSelection
 import dev.izumi.appopsnext.presentation.components.AppNavigationBar
 import dev.izumi.appopsnext.presentation.components.MainDestination
 import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticsUiState
+import dev.izumi.appopsnext.presentation.experimental.ExperimentalScreen
+import dev.izumi.appopsnext.presentation.experimental.ExperimentalUiState
+import dev.izumi.appopsnext.presentation.experimental.MonitorOperationsScreen
+import dev.izumi.appopsnext.presentation.experimental.MonitorTargetsScreen
 import dev.izumi.appopsnext.presentation.history.HistoryOverviewScreen
 import dev.izumi.appopsnext.presentation.history.HistoryAppStatisticsScreen
 import dev.izumi.appopsnext.presentation.history.HistoryUiState
@@ -71,6 +75,11 @@ fun AppOpsRootScreen(
     onDenyFallbackNoticeDismissed: (Boolean) -> Unit,
     onForegroundAlternativeRequested: () -> Unit,
     onHideSystemAppsChange: (Boolean) -> Unit,
+    experimentalUiState: ExperimentalUiState,
+    onMonitorEnabledChange: (Boolean) -> Unit,
+    onMonitorHeadsUpChange: (Boolean) -> Unit,
+    onCheckForUpdate: () -> Unit,
+    onMonitorOperationsChange: (String, Set<String>) -> Unit,
     onAppLanguageChange: (AppLanguage) -> Unit,
     onCreateTemplate: (String) -> Unit,
     onSelectTemplate: (String) -> Unit,
@@ -101,6 +110,12 @@ fun AppOpsRootScreen(
     }
     var showHistoryAppStatistics by rememberSaveable {
         mutableStateOf(false)
+    }
+    var experimentalRoute by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+    var monitorAppPackage by rememberSaveable {
+        mutableStateOf<String?>(null)
     }
     val selectedHistoryPermission = selectedHistoryPermissionName?.let {
         HistoryPermission(it)
@@ -137,6 +152,24 @@ fun AppOpsRootScreen(
         )
     }
 
+    BackHandler(enabled = selectedApp == null && monitorAppPackage != null) {
+        monitorAppPackage = null
+    }
+    BackHandler(
+        enabled = selectedApp == null &&
+            monitorAppPackage == null &&
+            experimentalRoute == ROUTE_MONITOR_TARGETS,
+    ) {
+        experimentalRoute = ROUTE_EXPERIMENTAL
+    }
+    BackHandler(
+        enabled = selectedApp == null &&
+            monitorAppPackage == null &&
+            experimentalRoute == ROUTE_EXPERIMENTAL,
+    ) {
+        experimentalRoute = null
+    }
+
     BackHandler(enabled = selectedApp != null) {
         navigateBackFromDetail()
     }
@@ -153,6 +186,40 @@ fun AppOpsRootScreen(
             !showHistoryAppStatistics,
     ) {
         selectedHistoryPermissionName = null
+    }
+
+    val monitorApp = monitorAppPackage?.let { packageName ->
+        appListUiState.allApps.firstOrNull { it.packageName == packageName }
+    }
+    if (selectedApp == null && experimentalRoute != null) {
+        when {
+            monitorApp != null -> MonitorOperationsScreen(
+                app = monitorApp,
+                selected = experimentalUiState
+                    .selectionByPackage[monitorApp.packageName]
+                    .orEmpty(),
+                onBack = { monitorAppPackage = null },
+                onSelectionChange = { operations ->
+                    onMonitorOperationsChange(monitorApp.packageName, operations)
+                },
+            )
+
+            experimentalRoute == ROUTE_MONITOR_TARGETS -> MonitorTargetsScreen(
+                apps = appListUiState.allApps,
+                selectionByPackage = experimentalUiState.selectionByPackage,
+                onBack = { experimentalRoute = ROUTE_EXPERIMENTAL },
+                onAppSelected = { app -> monitorAppPackage = app.packageName },
+            )
+
+            else -> ExperimentalScreen(
+                uiState = experimentalUiState,
+                onBack = { experimentalRoute = null },
+                onMonitorChange = onMonitorEnabledChange,
+                onHeadsUpChange = onMonitorHeadsUpChange,
+                onOpenTargets = { experimentalRoute = ROUTE_MONITOR_TARGETS },
+            )
+        }
+        return
     }
 
     if (selectedApp != null) {
@@ -260,6 +327,8 @@ fun AppOpsRootScreen(
                 uiState = settingsUiState,
                 diagnosticsUiState = diagnosticsUiState,
                 onHideSystemAppsChange = onHideSystemAppsChange,
+                onOpenExperimental = { experimentalRoute = ROUTE_EXPERIMENTAL },
+                onCheckForUpdate = onCheckForUpdate,
                 onAppLanguageChange = onAppLanguageChange,
                 onShizukuAction = onShizukuAction,
                 onPrivilegedServiceRetry = onPrivilegedServiceRetry,
@@ -296,3 +365,5 @@ private val InstalledAppStateSaver = listSaver<InstalledApp?, Any>(
 )
 
 private const val SAVED_APP_FIELD_COUNT = 4
+private const val ROUTE_EXPERIMENTAL = "experimental"
+private const val ROUTE_MONITOR_TARGETS = "monitor_targets"

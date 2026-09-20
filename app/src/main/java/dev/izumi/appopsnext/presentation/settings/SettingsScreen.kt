@@ -44,6 +44,8 @@ fun SettingsScreen(
     uiState: SettingsUiState,
     diagnosticsUiState: DiagnosticsUiState,
     onHideSystemAppsChange: (Boolean) -> Unit,
+    onOpenExperimental: () -> Unit,
+    onCheckForUpdate: () -> Unit,
     onAppLanguageChange: (AppLanguage) -> Unit,
     onShizukuAction: () -> Unit,
     onPrivilegedServiceRetry: () -> Unit,
@@ -118,6 +120,22 @@ fun SettingsScreen(
             }
             item {
                 SettingsSectionTitle(
+                    text = stringResource(R.string.settings_experimental),
+                )
+            }
+            item {
+                ListItem(
+                    modifier = Modifier.clickable(onClick = onOpenExperimental),
+                    headlineContent = {
+                        Text(text = stringResource(R.string.experimental_title))
+                    },
+                    supportingContent = {
+                        Text(text = stringResource(R.string.experimental_caption))
+                    },
+                )
+            }
+            item {
+                SettingsSectionTitle(
                     text = stringResource(R.string.settings_diagnostics),
                 )
             }
@@ -146,23 +164,16 @@ fun SettingsScreen(
                 )
             }
             item {
-                ListItem(
-                    headlineContent = {
-                        Text(
-                            text = stringResource(
-                                R.string.settings_app_version,
-                            ),
-                        )
+                AppVersionRow(
+                    updateState = uiState.updateState,
+                    onOpenRelease = { url ->
+                        runCatching {
+                            context.startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse(url)),
+                            )
+                        }
                     },
-                    supportingContent = {
-                        Text(
-                            text = stringResource(
-                                R.string.settings_app_version_value,
-                                BuildConfig.VERSION_NAME,
-                                BuildConfig.VERSION_CODE,
-                            ),
-                        )
-                    },
+                    onCheckForUpdate = onCheckForUpdate,
                 )
             }
             item {

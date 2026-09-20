@@ -41,6 +41,12 @@ class UserSettingsRepository(
                     preferences[Keys.AUTO_APPLY_NEW_APP_TEMPLATE]
                         ?: UserSettingsDefaults
                             .AUTO_APPLY_NEW_APP_TEMPLATE,
+                backgroundMonitor =
+                    preferences[Keys.BACKGROUND_MONITOR]
+                        ?: UserSettingsDefaults.BACKGROUND_MONITOR,
+                monitorHeadsUp =
+                    preferences[Keys.MONITOR_HEADS_UP]
+                        ?: UserSettingsDefaults.MONITOR_HEADS_UP,
             )
         }
 
@@ -62,11 +68,25 @@ class UserSettingsRepository(
         }
     }
 
+    suspend fun setBackgroundMonitor(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[Keys.BACKGROUND_MONITOR] = enabled
+        }
+    }
+
+    suspend fun setMonitorHeadsUp(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[Keys.MONITOR_HEADS_UP] = enabled
+        }
+    }
+
     private object Keys {
         val HIDE_SYSTEM_APPS = booleanPreferencesKey("hide_system_apps")
         val SUPPRESS_DENY_FALLBACK_NOTICE =
             booleanPreferencesKey("suppress_deny_fallback_notice")
         val AUTO_APPLY_NEW_APP_TEMPLATE =
             booleanPreferencesKey("auto_apply_new_app_template")
+        val BACKGROUND_MONITOR = booleanPreferencesKey("background_monitor")
+        val MONITOR_HEADS_UP = booleanPreferencesKey("monitor_heads_up")
     }
 }
