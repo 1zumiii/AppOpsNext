@@ -112,6 +112,10 @@ object AppOpDisplayCatalog {
         val alternateLabel: String?,
     )
 
+    /** The localized label for an operation, or null when it is not catalogued. */
+    fun labelResOf(operationName: String): Int? =
+        metadataByOperation[normalize(operationName)]?.labelRes
+
     fun knownOperations(): List<KnownAppOp> =
         metadataByOperation
             .map { (shellName, metadata) ->

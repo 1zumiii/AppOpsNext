@@ -4,7 +4,9 @@ import android.os.Bundle
 import android.content.Intent
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
+import dev.izumi.appopsnext.monitor.AppOpsMonitorService
 import dev.izumi.appopsnext.newapps.NewAppPolicyNotifier
+import kotlinx.coroutines.flow.first
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -15,6 +17,7 @@ import dev.izumi.appopsnext.presentation.app_detail.AppDetailViewModel
 import dev.izumi.appopsnext.presentation.app_list.AppListViewModel
 import dev.izumi.appopsnext.presentation.batch.BatchOperationsViewModel
 import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticsViewModel
+import dev.izumi.appopsnext.presentation.experimental.ExperimentalViewModel
 import dev.izumi.appopsnext.presentation.history.HistoryViewModel
 import dev.izumi.appopsnext.presentation.settings.SettingsViewModel
 import dev.izumi.appopsnext.presentation.templates.TemplatesViewModel
@@ -28,10 +31,12 @@ class MainActivity : ComponentActivity() {
     private val settingsViewModel: SettingsViewModel by viewModels()
     private val templatesViewModel: TemplatesViewModel by viewModels()
     private val batchOperationsViewModel: BatchOperationsViewModel by viewModels()
+    private val experimentalViewModel: ExperimentalViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         DevelopmentWindowPolicy.apply(window)
+        restoreBackgroundMonitor()
         showNewAppResult(intent)
 
         setContent {
@@ -53,6 +58,8 @@ class MainActivity : ComponentActivity() {
                 batchOperationsViewModel.uiState.collectAsStateWithLifecycle()
             val appOpSearchQuery =
                 appDetailViewModel.searchQuery.collectAsStateWithLifecycle()
+            val experimentalUiState =
+                experimentalViewModel.uiState.collectAsStateWithLifecycle()
 
             AppOpsNextTheme {
                 AppOpsRootScreen(
@@ -65,6 +72,15 @@ class MainActivity : ComponentActivity() {
                     templatesUiState = templatesUiState.value,
                     batchOperationUiState = batchOperationUiState.value,
                     appOpSearchQuery = appOpSearchQuery.value,
+                    experimentalUiState = experimentalUiState.value,
+                    onMonitorEnabledChange =
+                        experimentalViewModel::setMonitorEnabled,
+                    onMonitorHeadsUpChange =
+                        experimentalViewModel::setHeadsUp,
+                    onCheckForUpdate =
+                        settingsViewModel::checkForUpdate,
+                    onMonitorOperationsChange =
+                        experimentalViewModel::setOperations,
                     onShizukuAction =
                         diagnosticsViewModel::performShizukuAction,
                     onPrivilegedServiceRetry =
@@ -128,6 +144,23 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         showNewAppResult(intent)
+    }
+
+    /**
+     * A force stop tears the service down and stops the system from restarting
+     * it, so the switch would read as on while nothing was being watched. This
+     * brings the service back the next time the user opens the app.
+     */
+    private fun restoreBackgroundMonitor() {
+        val application = application as AppOpsNextApplication
+        lifecycleScope.launch {
+            val enabled = runCatching {
+                application.userSettingsRepository.settings.first().backgroundMonitor
+            }.getOrDefault(false)
+            if (enabled && !application.appOpsMonitorController.isRunning) {
+                runCatching { AppOpsMonitorService.start(this@MainActivity) }
+            }
+        }
     }
 
     private fun showNewAppResult(intent: Intent) {

@@ -19,7 +19,8 @@ history — with a native Kotlin and Jetpack Compose interface powered by
 | Templates and batches | Create reusable rules, reorder them, apply a template to multiple apps, or change several operations in one app. |
 | Newly installed apps | Opt in to automatic template application, catch up on pending installations, and inspect saved per-rule results. |
 | History | Explore permission distribution, app statistics, and timelines; choose and reorder the operations you follow. |
-| Settings and diagnostics | Switch between English, Simplified Chinese, or the system language, and inspect connection status and diagnostic reports. |
+| Settings and diagnostics | Switch between English, Simplified Chinese, or the system language, inspect connection status and diagnostic reports, and see quietly whether a newer release exists. |
+| Experimental | Watch chosen operations for chosen apps and be notified when one is used in the background. Nothing is watched until you pick it, and a self-check reports whether the device supports it. |
 
 ## Install and get started
 
@@ -107,6 +108,24 @@ screen identifies those packages. Automatic scope fallback is constrained to
 avoid silently extending a change to other apps. Batch results report each
 target separately.
 
+## Permissions and network use
+
+| Permission | Why it is needed |
+| --- | --- |
+| `QUERY_ALL_PACKAGES` | An AppOps manager has to discover packages that are not known at build time. |
+| `INTERNET` | Only to check quietly whether a newer release exists. |
+| `POST_NOTIFICATIONS` | Results of automatic template application, and access reports from the experimental monitor. |
+| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE` | Keeps the experimental background monitor's callbacks reachable while it is switched on. |
+
+The update check reads one public GitHub endpoint and nothing else. It never
+forces an update, never downloads or installs anything, and never shows a popup
+or a notification about it: an available version appears next to the app version
+in Settings and nowhere else. **No user data of any kind is uploaded.**
+
+The diagnostic report is never sent anywhere on its own. It is assembled on the
+device and copied to the clipboard only when you ask for it, and sharing it is
+entirely your decision.
+
 ## Troubleshooting
 
 - **Cannot connect:** confirm Shizuku is running and AppOpsNext is authorized,
@@ -117,6 +136,14 @@ target separately.
   through AppOps.
 - **History looks old or incomplete:** check the saved update time, refresh
   manually, and verify the connection. Android controls which records exist.
+- **The background monitor reports nothing:** it is experimental and depends
+  on a privileged interface that not every ROM provides. Turn it on again and
+  read the self-check result; it distinguishes an unsupported device from a
+  partly registered watch. Also confirm at least one app and operation are
+  selected, since nothing is watched by default.
+- **The monitor stops after a force stop:** a force stop removes its service
+  and prevents Android from restarting it. Opening AppOpsNext again brings it
+  back while the switch is still on.
 - **Reporting a problem:** include the device, Android/ROM version, reproduction
   steps, and a diagnostic report from Settings. Review and redact that report
   before posting it in a public issue.
@@ -171,9 +198,11 @@ Android packages live under `app/src/main/java/dev/izumi/appopsnext/`.
 | `appops/` | Commands, parsers, scope handling, and verified write transactions. |
 | `nativebackend/`, `shizuku/` | Privileged connections, native pipes, and UserService fallback. |
 | `apps/`, `settings/` | App discovery, metadata caching, and preferences. |
-| `templates/`, `newapps/` | Template persistence, installation detection, and resumable rule execution. |
+| `templates/`, `newapps/`, `batch/` | Template persistence, installation detection, resumable rule execution, and batch targets. |
 | `history/` | System-history parsing, refresh scheduling, and local snapshots. |
 | `diagnostics/` | Environment and connection reports. |
+| `monitor/` | Experimental access monitor: watch registration over a forwarded binder call, event filtering, and notifications. |
+| `update/` | Release check against the GitHub API and version comparison. |
 | [`daemon/`](daemon/) at the repository root | Go daemon with an allowlisted command protocol. |
 
 Further reading: [Architecture](docs/ARCHITECTURE.md) ·

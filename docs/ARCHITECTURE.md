@@ -5,29 +5,48 @@ behavior stays isolated from UI code.
 
 ## Package boundaries
 
-- `model`: immutable app-wide data models.
+Android code lives under `app/src/main/java/dev/izumi/appopsnext/`.
+
 - `presentation`: Compose screens, reusable components, and screen state.
 - `shizuku`: binder lifecycle, authorization, and privileged process launch.
 - `nativebackend`: daemon installation, private pipe protocol, and gateway.
-- `daemon`: allowlisted shell process compiled as an ARM64 Android ELF.
+- `daemon` (repository root): allowlisted shell process compiled as an ARM64
+  Android ELF.
 - `appops`: AppOps commands, parsing, mode mapping, and privileged adapters.
 - `apps`: installed-application discovery and metadata.
+- `templates`: permission template persistence and rule ordering.
+- `batch`: batch targets and the executor shared by templates and new-app work.
+- `newapps`: installation detection and resumable per-rule policy execution.
+- `history`: system-history parsing, refresh scheduling, and local snapshots.
+- `monitor`: the experimental access monitor — watch registration over a
+  forwarded binder call, event filtering, and notifications.
+- `update`: release check against the GitHub API and version comparison.
+- `diagnostics`: environment collection, connection reports, and the local log.
 - `settings`: Preferences DataStore and typed user settings.
-- `data`: persistence for templates and backups as those modules land.
+- `model`, `ui`: app-wide data models and the Compose theme.
 
 The `shizuku` package owns privileged-process lifecycle only. The
 `nativebackend` package isolates the deprecated Shizuku remote-process
 bootstrap surface and the versioned daemon protocol. The `appops` package owns
 command construction, execution results, parsing, and repository state. The
 `apps` package owns installed-application discovery and pure search filtering.
-Persistence packages are introduced as their feature modules land.
 
-`AppOpsNextApplication` owns the single `PrivilegedServiceClient` and
-`UserSettingsRepository` instances. The privileged client is shared by
-diagnostics and per-app detail ViewModels; feature ViewModels consume the shared
-state and repository gateway rather than starting competing privileged
-services. The settings repository owns the only `user_settings` DataStore
-instance.
+The `monitor` package is the one privileged path that does not go through
+`PrivilegedAppOpsGateway`. Watch callbacks cannot be delivered over a
+request-and-response pipe, so it registers them directly against the AppOps
+service through a forwarded binder call and keeps that dependency to itself.
+The `update` package holds the only network access in the app.
+
+`AppOpsNextApplication` owns every long-lived instance: the single
+`PrivilegedServiceClient`, `AppOpsRepository`, `DiagnosticLogRepository`,
+`InstalledAppsRepository`, `HistorySnapshotStore`, `NewAppPolicyCoordinator`,
+`AppOpsMonitorController`, and the repositories behind the five Preferences
+DataStores (`user_settings`, `permission_templates`,
+`history_permission_settings`, `new_app_policy`, `monitor_targets`). The
+privileged client is shared by diagnostics and per-app detail ViewModels;
+feature ViewModels consume the shared state and repository gateway rather than
+starting competing privileged services. Each DataStore has exactly one owning
+repository.
 
 ## Privileged read path
 

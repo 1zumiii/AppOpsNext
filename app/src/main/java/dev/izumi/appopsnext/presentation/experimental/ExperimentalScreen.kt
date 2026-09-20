@@ -1,0 +1,234 @@
+package dev.izumi.appopsnext.presentation.experimental
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.monitor.MonitorSelfCheckResult
+import dev.izumi.appopsnext.monitor.MonitorStatus
+
+/**
+ * A page of its own rather than a settings section, so later experiments have
+ * somewhere to go without pushing the rest of the settings list down.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ExperimentalScreen(
+    uiState: ExperimentalUiState,
+    onBack: () -> Unit,
+    onMonitorChange: (Boolean) -> Unit,
+    onHeadsUpChange: (Boolean) -> Unit,
+    onOpenTargets: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Scaffold(
+        modifier = modifier,
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = stringResource(R.string.experimental_title),
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_arrow_back),
+                            contentDescription = stringResource(R.string.action_back),
+                        )
+                    }
+                },
+            )
+        },
+    ) { contentPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(contentPadding),
+        ) {
+            item {
+                Text(
+                    text = stringResource(R.string.experimental_caption),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            item { HorizontalDivider() }
+            item {
+                MonitorFeature(
+                    uiState = uiState,
+                    onMonitorChange = onMonitorChange,
+                    onHeadsUpChange = onHeadsUpChange,
+                    onOpenTargets = onOpenTargets,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MonitorFeature(
+    uiState: ExperimentalUiState,
+    onMonitorChange: (Boolean) -> Unit,
+    onHeadsUpChange: (Boolean) -> Unit,
+    onOpenTargets: () -> Unit,
+) {
+    Column {
+        ListItem(
+            headlineContent = { Text(text = stringResource(R.string.monitor_title)) },
+            supportingContent = { Text(text = stringResource(R.string.monitor_summary)) },
+            trailingContent = {
+                Switch(
+                    checked = uiState.monitorEnabled,
+                    enabled = !uiState.monitorBusy && uiState.targetCount > 0,
+                    onCheckedChange = onMonitorChange,
+                )
+            },
+        )
+        // Changing the selection while the watches are live would mean tearing
+        // them down and rebuilding them under the user, so the entry is closed
+        // until the monitor is switched off.
+        val locked = uiState.monitorEnabled
+        ListItem(
+            modifier = if (locked) {
+                Modifier
+            } else {
+                Modifier.clickable(onClick = onOpenTargets)
+            },
+            headlineContent = {
+                Text(
+                    text = stringResource(R.string.monitor_targets_title),
+                    color = if (locked) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        Color.Unspecified
+                    },
+                )
+            },
+            supportingContent = {
+                val summary = if (uiState.targetCount == 0) {
+                    stringResource(R.string.monitor_targets_empty)
+                } else {
+                    stringResource(
+                        R.string.monitor_targets_summary,
+                        uiState.targetCount,
+                    )
+                }
+                Text(
+                    text = if (locked) {
+                        stringResource(R.string.monitor_targets_locked, summary)
+                    } else {
+                        summary
+                    },
+                )
+            },
+        )
+        ListItem(
+            headlineContent = {
+                Text(text = stringResource(R.string.monitor_heads_up_title))
+            },
+            supportingContent = {
+                Text(text = stringResource(R.string.monitor_heads_up_summary))
+            },
+            trailingContent = {
+                Switch(
+                    checked = uiState.headsUp,
+                    onCheckedChange = onHeadsUpChange,
+                )
+            },
+        )
+        Text(
+            text = stringResource(R.string.monitor_explainer),
+            modifier = Modifier.padding(horizontal = 16.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        MonitorStatusText(uiState)
+    }
+}
+
+@Composable
+private fun MonitorStatusText(uiState: ExperimentalUiState) {
+    val message: String?
+    val isError: Boolean
+    when {
+        uiState.monitorBusy -> {
+            message = stringResource(R.string.monitor_checking)
+            isError = false
+        }
+
+        uiState.targetCount == 0 && !uiState.monitorEnabled -> {
+            message = stringResource(R.string.monitor_needs_targets)
+            isError = false
+        }
+
+        uiState.selfCheckResult is MonitorSelfCheckResult.Passed -> {
+            message = partialWatchMessage(uiState.status)
+                ?: stringResource(R.string.monitor_check_passed)
+            isError = uiState.status?.partial == true
+        }
+
+        uiState.selfCheckResult is MonitorSelfCheckResult.NoEvent -> {
+            message = stringResource(R.string.monitor_check_no_event)
+            isError = true
+        }
+
+        uiState.selfCheckResult is MonitorSelfCheckResult.Failed -> {
+            message = stringResource(
+                R.string.monitor_check_failed,
+                (uiState.selfCheckResult as MonitorSelfCheckResult.Failed).reason,
+            )
+            isError = true
+        }
+
+        else -> {
+            message = null
+            isError = false
+        }
+    }
+    if (message == null) return
+    Text(
+        text = message,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
+        style = MaterialTheme.typography.bodyMedium,
+        color = if (isError) {
+            MaterialTheme.colorScheme.error
+        } else {
+            MaterialTheme.colorScheme.primary
+        },
+    )
+}
+
+/** Names the watches that did not register, instead of claiming full coverage. */
+@Composable
+private fun partialWatchMessage(status: MonitorStatus?): String? {
+    if (status == null || !status.partial) return null
+    val missing = buildList {
+        if (!status.activeWatch) add(stringResource(R.string.monitor_watch_active))
+        if (!status.notedWatch) add(stringResource(R.string.monitor_watch_noted))
+        if (!status.startedWatch) add(stringResource(R.string.monitor_watch_started))
+    }
+    if (missing.isEmpty()) return null
+    return stringResource(R.string.monitor_partial_watch, missing.joinToString("、"))
+}

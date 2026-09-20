@@ -4,6 +4,8 @@ object UserSettingsDefaults {
     const val HIDE_SYSTEM_APPS = true
     const val SUPPRESS_DENY_FALLBACK_NOTICE = false
     const val AUTO_APPLY_NEW_APP_TEMPLATE = false
+    const val BACKGROUND_MONITOR = false
+    const val MONITOR_HEADS_UP = false
 }
 
 data class UserSettings(
@@ -12,4 +14,8 @@ data class UserSettings(
         UserSettingsDefaults.SUPPRESS_DENY_FALLBACK_NOTICE,
     val autoApplyNewAppTemplate: Boolean =
         UserSettingsDefaults.AUTO_APPLY_NEW_APP_TEMPLATE,
+    val backgroundMonitor: Boolean =
+        UserSettingsDefaults.BACKGROUND_MONITOR,
+    val monitorHeadsUp: Boolean =
+        UserSettingsDefaults.MONITOR_HEADS_UP,
 )
