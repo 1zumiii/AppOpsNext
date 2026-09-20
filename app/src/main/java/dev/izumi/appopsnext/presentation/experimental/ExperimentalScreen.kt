@@ -183,6 +183,13 @@ private fun MonitorStatusText(uiState: ExperimentalUiState) {
             isError = false
         }
 
+        // The switch alone cannot show whether the watches are live; a restore
+        // that failed leaves it on with nothing registered.
+        uiState.monitorEnabled && uiState.status == null -> {
+            message = stringResource(R.string.monitor_not_running)
+            isError = true
+        }
+
         uiState.selfCheckResult is MonitorSelfCheckResult.Passed -> {
             message = partialWatchMessage(uiState.status)
                 ?: stringResource(R.string.monitor_check_passed)

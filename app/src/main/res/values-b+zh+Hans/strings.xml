@@ -330,4 +330,5 @@
     <string name="update_checking">检查中…</string>
     <string name="update_failed">检查失败 · 点击重试</string>
     <string name="update_available_description">有新版本可用</string>
+    <string name="monitor_not_running">未在运行 · 下次打开应用时重试</string>
 </resources>

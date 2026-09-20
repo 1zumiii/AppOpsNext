@@ -39,7 +39,13 @@ class AppOpsMonitorService : Service() {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
         )
         if (!controller.isRunning) {
-            serviceScope.launch { controller.start() }
+            serviceScope.launch {
+                // Staying up after a failed registration would leave an ongoing
+                // notification claiming to watch something while nothing is
+                // registered. The setting is left on so the next launch retries,
+                // because the usual cause is Shizuku not being ready yet.
+                if (controller.start().isFailure) stopSelf()
+            }
         }
         return START_STICKY
     }
