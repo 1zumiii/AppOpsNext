@@ -7,7 +7,7 @@ enum class AppOpAccessKind {
     /** A one-shot access was noted, such as the clipboard being read. */
     NOTED,
 
-    /** A long-running access was attempted and refused. */
+    /** A long-running access was attempted, allowed or refused. */
     STARTED,
 }
 
@@ -21,13 +21,15 @@ internal data class AppOpAccessEvent(
 
 /** An access resolved for display, with the operation's shell name attached. */
 data class MonitoredAccess(
+    val uid: Int,
     val operationName: String,
     val packageName: String,
     val appLabel: String,
     val kind: AppOpAccessKind,
     val allowed: Boolean,
     val observedAtMillis: Long,
-    /** How many times this access repeated inside the coalescing window. */
+    val elapsedRealtimeMillis: Long,
+    /** How many times this access was reported, which a throttle can limit. */
     val count: Int = 1,
 )
 

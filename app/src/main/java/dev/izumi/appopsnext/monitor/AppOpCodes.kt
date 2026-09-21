@@ -188,6 +188,13 @@ internal object AppOpCodes {
         "android:body_sensors",
     )
 
+    /**
+     * Every operation the table knows, for the picker's advanced list. Many of
+     * them are never noted for an ordinary application, and some are reported so
+     * often that they are only usable with an interval set.
+     */
+    val ALL_NAMES: List<String> = codeToName.values.sorted()
+
     val MONITORED_CODES: IntArray =
         MONITORED_NAMES.mapNotNull(::codeOf).toIntArray()
 

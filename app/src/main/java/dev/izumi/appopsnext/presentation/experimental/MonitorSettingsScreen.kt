@@ -31,6 +31,8 @@ fun MonitorSettingsScreen(
     uiState: ExperimentalUiState,
     onBack: () -> Unit,
     onOpenTargets: () -> Unit,
+    onOpenPoints: () -> Unit,
+    onOpenExamples: () -> Unit,
     onHeadsUpChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -77,6 +79,37 @@ fun MonitorSettingsScreen(
                                 )
                             },
                         )
+                    },
+                )
+            }
+            item {
+                ListItem(
+                    modifier = Modifier.clickable(onClick = onOpenPoints),
+                    headlineContent = {
+                        Text(text = stringResource(R.string.monitor_points_title))
+                    },
+                    supportingContent = {
+                        Text(
+                            text = if (uiState.points.isEmpty()) {
+                                stringResource(R.string.monitor_points_none)
+                            } else {
+                                stringResource(
+                                    R.string.monitor_points_summary,
+                                    uiState.points.size,
+                                )
+                            },
+                        )
+                    },
+                )
+            }
+            item {
+                ListItem(
+                    modifier = Modifier.clickable(onClick = onOpenExamples),
+                    headlineContent = {
+                        Text(text = stringResource(R.string.monitor_examples_entry))
+                    },
+                    supportingContent = {
+                        Text(text = stringResource(R.string.monitor_examples_summary))
                     },
                 )
             }

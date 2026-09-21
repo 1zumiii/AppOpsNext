@@ -330,7 +330,73 @@
     <string name="update_failed">检查失败 · 点击重试</string>
     <string name="update_available_description">有新版本可用</string>
     <string name="monitor_not_running">未在运行 · 下次打开应用时重试</string>
-    <string name="monitor_access_count">%1$s · %2$d 次</string>
+    <string name="monitor_access_count">%1$s · x%2$d</string>
+    <string name="monitor_stopped_reason">未在运行 · %1$s</string>
+    <string name="monitor_event_count_note">计数表示通报了多少次。像导航中的定位这种会持续高频上报的权限，可以在监测设置里给它设一个通报间隔。仅监测当前用户空间的应用。</string>
+    <string name="monitor_throttle_minutes">分</string>
+    <string name="monitor_throttle_seconds">秒</string>
+    <string name="monitor_throttle_invalid">请输入 1 秒到 %1$d 分钟之间的间隔。</string>
+    <string name="monitor_examples_title">配置示例</string>
+    <string name="monitor_examples_entry">配置示例</string>
+    <string name="monitor_examples_summary">这些设置分别在什么时候用</string>
+    <string name="monitor_examples_hint">下面是这些设置各自适合的情况。这里只做说明，不会帮你改任何配置——哪一条对应你的哪个应用，只有你自己清楚。</string>
+    <string name="monitor_example_own_use">你自己经常打开来用的定位类应用</string>
+    <string name="monitor_example_own_use_body">你开着它的时候它在用定位，这你知道。真正需要被告知的是你没看它的那些时候。
+
+建议：仅后台 · 间隔 1 分钟以上 · 静默</string>
+    <string name="monitor_example_quiet_location">怀疑某个应用在偷偷定位</string>
+    <string name="monitor_example_quiet_location_body">每一次都想知道，但又不想在你没留意的时候看到一个一直在涨的数字。
+
+建议：仅后台 · 间隔 1 分钟 · 弹窗</string>
+    <string name="monitor_example_sensors">相机或麦克风被自己打开</string>
+    <string name="monitor_example_sensors_body">这种事本来就不该经常发生，所以一次都不要合并，每次都弹出来。
+
+建议：仅后台 · 不限流 · 弹窗</string>
+    <string name="monitor_example_refusals">想确认刚拒掉的权限是不是真被拦住了</string>
+    <string name="monitor_example_refusals_body">这时候只有被拒绝的记录有用，成功的访问反而碍事。
+
+建议：仅被拒绝 · 不限流 · 弹窗</string>
+    <string name="monitor_example_one_shot">剪贴板、通讯录、短信、通话记录</string>
+    <string name="monitor_example_one_shot_body">这类权限一次一读，每次都有意义，漏掉哪次都不行。你正用着的时候被读了，同样算数。
+
+建议：不限流 · 不开仅后台</string>
+    <string name="monitor_example_unknown">第一次监测某个权限，不知道它有多吵</string>
+    <string name="monitor_example_unknown_body">有些权限上报得比你想的频繁得多。先挂个间隔，观察几天，确认它安静再取消。
+
+建议：间隔 30 秒 · 静默</string>
+    <string name="monitor_points_title">监测点设置</string>
+    <string name="monitor_points_none">每次访问都通报</string>
+    <string name="monitor_points_summary">已配置 %1$d 个监测点</string>
+    <string name="monitor_points_hint">单独配置每个监测点的通报内容、提醒强度和节流间隔。</string>
+    <string name="monitor_points_empty">还没有监测任何权限。</string>
+    <string name="monitor_points_retained_header">已保留，当前未生效</string>
+    <string name="monitor_point_every_access">每次都通报</string>
+    <string name="monitor_point_every">每 %1$s</string>
+    <string name="monitor_point_unwatched">该权限已不在监测中。配置会保留，重新勾选后继续生效。</string>
+    <string name="monitor_point_throttle_title">限制通报频率</string>
+    <string name="monitor_point_throttle_summary">每隔一段时间最多通报一次</string>
+    <string name="monitor_point_interval_title">通报间隔</string>
+    <string name="monitor_point_alert_title">提醒方式</string>
+    <string name="monitor_point_alert_summary">这个监测点是否允许打断你</string>
+    <string name="monitor_point_outcome_title">通报内容</string>
+    <string name="monitor_point_outcome_summary">哪些结果值得被告知</string>
+    <string name="monitor_point_background_title">仅在应用不在屏幕上时通报</string>
+    <string name="monitor_point_background_summary">应用正显示在屏幕上时的访问不通报。前台服务算作不在屏幕上，所以挂在通知栏里继续跑的导航仍然会被通报。</string>
+    <string name="monitor_point_background_short">仅后台</string>
+    <string name="monitor_alert_default">跟随全局</string>
+    <string name="monitor_alert_silent">静默</string>
+    <string name="monitor_alert_loud">弹窗</string>
+    <string name="monitor_outcome_all">全部</string>
+    <string name="monitor_outcome_refused">仅被拒绝</string>
+    <string name="monitor_outcome_allowed">仅被允许</string>
+    <string name="monitor_interval_seconds">%1$d 秒</string>
+    <string name="monitor_interval_minutes">%1$d 分钟</string>
+    <string name="monitor_interval_both">%1$d 分 %2$d 秒</string>
+    <string name="monitor_all_ops_title">显示全部监测点</string>
+    <string name="monitor_all_ops_warning_title">开启前请注意</string>
+    <string name="monitor_all_ops_warning_text">噪音：这里面很多操作普通应用会持续高频触发。监测了却没给它设通报间隔，几秒钟就能把通知刷满。\n\n适配性：只有常用的那几个经过测试。部分操作可能从来不会被回报、ROM 不同编号可能存在差异，或者含义和名字看起来不一样。</string>
+    <string name="action_confirm">确认</string>
+    <string name="action_do_not_ask_again">不再提醒</string>
     <string name="monitor_settings_title">监测设置</string>
     <string name="monitor_clear">清空</string>
     <string name="monitor_battery_title">未排除电池优化</string>

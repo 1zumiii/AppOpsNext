@@ -14,6 +14,9 @@ interface PrivilegedAppOpsGateway {
     suspend fun getUidOps(uid: Int): ShellCommandResult =
         error("UID-scoped reads are not implemented by this gateway")
 
+    suspend fun getUidStates(packageName: String): ShellCommandResult =
+        error("UID state reads are not implemented by this gateway")
+
     suspend fun getHistory(
         operationName: String,
     ): ShellCommandResult =

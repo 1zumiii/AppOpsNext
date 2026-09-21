@@ -49,6 +49,16 @@ internal class NativeDaemonGateway(
         )
     }
 
+    override suspend fun getUidStates(packageName: String): ShellCommandResult {
+        requirePackageName(packageName)
+        return connection.execute(
+            NativeDaemonCommand(
+                verb = "GET_UID_STATES",
+                arguments = listOf(packageName),
+            ),
+        )
+    }
+
     override suspend fun getHistory(
         operationName: String,
     ): ShellCommandResult {

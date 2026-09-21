@@ -3,7 +3,6 @@ package dev.izumi.appopsnext.monitor
 import android.os.IBinder
 import android.os.Parcel
 import rikka.shizuku.ShizukuBinderWrapper
-import rikka.shizuku.SystemServiceHelper
 
 /**
  * Registers AppOps watch callbacks through Shizuku's remote binder call.
@@ -13,7 +12,7 @@ import rikka.shizuku.SystemServiceHelper
  * connection callback never arrived, on a device where Shizuku's own binder was
  * working; forwarding a transaction uses that working layer instead.
  */
-internal class AppOpsMonitorClient {
+internal class AppOpsMonitorClient(private val onMalformed: (String) -> Unit) {
     /** Which of the three watches are live, so a partial result stays visible. */
     data class Registration(
         val active: Boolean,
@@ -28,9 +27,7 @@ internal class AppOpsMonitorClient {
     private var activeCallback: ActiveOpCallback? = null
     private var notedCallback: NotedOpCallback? = null
     private var startedCallback: StartedOpCallback? = null
-
-    val isRegistered: Boolean
-        get() = activeCallback != null || notedCallback != null || startedCallback != null
+    private var registeredService: IBinder? = null
 
     /**
      * Each watch is registered on its own. A refused `noted` watch still leaves
@@ -39,12 +36,15 @@ internal class AppOpsMonitorClient {
      *
      * @throws IllegalStateException when the AppOps service itself is unreachable.
      */
+    @Synchronized
     fun register(
         opCodes: IntArray,
         onAccess: (AppOpAccessEvent) -> Unit,
     ): Registration {
         unregister()
+        check(registeredService == null) { "Previous AppOps watches could not be removed; retry later" }
         val service = appOpsService()
+        registeredService = service
         val failures = mutableListOf<String>()
         var fromPlatform = true
 
@@ -66,17 +66,17 @@ internal class AppOpsMonitorClient {
         activeCallback = watch(
             AppOpsTransactions.startWatchingActive(),
             "active",
-            ActiveOpCallback(onAccess),
+            ActiveOpCallback(onAccess, onMalformed),
         )
         notedCallback = watch(
             AppOpsTransactions.startWatchingNoted(),
             "noted",
-            NotedOpCallback(onAccess),
+            NotedOpCallback(onAccess, onMalformed),
         )
         startedCallback = watch(
             AppOpsTransactions.startWatchingStarted(),
             "started",
-            StartedOpCallback(onAccess),
+            StartedOpCallback(onAccess, onMalformed),
         )
 
         return Registration(
@@ -88,42 +88,52 @@ internal class AppOpsMonitorClient {
         )
     }
 
+    @Synchronized
     fun unregister() {
-        val service = runCatching { appOpsService() }.getOrNull()
-        if (service != null) {
-            activeCallback?.let {
-                runCatching {
-                    transactStop(service, AppOpsTransactions.stopWatchingActive().value, it)
-                }
-            }
-            notedCallback?.let {
-                runCatching {
-                    transactStop(service, AppOpsTransactions.stopWatchingNoted().value, it)
-                }
-            }
-            startedCallback?.let {
-                runCatching {
-                    transactStop(service, AppOpsTransactions.stopWatchingStarted().value, it)
-                }
+        // Unregister from the exact binder used for registration, never a replacement service.
+        val service = registeredService
+        if (service == null || !service.isBinderAlive) {
+            activeCallback = null
+            notedCallback = null
+            startedCallback = null
+            registeredService = null
+            return
+        }
+        // Keep failed handles for the next cleanup attempt instead of leaking a live watch.
+        fun <T : IBinder> stop(callback: T?, code: () -> AppOpsTransactions.Code): T? {
+            if (callback == null) return null
+            return try {
+                transactStop(service, code().value, callback)
+                null
+            } catch (_: Exception) {
+                callback
             }
         }
-        activeCallback = null
-        notedCallback = null
-        startedCallback = null
+        activeCallback = stop(activeCallback, AppOpsTransactions::stopWatchingActive)
+        notedCallback = stop(notedCallback, AppOpsTransactions::stopWatchingNoted)
+        startedCallback = stop(startedCallback, AppOpsTransactions::stopWatchingStarted)
+        if (activeCallback == null && notedCallback == null && startedCallback == null) {
+            registeredService = null
+        }
     }
 
     /** True while the registered callbacks still have a live service behind them. */
+    @Synchronized
     fun isServiceAlive(): Boolean = runCatching {
-        SystemServiceHelper.getSystemService(APP_OPS_SERVICE)?.pingBinder() == true
+        registeredService?.pingBinder() == true
     }.getOrDefault(false)
 
     private fun appOpsService(): IBinder {
-        val raw = SystemServiceHelper.getSystemService(APP_OPS_SERVICE)
+        // Do not use Shizuku's permanent service cache: a dead proxy must be replaced.
+        val raw = Class.forName("android.os.ServiceManager")
+            .getMethod("getService", String::class.java)
+            .invoke(null, APP_OPS_SERVICE) as? IBinder
             ?: error("The AppOps system service is unavailable")
         // A descriptor that is not the one the transaction codes belong to means
         // a call would land on an unrelated method, so refuse rather than guess.
-        val descriptor = runCatching { raw.interfaceDescriptor }.getOrNull()
-        check(descriptor == null || descriptor == AppOpsTransactions.INTERFACE) {
+        check(raw.pingBinder()) { "The AppOps system service is dead" }
+        val descriptor = raw.interfaceDescriptor
+        check(descriptor == AppOpsTransactions.INTERFACE) {
             "Unexpected AppOps interface descriptor: $descriptor"
         }
         return ShizukuBinderWrapper(raw)
@@ -142,6 +152,7 @@ internal class AppOpsMonitorClient {
             data.writeIntArray(opCodes)
             data.writeStrongBinder(callback)
             service.transact(transaction, data, reply, 0)
+            check(reply.dataAvail() >= 4) { "Missing AppOps transaction reply" }
             reply.readException()
         } finally {
             reply.recycle()
@@ -160,6 +171,7 @@ internal class AppOpsMonitorClient {
             data.writeInterfaceToken(AppOpsTransactions.INTERFACE)
             data.writeStrongBinder(callback)
             service.transact(transaction, data, reply, 0)
+            check(reply.dataAvail() >= 4) { "Missing AppOps transaction reply" }
             reply.readException()
         } finally {
             reply.recycle()
