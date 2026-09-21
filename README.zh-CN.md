@@ -35,7 +35,7 @@ AppOpsNext 的特权操作仍依赖 Shizuku。
 
 1. 安装并启动 [Shizuku](https://shizuku.rikka.app/)。
 2. 从[最新 Release](https://github.com/1zumiii/AppOpsNext/releases/latest)
-   下载并安装 `app-release.apk`。
+   下载并安装其中的 APK。
 3. 打开 AppOpsNext，在 Shizuku 提示时允许访问。
 4. 选择目标应用和权限，阅读确认信息后执行修改。
 

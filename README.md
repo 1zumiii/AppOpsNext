@@ -35,7 +35,7 @@ Root is not required when Shizuku is started through ADB or wireless debugging.
 AppOpsNext still needs Shizuku for privileged operations.
 
 1. Install and start [Shizuku](https://shizuku.rikka.app/).
-2. Download `app-release.apk` from the
+2. Download the APK from the
    [latest release](https://github.com/1zumiii/AppOpsNext/releases/latest) and install it.
 3. Open AppOpsNext and grant access when Shizuku prompts you.
 4. Choose an app, select an operation, and review the confirmation before applying a change.
