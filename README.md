@@ -20,7 +20,7 @@ history — with a native Kotlin and Jetpack Compose interface powered by
 | Newly installed apps | Opt in to automatic template application, catch up on pending installations, and inspect saved per-rule results. |
 | History | Explore permission distribution, app statistics, and timelines; choose and reorder the operations you follow. |
 | Settings and diagnostics | Switch between English, Simplified Chinese, or the system language, inspect connection status and diagnostic reports, and see quietly whether a newer release exists. |
-| Experimental | Watch chosen operations for chosen apps and be notified when one is used in the background. Nothing is watched until you pick it, and a self-check reports whether the device supports it. |
+| Experimental | Watch chosen operations for chosen apps and be notified when one is used. Each app-and-permission pair is a monitoring point with its own reporting interval, notification loudness, outcome filter, and an option to report only what happens while the app is off screen. Nothing is watched until you pick it, and a self-check reports whether the device supports it. |
 
 ## Install and get started
 
@@ -141,6 +141,20 @@ entirely your decision.
   read the self-check result; it distinguishes an unsupported device from a
   partly registered watch. Also confirm at least one app and operation are
   selected, since nothing is watched by default.
+- **Monitor counts differ from app calls:** the count represents reported
+  events, which Android may emit more than once for one call. A monitoring
+  point may also carry a reporting interval, in which case anything inside that
+  interval is not reported at all. Only the selected apps in the current user
+  profile are included. The monitor is not an exact API-call audit log.
+- **A busy permission fills the notification:** an operation such as location is
+  reported once per delivered fix, so watching one without an interval produces
+  a report per second. Give that monitoring point a reporting interval in
+  Settings, Experimental, Monitor settings, Monitoring points.
+- **"Only when off screen" still reports what you can see:** the monitor reads
+  the process state AppOps keeps for the app, and treats anything other than
+  the app being on screen as off screen — including a foreground service. If
+  the state cannot be read at all, the access is reported rather than dropped,
+  so a monitor that cannot check something never goes quiet.
 - **The monitor stops after a force stop:** a force stop removes its service
   and prevents Android from restarting it. Opening AppOpsNext again brings it
   back while the switch is still on.
@@ -207,7 +221,7 @@ Android packages live under `app/src/main/java/dev/izumi/appopsnext/`.
 | `templates/`, `newapps/`, `batch/` | Template persistence, installation detection, resumable rule execution, and batch targets. |
 | `history/` | System-history parsing, refresh scheduling, and local snapshots. |
 | `diagnostics/` | Environment and connection reports. |
-| `monitor/` | Experimental access monitor: watch registration over a forwarded binder call, event filtering, and notifications. |
+| `monitor/` | Experimental access monitor: watch registration over a forwarded binder call, per-point reporting settings, event filtering, and notifications. |
 | `update/` | Release check against the GitHub API and version comparison. |
 | [`daemon/`](daemon/) at the repository root | Go daemon with an allowlisted command protocol. |
 

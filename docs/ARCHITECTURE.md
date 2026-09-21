@@ -19,7 +19,8 @@ Android code lives under `app/src/main/java/dev/izumi/appopsnext/`.
 - `newapps`: installation detection and resumable per-rule policy execution.
 - `history`: system-history parsing, refresh scheduling, and local snapshots.
 - `monitor`: the experimental access monitor — watch registration over a
-  forwarded binder call, event filtering, and notifications.
+  forwarded binder call, per-point reporting settings, event filtering, and
+  notifications.
 - `update`: release check against the GitHub API and version comparison.
 - `diagnostics`: environment collection, connection reports, and the local log.
 - `settings`: Preferences DataStore and typed user settings.
@@ -35,7 +36,42 @@ The `monitor` package is the one privileged path that does not go through
 `PrivilegedAppOpsGateway`. Watch callbacks cannot be delivered over a
 request-and-response pipe, so it registers them directly against the AppOps
 service through a forwarded binder call and keeps that dependency to itself.
+`MonitorLifecycle` serializes registration and cleanup, invalidates sessions
+immediately on stop, and orders event publication with clear/stop. Callback
+arrival times use a monotonic clock for grouping and a wall clock for display.
+Targets must match the installed app's full UID in the current user profile.
+Started callbacks report long-running attempts; active is a fallback when the
+started watch is unavailable. Counts represent reported events, not exact API
+invocations. A full session queue drops events and records it once, rather than
+stopping the monitor.
+
+How an access is reported is decided per monitoring point — one package and one
+operation — because none of those decisions follow from the callback. A point
+carries a reporting interval, a notification override, an outcome filter, and
+whether to report only while the application is off screen. Settings outlive
+their point: unpicking an operation is not a decision about how it should be
+reported. The only suppression nobody configures is a 200 ms window that folds
+the platform reporting a single read twice.
+
+Filters run cheapest first. The outcome filter and the interval are decided in
+memory; only an access that would otherwise be reported is worth asking the
+platform where the application was running. That question reads the process
+state AppOps keeps for the UID, scoped to one package because the unfiltered
+dump runs to tens of thousands of lines, and cached briefly so a busy operation
+cannot turn into a command per event. Only `top` counts as on screen, so a
+foreground service is reported. An unanswerable question reports the access: a
+monitor that goes quiet because it could not check something is worse than one
+that says a little too much.
+Recovery obtains a fresh service reference without Shizuku's permanent helper
+cache, retries at bounded intervals, and stops the service on terminal failure.
+The notification channel is fixed by the session preference; alerting is a
+separate per-update decision. Callback decoding validates the common prefix
+and fixed tail length before consuming it; malformed callbacks are logged once
+per registration. Supported old/new tail lengths alone cannot distinguish a
+new packet truncated by exactly one integer from a complete old packet.
 The `update` package holds the only network access in the app.
+Its response reader enforces a 512 KiB byte limit while reading, including
+responses without a Content-Length header.
 
 `AppOpsNextApplication` owns every long-lived instance: the single
 `PrivilegedServiceClient`, `AppOpsRepository`, `DiagnosticLogRepository`,
