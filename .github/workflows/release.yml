@@ -91,17 +91,24 @@ jobs:
       - name: Prepare artifacts
         id: artifacts
         run: |
+          # Named after the tag so the file still says what it is once it is in
+          # someone's downloads folder, and so the checksum file names the same
+          # file the release actually carries.
+          asset="AppOpsNext-$GITHUB_REF_NAME.apk"
           mkdir -p artifacts
-          cp app/build/outputs/apk/release/app-release.apk artifacts/
+          cp app/build/outputs/apk/release/app-release.apk "artifacts/$asset"
           cd artifacts
-          sha256sum app-release.apk > app-release.apk.sha256
-          echo "checksum=$(cut -d' ' -f1 app-release.apk.sha256)" \
-            >> "$GITHUB_OUTPUT"
+          sha256sum "$asset" > "$asset.sha256"
+          {
+            echo "asset=$asset"
+            echo "checksum=$(cut -d' ' -f1 "$asset.sha256")"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create the draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CHECKSUM: ${{ steps.artifacts.outputs.checksum }}
+          ASSET: ${{ steps.artifacts.outputs.asset }}
         run: |
           # A tag carrying a suffix such as v1.4.1-beta1 is published as a
           # prerelease, which keeps it out of "latest" and therefore out of the
@@ -115,6 +122,6 @@ jobs:
             --draft \
             $prerelease \
             --title "$GITHUB_REF_NAME" \
-            --notes "SHA-256 (app-release.apk): \`$CHECKSUM\`" \
-            artifacts/app-release.apk \
-            artifacts/app-release.apk.sha256
+            --notes "SHA-256 ($ASSET): \`$CHECKSUM\`" \
+            "artifacts/$ASSET" \
+            "artifacts/$ASSET.sha256"
