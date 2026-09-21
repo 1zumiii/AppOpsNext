@@ -20,6 +20,30 @@ UserService callback failure. The remote-process API is deprecated upstream,
 so its use remains isolated under `shizuku/process` and the UserService path is
 kept as a functional fallback.
 
+## Command surface
+
+Both backends expose the same fixed set of commands; neither runs an arbitrary
+shell string. Each one is built as an argument list with the package and
+operation names validated first, on the app side and again in the daemon.
+
+| Command | Runs |
+| --- | --- |
+| `GET_PACKAGE_OPS` | `cmd appops get <package>` |
+| `GET_PACKAGE_OP` | `cmd appops get <package> <op>` |
+| `GET_UID_OPS` | `cmd appops get <uid>` |
+| `GET_UID_STATES` | `dumpsys appops --package <package>` |
+| `GET_HISTORY` | `dumpsys appops --history --include-discrete 0 --op <op>` |
+| `SET_PACKAGE` | `cmd appops set <package> <op> <mode>` |
+| `SET_UID` | `cmd appops set --uid <package> <op> <mode>` |
+
+`GET_UID_STATES` exists for the monitor's off-screen filter and returns the
+process state AppOps keeps for each UID carrying that package. It is scoped to
+one package deliberately: the unfiltered dump runs to tens of thousands of
+lines on an ordinary device, which is not something to run while callbacks are
+arriving. A ROM that does not support `--package`, or prints the block in a
+different shape, yields no usable state; the monitor then reports the access
+rather than dropping it.
+
 ## Compatibility evidence
 
 | Device | System | Evidence |
