@@ -297,7 +297,6 @@
     <string name="monitor_ongoing_title">访问监测运行中</string>
     <string name="monitor_ongoing_text">正在关注敏感权限</string>
     <string name="monitor_channel_status">监测状态</string>
-    <string name="monitor_channel_silent">权限访问（静默）</string>
     <string name="monitor_channel_alert">权限访问（弹窗）</string>
     <string name="monitor_access_allowed">%1$s · %2$s 使用了%3$s</string>
     <string name="monitor_access_refused">%1$s · %2$s 被拒绝使用%3$s</string>
@@ -317,7 +316,7 @@
     <string name="monitor_watch_active">正在使用</string>
     <string name="monitor_watch_noted">单次访问</string>
     <string name="monitor_watch_started">被拒绝</string>
-    <string name="monitor_selected_count">已选 %1$d 项</string>
+    <string name="monitor_selected_count">%1$d 种权限</string>
     <string name="monitor_more_accesses">还有 %1$d 条</string>
     <string name="monitor_heads_up_title">每次访问弹窗提示</string>
     <string name="monitor_heads_up_summary">关闭时只在状态栏显示带计数的静默图标；开启时通知会弹出到屏幕上。</string>
@@ -331,4 +330,10 @@
     <string name="update_failed">检查失败 · 点击重试</string>
     <string name="update_available_description">有新版本可用</string>
     <string name="monitor_not_running">未在运行 · 下次打开应用时重试</string>
+    <string name="monitor_access_count">%1$s · %2$d 次</string>
+    <string name="monitor_settings_title">监测设置</string>
+    <string name="monitor_clear">清空</string>
+    <string name="monitor_battery_title">未排除电池优化</string>
+    <string name="monitor_battery_summary">厂商的后台管理可能在无提示的情况下结束本应用并停止监测。点击前往系统设置。部分 ROM 的开关位置不同，处理好后可关闭此提示。</string>
+    <string name="monitor_battery_dismiss">不再提示</string>
 </resources>

@@ -79,6 +79,11 @@ class MainActivity : ComponentActivity() {
                         experimentalViewModel::setHeadsUp,
                     onCheckForUpdate =
                         settingsViewModel::checkForUpdate,
+                    onOpenBatterySettings = ::openBatterySettings,
+                    onDismissBatteryNotice =
+                        experimentalViewModel::dismissBatteryNotice,
+                    onRefreshBatteryExemption =
+                        experimentalViewModel::refreshBatteryExemption,
                     onMonitorOperationsChange =
                         experimentalViewModel::setOperations,
                     onShizukuAction =
@@ -168,6 +173,19 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+    }
+
+    /**
+     * Opens the system's battery-optimisation list rather than requesting the
+     * exemption directly: the direct request needs a permission that app stores
+     * restrict, and this route works from any app.
+     */
+    private fun openBatterySettings() {
+        runCatching {
+            startActivity(
+                Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
+            )
         }
     }
 

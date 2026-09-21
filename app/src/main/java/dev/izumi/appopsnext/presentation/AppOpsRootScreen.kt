@@ -28,6 +28,7 @@ import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticsUiState
 import dev.izumi.appopsnext.presentation.experimental.ExperimentalScreen
 import dev.izumi.appopsnext.presentation.experimental.ExperimentalUiState
 import dev.izumi.appopsnext.presentation.experimental.MonitorOperationsScreen
+import dev.izumi.appopsnext.presentation.experimental.MonitorSettingsScreen
 import dev.izumi.appopsnext.presentation.experimental.MonitorTargetsScreen
 import dev.izumi.appopsnext.presentation.history.HistoryOverviewScreen
 import dev.izumi.appopsnext.presentation.history.HistoryAppStatisticsScreen
@@ -79,6 +80,9 @@ fun AppOpsRootScreen(
     onMonitorEnabledChange: (Boolean) -> Unit,
     onMonitorHeadsUpChange: (Boolean) -> Unit,
     onCheckForUpdate: () -> Unit,
+    onOpenBatterySettings: () -> Unit,
+    onDismissBatteryNotice: () -> Unit,
+    onRefreshBatteryExemption: () -> Unit,
     onMonitorOperationsChange: (String, Set<String>) -> Unit,
     onAppLanguageChange: (AppLanguage) -> Unit,
     onCreateTemplate: (String) -> Unit,
@@ -160,6 +164,13 @@ fun AppOpsRootScreen(
             monitorAppPackage == null &&
             experimentalRoute == ROUTE_MONITOR_TARGETS,
     ) {
+        experimentalRoute = ROUTE_MONITOR_SETTINGS
+    }
+    BackHandler(
+        enabled = selectedApp == null &&
+            monitorAppPackage == null &&
+            experimentalRoute == ROUTE_MONITOR_SETTINGS,
+    ) {
         experimentalRoute = ROUTE_EXPERIMENTAL
     }
     BackHandler(
@@ -207,16 +218,25 @@ fun AppOpsRootScreen(
             experimentalRoute == ROUTE_MONITOR_TARGETS -> MonitorTargetsScreen(
                 apps = appListUiState.allApps,
                 selectionByPackage = experimentalUiState.selectionByPackage,
-                onBack = { experimentalRoute = ROUTE_EXPERIMENTAL },
+                onBack = { experimentalRoute = ROUTE_MONITOR_SETTINGS },
                 onAppSelected = { app -> monitorAppPackage = app.packageName },
+            )
+
+            experimentalRoute == ROUTE_MONITOR_SETTINGS -> MonitorSettingsScreen(
+                uiState = experimentalUiState,
+                onBack = { experimentalRoute = ROUTE_EXPERIMENTAL },
+                onOpenTargets = { experimentalRoute = ROUTE_MONITOR_TARGETS },
+                onHeadsUpChange = onMonitorHeadsUpChange,
             )
 
             else -> ExperimentalScreen(
                 uiState = experimentalUiState,
                 onBack = { experimentalRoute = null },
                 onMonitorChange = onMonitorEnabledChange,
-                onHeadsUpChange = onMonitorHeadsUpChange,
-                onOpenTargets = { experimentalRoute = ROUTE_MONITOR_TARGETS },
+                onOpenSettings = { experimentalRoute = ROUTE_MONITOR_SETTINGS },
+                onOpenBatterySettings = onOpenBatterySettings,
+                onDismissBatteryNotice = onDismissBatteryNotice,
+                onRefreshBatteryExemption = onRefreshBatteryExemption,
             )
         }
         return
@@ -366,4 +386,5 @@ private val InstalledAppStateSaver = listSaver<InstalledApp?, Any>(
 
 private const val SAVED_APP_FIELD_COUNT = 4
 private const val ROUTE_EXPERIMENTAL = "experimental"
+private const val ROUTE_MONITOR_SETTINGS = "monitor_settings"
 private const val ROUTE_MONITOR_TARGETS = "monitor_targets"

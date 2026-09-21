@@ -1,6 +1,8 @@
 package dev.izumi.appopsnext.presentation.experimental
 
 import android.app.Application
+import android.content.Context
+import android.os.PowerManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
@@ -21,7 +23,13 @@ data class ExperimentalUiState(
     val selfCheckResult: MonitorSelfCheckResult? = null,
     val status: MonitorStatus? = null,
     val targets: List<MonitorTarget> = emptyList(),
+    /** False when vendor battery management may end the process unannounced. */
+    val batteryExempt: Boolean = true,
+    val batteryNoticeSuppressed: Boolean = false,
 ) {
+    val showBatteryNotice: Boolean
+        get() = monitorEnabled && !batteryExempt && !batteryNoticeSuppressed
+
     val targetCount: Int get() = targets.size
 
     val selectionByPackage: Map<String, Set<String>>
@@ -37,6 +45,7 @@ class ExperimentalViewModel(
     private val controller = app.appOpsMonitorController
     private val busy = MutableStateFlow(false)
     private val selfCheckResult = MutableStateFlow<MonitorSelfCheckResult?>(null)
+    private val batteryExempt = MutableStateFlow(true)
 
     val uiState = combine(
         settingsRepository.settings,
@@ -44,7 +53,16 @@ class ExperimentalViewModel(
         busy,
         selfCheckResult,
         controller.status,
-    ) { settings, targets, isBusy, result, status ->
+        batteryExempt,
+    ) { values ->
+        @Suppress("UNCHECKED_CAST")
+        val settings = values[0] as dev.izumi.appopsnext.settings.UserSettings
+        @Suppress("UNCHECKED_CAST")
+        val targets = values[1] as List<MonitorTarget>
+        val isBusy = values[2] as Boolean
+        val result = values[3] as MonitorSelfCheckResult?
+        val status = values[4] as MonitorStatus?
+        val exempt = values[5] as Boolean
         ExperimentalUiState(
             monitorEnabled = settings.backgroundMonitor,
             headsUp = settings.monitorHeadsUp,
@@ -52,6 +70,8 @@ class ExperimentalViewModel(
             selfCheckResult = result,
             status = status,
             targets = targets,
+            batteryExempt = exempt,
+            batteryNoticeSuppressed = settings.suppressBatteryNotice,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -74,6 +94,9 @@ class ExperimentalViewModel(
         viewModelScope.launch {
             busy.value = true
             selfCheckResult.value = null
+            // The service comes up first so the notification appears as soon as
+            // the switch is tapped, showing the self-check in progress.
+            AppOpsMonitorService.start(getApplication(), checking = true)
             val result = runCatching { controller.runSelfCheck() }
                 .getOrElse { error ->
                     MonitorSelfCheckResult.Failed(
@@ -86,9 +109,28 @@ class ExperimentalViewModel(
                 AppOpsMonitorService.start(getApplication())
             } else {
                 controller.stop()
+                AppOpsMonitorService.stop(getApplication())
                 settingsRepository.setBackgroundMonitor(false)
             }
             busy.value = false
+        }
+    }
+
+    /**
+     * Re-read whenever the screen resumes, because the user grants the
+     * exemption in system settings and comes back to this screen.
+     */
+    fun refreshBatteryExemption() {
+        val application = getApplication<Application>()
+        batteryExempt.value = runCatching {
+            application.getSystemService(PowerManager::class.java)
+                .isIgnoringBatteryOptimizations(application.packageName)
+        }.getOrDefault(true)
+    }
+
+    fun dismissBatteryNotice() {
+        viewModelScope.launch {
+            settingsRepository.setBatteryNoticeSuppressed(true)
         }
     }
 
