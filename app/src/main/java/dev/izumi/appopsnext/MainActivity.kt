@@ -86,6 +86,18 @@ class MainActivity : ComponentActivity() {
                         experimentalViewModel::refreshBatteryExemption,
                     onMonitorOperationsChange =
                         experimentalViewModel::setOperations,
+                    onMonitorThrottleChange =
+                        experimentalViewModel::setThrottle,
+                    onMonitorPointHeadsUpChange =
+                        experimentalViewModel::setPointHeadsUp,
+                    onMonitorPointOutcomesChange =
+                        experimentalViewModel::setPointOutcomes,
+                    onMonitorPointBackgroundOnlyChange =
+                        experimentalViewModel::setPointBackgroundOnly,
+                    onMonitorShowAllOperationsChange =
+                        experimentalViewModel::setShowAllOperations,
+                    onMonitorSuppressAllOperationsWarning =
+                        experimentalViewModel::suppressAllOperationsWarning,
                     onShizukuAction =
                         diagnosticsViewModel::performShizukuAction,
                     onPrivilegedServiceRetry =

@@ -7,15 +7,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -196,21 +200,61 @@ private fun TargetRow(
 fun MonitorOperationsScreen(
     app: InstalledApp,
     selected: Set<String>,
+    showAll: Boolean,
+    warningSuppressed: Boolean,
     onBack: () -> Unit,
     onSelectionChange: (Set<String>) -> Unit,
+    onShowAllChange: (Boolean) -> Unit,
+    onSuppressWarning: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    // Only operations the watch can actually report are offered, so the picker
-    // cannot promise coverage the monitor does not have.
-    val options = remember {
-        AppOpCodes.MONITORED_NAMES.map { name ->
+    // The shortlist is a judgement about what usually matters, not a limit of
+    // the watch, so everything the operation table knows can be offered instead.
+    // An operation that is already picked stays on the list either way, so
+    // turning the shortlist back on cannot hide a live selection.
+    val options = remember(showAll, selected) {
+        val names = if (showAll) {
+            AppOpCodes.ALL_NAMES
+        } else {
+            (AppOpCodes.MONITORED_NAMES + selected).distinct()
+        }
+        names.map { name ->
             name to (
                 AppOpDisplayCatalog.labelResOf(name)
                     ?.let(context::getString)
                     ?: name
                 )
         }.sortedBy { it.second }
+    }
+    var warning by remember { mutableStateOf(false) }
+    if (warning) {
+        AlertDialog(
+            onDismissRequest = { warning = false },
+            title = { Text(text = stringResource(R.string.monitor_all_ops_warning_title)) },
+            text = { Text(text = stringResource(R.string.monitor_all_ops_warning_text)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        warning = false
+                        onShowAllChange(true)
+                    },
+                ) {
+                    Text(text = stringResource(R.string.action_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        warning = false
+                        onSuppressWarning()
+                        onShowAllChange(true)
+                    },
+                ) {
+                    Text(text = stringResource(R.string.action_do_not_ask_again))
+                }
+            },
+        )
     }
     Scaffold(
         modifier = modifier,
@@ -247,6 +291,26 @@ fun MonitorOperationsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             LazyColumn {
+                item {
+                    ListItem(
+                        headlineContent = {
+                            Text(text = stringResource(R.string.monitor_all_ops_title))
+                        },
+                        trailingContent = {
+                            Switch(
+                                checked = showAll,
+                                onCheckedChange = { on ->
+                                    when {
+                                        !on -> onShowAllChange(false)
+                                        warningSuppressed -> onShowAllChange(true)
+                                        else -> warning = true
+                                    }
+                                },
+                            )
+                        },
+                    )
+                }
+                item { HorizontalDivider() }
                 items(options, key = { it.first }) { (name, label) ->
                     val checked = name in selected
                     ListItem(

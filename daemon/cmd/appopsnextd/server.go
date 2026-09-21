@@ -141,6 +141,19 @@ func parseCommand(request string) (appOpsCommand, error) {
 			fields[1],
 		), nil
 
+	case "GET_UID_STATES":
+		if len(fields) != 2 || !validPackageName(fields[1]) {
+			return appOpsCommand{}, errors.New("invalid uid state query")
+		}
+		// Scoped to one package: the unfiltered dump is tens of thousands of
+		// lines, which is not something to run while events are arriving.
+		return command(
+			"/system/bin/dumpsys",
+			"appops",
+			"--package",
+			fields[1],
+		), nil
+
 	case "GET_HISTORY":
 		if len(fields) != 2 || !validOperationName(fields[1]) {
 			return appOpsCommand{}, errors.New("invalid history query")

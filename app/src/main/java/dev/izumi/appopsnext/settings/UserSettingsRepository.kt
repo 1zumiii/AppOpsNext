@@ -50,6 +50,12 @@ class UserSettingsRepository(
                 suppressBatteryNotice =
                     preferences[Keys.SUPPRESS_BATTERY_NOTICE]
                         ?: UserSettingsDefaults.SUPPRESS_BATTERY_NOTICE,
+                showAllMonitorOperations =
+                    preferences[Keys.SHOW_ALL_MONITOR_OPERATIONS]
+                        ?: UserSettingsDefaults.SHOW_ALL_MONITOR_OPERATIONS,
+                suppressAllOperationsWarning =
+                    preferences[Keys.SUPPRESS_ALL_OPERATIONS_WARNING]
+                        ?: UserSettingsDefaults.SUPPRESS_ALL_OPERATIONS_WARNING,
             )
         }
 
@@ -83,6 +89,18 @@ class UserSettingsRepository(
         }
     }
 
+    suspend fun setShowAllMonitorOperations(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[Keys.SHOW_ALL_MONITOR_OPERATIONS] = enabled
+        }
+    }
+
+    suspend fun setAllOperationsWarningSuppressed(suppressed: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[Keys.SUPPRESS_ALL_OPERATIONS_WARNING] = suppressed
+        }
+    }
+
     suspend fun setBatteryNoticeSuppressed(suppressed: Boolean) {
         dataStore.edit { preferences ->
             preferences[Keys.SUPPRESS_BATTERY_NOTICE] = suppressed
@@ -99,5 +117,12 @@ class UserSettingsRepository(
         val MONITOR_HEADS_UP = booleanPreferencesKey("monitor_heads_up")
         val SUPPRESS_BATTERY_NOTICE =
             booleanPreferencesKey("suppress_battery_notice")
+        val SHOW_ALL_MONITOR_OPERATIONS =
+            booleanPreferencesKey("show_all_monitor_operations")
+        // The key carries the wording it was answered for: "don't ask again" was
+        // given for a particular warning, and a materially different one has to
+        // be shown again rather than inheriting that answer.
+        val SUPPRESS_ALL_OPERATIONS_WARNING =
+            booleanPreferencesKey("suppress_all_operations_warning_noise_rom")
     }
 }

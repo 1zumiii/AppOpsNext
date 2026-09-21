@@ -96,6 +96,7 @@ class AppOpsNextApplication : Application() {
             context = this,
             scope = applicationScope,
             installedAppsRepository = installedAppsRepository,
+            gateway = privilegedServiceClient,
             targetsRepository = monitorTargetsRepository,
             settingsRepository = userSettingsRepository,
             diagnosticLog = diagnosticLogRepository,

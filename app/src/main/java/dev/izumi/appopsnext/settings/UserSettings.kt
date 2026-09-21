@@ -7,6 +7,8 @@ object UserSettingsDefaults {
     const val BACKGROUND_MONITOR = false
     const val MONITOR_HEADS_UP = false
     const val SUPPRESS_BATTERY_NOTICE = false
+    const val SHOW_ALL_MONITOR_OPERATIONS = false
+    const val SUPPRESS_ALL_OPERATIONS_WARNING = false
 }
 
 data class UserSettings(
@@ -21,4 +23,8 @@ data class UserSettings(
         UserSettingsDefaults.MONITOR_HEADS_UP,
     val suppressBatteryNotice: Boolean =
         UserSettingsDefaults.SUPPRESS_BATTERY_NOTICE,
+    val showAllMonitorOperations: Boolean =
+        UserSettingsDefaults.SHOW_ALL_MONITOR_OPERATIONS,
+    val suppressAllOperationsWarning: Boolean =
+        UserSettingsDefaults.SUPPRESS_ALL_OPERATIONS_WARNING,
 )

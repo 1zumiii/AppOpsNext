@@ -51,9 +51,8 @@ class UpdateChecker(
             connection.setRequestProperty("Accept", "application/vnd.github+json")
             connection.setRequestProperty("User-Agent", USER_AGENT)
             if (connection.responseCode != HttpURLConnection.HTTP_OK) return null
-            connection.inputStream
-                .bufferedReader()
-                .use { reader -> reader.readText().take(MAX_BODY_CHARS) }
+            if (connection.contentLengthLong > MAX_BODY_BYTES) return null
+            connection.inputStream.use { it.readBoundedResponse(MAX_BODY_BYTES) }
         } catch (_: Exception) {
             null
         } finally {
@@ -68,6 +67,6 @@ class UpdateChecker(
             "https://api.github.com/repos/1zumiii/AppOpsNext/releases/latest"
         private const val USER_AGENT = "AppOpsNext"
         private const val TIMEOUT_MILLIS = 10_000
-        private const val MAX_BODY_CHARS = 512 * 1024
+        private const val MAX_BODY_BYTES = 512 * 1024
     }
 }

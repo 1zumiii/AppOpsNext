@@ -36,18 +36,21 @@ class MonitorNotifier(
     fun ongoingNotification(
         accesses: List<MonitoredAccess> = emptyList(),
         checking: Boolean = false,
-        headsUp: Boolean = false,
+        useAlertChannel: Boolean = false,
+        alert: Boolean = false,
     ): Notification {
         createChannels()
         // A channel's importance is fixed when it is created, so the way to let
         // this one notification interrupt is to post it on the loud channel
         // instead of adding a second notification beside it.
         val builder = Notification
-            .Builder(context, if (headsUp) CHANNEL_ALERT else CHANNEL_STATUS)
+            .Builder(context, if (useAlertChannel) CHANNEL_ALERT else CHANNEL_STATUS)
             .setContentIntent(openAppIntent(OPEN_REQUEST_CODE))
             .setCategory(Notification.CATEGORY_SERVICE)
             .setOngoing(true)
-            .setOnlyAlertOnce(!headsUp)
+            .setOnlyAlertOnce(!alert)
+            .setGroup("monitor_events")
+            .setGroupAlertBehavior(if (alert) Notification.GROUP_ALERT_ALL else Notification.GROUP_ALERT_SUMMARY)
 
         return when {
             checking -> builder
@@ -95,14 +98,12 @@ class MonitorNotifier(
     /**
      * Updates the ongoing notification with the accesses so far.
      *
-     * [headsUp] additionally raises a separate notification that can interrupt,
-     * because a channel's importance is fixed when it is created and the ongoing
-     * notification's channel is deliberately quiet. That second notification
-     * only exists when the user asked to be interrupted.
+     * The channel is fixed for the session. Only a new entry requests an alert;
+     * repeats and refreshes update silently on that same channel.
      *
      * @param accesses most recent first.
      */
-    fun notifyAccesses(accesses: List<MonitoredAccess>, headsUp: Boolean) {
+    fun notifyAccesses(accesses: List<MonitoredAccess>, useAlertChannel: Boolean, alert: Boolean) {
         if (accesses.isEmpty()) return
         if (
             context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
@@ -112,14 +113,17 @@ class MonitorNotifier(
         }
         notificationManager.notify(
             ONGOING_NOTIFICATION_ID,
-            ongoingNotification(accesses, headsUp = headsUp),
+            ongoingNotification(accesses, useAlertChannel = useAlertChannel, alert = alert),
         )
     }
 
     /** Re-posts the ongoing notification in its no-accesses form. */
-    fun postOngoing() {
-        notificationManager.notify(ONGOING_NOTIFICATION_ID, ongoingNotification())
+    fun postOngoing(useAlertChannel: Boolean) {
+        notificationManager.notify(ONGOING_NOTIFICATION_ID,
+            ongoingNotification(useAlertChannel = useAlertChannel))
     }
+
+    fun cancel() { notificationManager.cancel(ONGOING_NOTIFICATION_ID) }
 
     private fun inboxStyle(accesses: List<MonitoredAccess>): Notification.InboxStyle =
         Notification.InboxStyle().apply {
@@ -134,7 +138,21 @@ class MonitorNotifier(
             }
         }
 
-    /** `14:32 · WeChat used the clipboard · 3 times` */
+    /**
+     * Caps the application label so the rest of the line survives.
+     *
+     * An inbox line is a single line: a long label pushes the operation and the
+     * count off the end into an ellipsis, which loses exactly the part the line
+     * exists to show.
+     */
+    private fun shortLabel(label: String): String =
+        if (label.length <= MAX_LABEL_CHARS) {
+            label
+        } else {
+            label.take(MAX_LABEL_CHARS - 1).trimEnd() + "\u2026"
+        }
+
+    /** `14:32 · WeChat used the clipboard · x3` */
     private fun describe(access: MonitoredAccess): String {
         val operationLabel = AppOpDisplayCatalog.labelResOf(access.operationName)
             ?.let(context::getString)
@@ -149,7 +167,7 @@ class MonitorNotifier(
                 R.string.monitor_access_refused
             },
             time,
-            access.appLabel,
+            shortLabel(access.appLabel),
             operationLabel,
         )
         return if (access.count > 1) {
@@ -212,6 +230,7 @@ class MonitorNotifier(
         private const val OPEN_REQUEST_CODE = 4012
         private const val CLEAR_REQUEST_CODE = 4014
         private const val MAX_LINES = 6
+        private const val MAX_LABEL_CHARS = 16
         private const val CHANNEL_STATUS = "monitor_status"
         private const val CHANNEL_ALERT = "monitor_access_alert"
         private const val LEGACY_CHANNEL_ACCESS = "monitor_access"

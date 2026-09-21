@@ -39,6 +39,23 @@ object AppOpsCommands {
         )
     }
 
+    /**
+     * The process state of every UID that carries this package.
+     *
+     * Scoped to one package because the unfiltered dump runs to tens of
+     * thousands of lines, which is not something to run while events arrive.
+     */
+    fun getUidStates(packageName: String): List<String> {
+        validatePackageName(packageName)
+
+        return listOf(
+            DUMPSYS_BINARY,
+            APP_OPS_SERVICE,
+            PACKAGE_OPTION,
+            packageName,
+        )
+    }
+
     fun getHistory(operationName: String): List<String> {
         validateOperationName(operationName)
 
@@ -108,6 +125,7 @@ object AppOpsCommands {
     private const val GET_COMMAND = "get"
     private const val SET_COMMAND = "set"
     private const val UID_OPTION = "--uid"
+    private const val PACKAGE_OPTION = "--package"
     private const val HISTORY_OPTION = "--history"
     private const val INCLUDE_DISCRETE_OPTION = "--include-discrete"
     private const val NO_DISCRETE_LIMIT = "0"

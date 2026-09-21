@@ -328,6 +328,13 @@ class PrivilegedServiceClient(
                 ?: throw IllegalStateException("Privileged service is unavailable")
         }
 
+    override suspend fun getUidStates(packageName: String): ShellCommandResult =
+        withContext(Dispatchers.IO) {
+            executeNative { it.getUidStates(packageName) }
+                ?: service?.getUidStates(packageName)
+                ?: throw IllegalStateException("Privileged service is unavailable")
+        }
+
     override suspend fun getHistory(
         operationName: String,
     ): ShellCommandResult =

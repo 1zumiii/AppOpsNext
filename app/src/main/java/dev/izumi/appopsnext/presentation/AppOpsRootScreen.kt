@@ -2,6 +2,7 @@ package dev.izumi.appopsnext.presentation
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -12,6 +13,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import dev.izumi.appopsnext.apps.model.InstalledApp
+import dev.izumi.appopsnext.monitor.MonitorOutcomes
+import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.presentation.app_detail.AppDetailScreen
@@ -30,6 +33,10 @@ import dev.izumi.appopsnext.presentation.experimental.ExperimentalUiState
 import dev.izumi.appopsnext.presentation.experimental.MonitorOperationsScreen
 import dev.izumi.appopsnext.presentation.experimental.MonitorSettingsScreen
 import dev.izumi.appopsnext.presentation.experimental.MonitorTargetsScreen
+import dev.izumi.appopsnext.presentation.experimental.MonitorExamplesScreen
+import dev.izumi.appopsnext.presentation.experimental.MonitorPointDetailScreen
+import dev.izumi.appopsnext.presentation.experimental.MonitorPointRow
+import dev.izumi.appopsnext.presentation.experimental.MonitorPointsScreen
 import dev.izumi.appopsnext.presentation.history.HistoryOverviewScreen
 import dev.izumi.appopsnext.presentation.history.HistoryAppStatisticsScreen
 import dev.izumi.appopsnext.presentation.history.HistoryUiState
@@ -84,6 +91,12 @@ fun AppOpsRootScreen(
     onDismissBatteryNotice: () -> Unit,
     onRefreshBatteryExemption: () -> Unit,
     onMonitorOperationsChange: (String, Set<String>) -> Unit,
+    onMonitorThrottleChange: (String, String, Int?) -> Unit,
+    onMonitorPointHeadsUpChange: (String, String, Boolean?) -> Unit,
+    onMonitorPointOutcomesChange: (String, String, MonitorOutcomes) -> Unit,
+    onMonitorPointBackgroundOnlyChange: (String, String, Boolean) -> Unit,
+    onMonitorShowAllOperationsChange: (Boolean) -> Unit,
+    onMonitorSuppressAllOperationsWarning: () -> Unit,
     onAppLanguageChange: (AppLanguage) -> Unit,
     onCreateTemplate: (String) -> Unit,
     onSelectTemplate: (String) -> Unit,
@@ -118,6 +131,7 @@ fun AppOpsRootScreen(
     var experimentalRoute by rememberSaveable {
         mutableStateOf<String?>(null)
     }
+    var monitorPointKey by rememberSaveable { mutableStateOf<String?>(null) }
     var monitorAppPackage by rememberSaveable {
         mutableStateOf<String?>(null)
     }
@@ -156,18 +170,29 @@ fun AppOpsRootScreen(
         )
     }
 
-    BackHandler(enabled = selectedApp == null && monitorAppPackage != null) {
+    BackHandler(enabled = selectedApp == null && monitorPointKey != null) {
+        monitorPointKey = null
+    }
+    BackHandler(
+        enabled = selectedApp == null && monitorPointKey == null && monitorAppPackage != null,
+    ) {
         monitorAppPackage = null
     }
     BackHandler(
         enabled = selectedApp == null &&
+            monitorPointKey == null &&
             monitorAppPackage == null &&
-            experimentalRoute == ROUTE_MONITOR_TARGETS,
+            (
+                experimentalRoute == ROUTE_MONITOR_TARGETS ||
+                    experimentalRoute == ROUTE_MONITOR_POINTS ||
+                    experimentalRoute == ROUTE_MONITOR_EXAMPLES
+                ),
     ) {
         experimentalRoute = ROUTE_MONITOR_SETTINGS
     }
     BackHandler(
         enabled = selectedApp == null &&
+            monitorPointKey == null &&
             monitorAppPackage == null &&
             experimentalRoute == ROUTE_MONITOR_SETTINGS,
     ) {
@@ -175,6 +200,7 @@ fun AppOpsRootScreen(
     }
     BackHandler(
         enabled = selectedApp == null &&
+            monitorPointKey == null &&
             monitorAppPackage == null &&
             experimentalRoute == ROUTE_EXPERIMENTAL,
     ) {
@@ -202,17 +228,31 @@ fun AppOpsRootScreen(
     val monitorApp = monitorAppPackage?.let { packageName ->
         appListUiState.allApps.firstOrNull { it.packageName == packageName }
     }
+    val monitorPointRows = monitorPointRows(
+        uiState = experimentalUiState,
+        apps = appListUiState.allApps,
+    )
+    val monitorPoint = monitorPointKey?.let { key ->
+        monitorPointRows.firstOrNull { "${it.packageName}\n${it.operationName}" == key }
+    }
     if (selectedApp == null && experimentalRoute != null) {
         when {
+            // The detail page belongs to a row of the points list, so it takes
+            // precedence over the route that opened that list.
+
             monitorApp != null -> MonitorOperationsScreen(
                 app = monitorApp,
                 selected = experimentalUiState
                     .selectionByPackage[monitorApp.packageName]
                     .orEmpty(),
+                showAll = experimentalUiState.showAllOperations,
+                warningSuppressed = experimentalUiState.allOperationsWarningSuppressed,
                 onBack = { monitorAppPackage = null },
                 onSelectionChange = { operations ->
                     onMonitorOperationsChange(monitorApp.packageName, operations)
                 },
+                onShowAllChange = onMonitorShowAllOperationsChange,
+                onSuppressWarning = onMonitorSuppressAllOperationsWarning,
             )
 
             experimentalRoute == ROUTE_MONITOR_TARGETS -> MonitorTargetsScreen(
@@ -222,10 +262,57 @@ fun AppOpsRootScreen(
                 onAppSelected = { app -> monitorAppPackage = app.packageName },
             )
 
+            monitorPoint != null -> MonitorPointDetailScreen(
+                point = monitorPoint,
+                onBack = { monitorPointKey = null },
+                onThrottleChange = { seconds ->
+                    onMonitorThrottleChange(
+                        monitorPoint.packageName,
+                        monitorPoint.operationName,
+                        seconds,
+                    )
+                },
+                onHeadsUpChange = { headsUp ->
+                    onMonitorPointHeadsUpChange(
+                        monitorPoint.packageName,
+                        monitorPoint.operationName,
+                        headsUp,
+                    )
+                },
+                onOutcomesChange = { outcomes ->
+                    onMonitorPointOutcomesChange(
+                        monitorPoint.packageName,
+                        monitorPoint.operationName,
+                        outcomes,
+                    )
+                },
+                onBackgroundOnlyChange = { backgroundOnly ->
+                    onMonitorPointBackgroundOnlyChange(
+                        monitorPoint.packageName,
+                        monitorPoint.operationName,
+                        backgroundOnly,
+                    )
+                },
+            )
+
+            experimentalRoute == ROUTE_MONITOR_EXAMPLES -> MonitorExamplesScreen(
+                onBack = { experimentalRoute = ROUTE_MONITOR_SETTINGS },
+            )
+
+            experimentalRoute == ROUTE_MONITOR_POINTS -> MonitorPointsScreen(
+                points = monitorPointRows,
+                onBack = { experimentalRoute = ROUTE_MONITOR_SETTINGS },
+                onPointSelected = { row ->
+                    monitorPointKey = "${row.packageName}\n${row.operationName}"
+                },
+            )
+
             experimentalRoute == ROUTE_MONITOR_SETTINGS -> MonitorSettingsScreen(
                 uiState = experimentalUiState,
                 onBack = { experimentalRoute = ROUTE_EXPERIMENTAL },
                 onOpenTargets = { experimentalRoute = ROUTE_MONITOR_TARGETS },
+                onOpenPoints = { experimentalRoute = ROUTE_MONITOR_POINTS },
+                onOpenExamples = { experimentalRoute = ROUTE_MONITOR_EXAMPLES },
                 onHeadsUpChange = onMonitorHeadsUpChange,
             )
 
@@ -388,3 +475,33 @@ private const val SAVED_APP_FIELD_COUNT = 4
 private const val ROUTE_EXPERIMENTAL = "experimental"
 private const val ROUTE_MONITOR_SETTINGS = "monitor_settings"
 private const val ROUTE_MONITOR_TARGETS = "monitor_targets"
+private const val ROUTE_MONITOR_POINTS = "monitor_points"
+private const val ROUTE_MONITOR_EXAMPLES = "monitor_examples"
+
+/**
+ * Orders the points so the ones that can act come first, and names them with
+ * labels rather than package names.
+ */
+@Composable
+private fun monitorPointRows(
+    uiState: ExperimentalUiState,
+    apps: List<InstalledApp>,
+): List<MonitorPointRow> {
+    val labels = apps.associate { it.packageName to it.label }
+    return uiState.configurablePoints
+        .map { settings ->
+            MonitorPointRow(
+                settings = settings,
+                appLabel = labels[settings.packageName] ?: settings.packageName,
+                operationLabel = AppOpDisplayCatalog.labelResOf(settings.operationName)
+                    ?.let { stringResource(it) }
+                    ?: settings.operationName,
+                watched = uiState.isWatched(settings.packageName, settings.operationName),
+            )
+        }
+        .sortedWith(
+            compareByDescending(MonitorPointRow::watched)
+                .thenBy(MonitorPointRow::appLabel)
+                .thenBy(MonitorPointRow::operationLabel),
+        )
+}

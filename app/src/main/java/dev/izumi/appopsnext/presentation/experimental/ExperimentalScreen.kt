@@ -119,7 +119,7 @@ private fun MonitorFeature(
         )
         // One entry is closed while the monitor runs instead of every setting
         // inside it, so the reason has to be stated once.
-        val locked = uiState.monitorEnabled
+        val locked = uiState.monitorEnabled || uiState.monitorBusy
         ListItem(
             modifier = if (locked) {
                 Modifier
@@ -166,7 +166,8 @@ private fun MonitorFeature(
             },
         )
         Text(
-            text = stringResource(R.string.monitor_explainer),
+            text = stringResource(R.string.monitor_explainer) + "\n\n" +
+                stringResource(R.string.monitor_event_count_note),
             modifier = Modifier.padding(horizontal = 16.dp),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -221,7 +222,9 @@ private fun MonitorStatusText(uiState: ExperimentalUiState) {
         // The switch alone cannot show whether the watches are live; a restore
         // that failed leaves it on with nothing registered.
         uiState.monitorEnabled && uiState.status == null -> {
-            message = stringResource(R.string.monitor_not_running)
+            message = uiState.monitorFailure?.let {
+                stringResource(R.string.monitor_stopped_reason, it)
+            } ?: stringResource(R.string.monitor_not_running)
             isError = true
         }
 
