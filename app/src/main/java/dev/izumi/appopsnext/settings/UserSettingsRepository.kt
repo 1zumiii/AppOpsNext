@@ -47,6 +47,9 @@ class UserSettingsRepository(
                 monitorHeadsUp =
                     preferences[Keys.MONITOR_HEADS_UP]
                         ?: UserSettingsDefaults.MONITOR_HEADS_UP,
+                suppressBatteryNotice =
+                    preferences[Keys.SUPPRESS_BATTERY_NOTICE]
+                        ?: UserSettingsDefaults.SUPPRESS_BATTERY_NOTICE,
             )
         }
 
@@ -80,6 +83,12 @@ class UserSettingsRepository(
         }
     }
 
+    suspend fun setBatteryNoticeSuppressed(suppressed: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[Keys.SUPPRESS_BATTERY_NOTICE] = suppressed
+        }
+    }
+
     private object Keys {
         val HIDE_SYSTEM_APPS = booleanPreferencesKey("hide_system_apps")
         val SUPPRESS_DENY_FALLBACK_NOTICE =
@@ -88,5 +97,7 @@ class UserSettingsRepository(
             booleanPreferencesKey("auto_apply_new_app_template")
         val BACKGROUND_MONITOR = booleanPreferencesKey("background_monitor")
         val MONITOR_HEADS_UP = booleanPreferencesKey("monitor_heads_up")
+        val SUPPRESS_BATTERY_NOTICE =
+            booleanPreferencesKey("suppress_battery_notice")
     }
 }

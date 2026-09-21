@@ -27,6 +27,8 @@ data class MonitoredAccess(
     val kind: AppOpAccessKind,
     val allowed: Boolean,
     val observedAtMillis: Long,
+    /** How many times this access repeated inside the coalescing window. */
+    val count: Int = 1,
 )
 
 /** Which parts of the watch are live, so a partial registration stays visible. */

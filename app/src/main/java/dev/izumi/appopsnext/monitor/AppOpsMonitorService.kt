@@ -2,7 +2,6 @@ package dev.izumi.appopsnext.monitor
 
 import android.app.Service
 import android.content.Context
-import android.app.NotificationManager
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.content.res.Configuration
@@ -33,11 +32,22 @@ class AppOpsMonitorService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        if (intent?.action == ACTION_CLEAR) {
+            controller.clearAccesses()
+            return START_STICKY
+        }
+        // Showing the notification before the self-check finishes is what makes
+        // the status bar respond to the switch immediately; it says what is
+        // actually happening rather than claiming the monitor is already live.
+        val checking = intent?.getBooleanExtra(EXTRA_CHECKING, false) == true
         startForeground(
             MonitorNotifier.ONGOING_NOTIFICATION_ID,
-            MonitorNotifier(this).ongoingNotification(),
+            MonitorNotifier(this).ongoingNotification(checking = checking),
             ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
         )
+        // The self-check registers the watches itself, so the service must not
+        // race it with a second registration.
+        if (checking) return START_STICKY
         if (!controller.isRunning) {
             serviceScope.launch {
                 // Staying up after a failed registration would leave an ongoing
@@ -57,10 +67,8 @@ class AppOpsMonitorService : Service() {
      */
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        getSystemService(NotificationManager::class.java).notify(
-            MonitorNotifier.ONGOING_NOTIFICATION_ID,
-            MonitorNotifier(this).ongoingNotification(),
-        )
+        // The controller rebuilds the ongoing notification too, so posting a
+        // plain one here first would briefly drop the accesses folded into it.
         controller.refreshNotifications()
     }
 
@@ -74,10 +82,13 @@ class AppOpsMonitorService : Service() {
 
     companion object {
         private const val ACTION_STOP = "dev.izumi.appopsnext.monitor.STOP"
+        const val ACTION_CLEAR = "dev.izumi.appopsnext.monitor.CLEAR"
+        private const val EXTRA_CHECKING = "checking"
 
-        fun start(context: Context) {
+        fun start(context: Context, checking: Boolean = false) {
             context.startForegroundService(
-                Intent(context, AppOpsMonitorService::class.java),
+                Intent(context, AppOpsMonitorService::class.java)
+                    .putExtra(EXTRA_CHECKING, checking),
             )
         }
 

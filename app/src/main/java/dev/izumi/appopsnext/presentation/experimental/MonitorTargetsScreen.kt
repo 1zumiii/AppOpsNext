@@ -54,19 +54,6 @@ fun MonitorTargetsScreen(
         AppListFilter.apply(apps = apps, query = query)
             .partition { selectionByPackage[it.packageName].orEmpty().isNotEmpty() }
     }
-    val operationSummary: (InstalledApp) -> String = remember(selectionByPackage, context) {
-        { app ->
-            selectionByPackage[app.packageName]
-                .orEmpty()
-                .map { name ->
-                    AppOpDisplayCatalog.labelResOf(name)
-                        ?.let(context::getString)
-                        ?: name
-                }
-                .sorted()
-                .joinToString("、")
-        }
-    }
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -119,9 +106,15 @@ fun MonitorTargetsScreen(
                     )
                 }
                 items(watched, key = InstalledApp::packageName) { app ->
+                    // The row says how many operations are watched rather than
+                    // naming them; the list grows past what one row can show and
+                    // the names are one tap away.
                     TargetRow(
                         app = app,
-                        detail = operationSummary(app),
+                        detail = stringResource(
+                            R.string.monitor_selected_count,
+                            selectionByPackage[app.packageName].orEmpty().size,
+                        ),
                         watched = true,
                         onClick = { onAppSelected(app) },
                     )

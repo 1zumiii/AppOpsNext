@@ -22,6 +22,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.monitor.MonitorSelfCheckResult
 import dev.izumi.appopsnext.monitor.MonitorStatus
@@ -36,10 +37,18 @@ fun ExperimentalScreen(
     uiState: ExperimentalUiState,
     onBack: () -> Unit,
     onMonitorChange: (Boolean) -> Unit,
-    onHeadsUpChange: (Boolean) -> Unit,
-    onOpenTargets: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenBatterySettings: () -> Unit,
+    onDismissBatteryNotice: () -> Unit,
+    onRefreshBatteryExemption: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // The exemption is granted in system settings, so it is re-read on every
+    // return to this screen rather than once when it is first shown.
+    LifecycleResumeEffect(Unit) {
+        onRefreshBatteryExemption()
+        onPauseOrDispose { }
+    }
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -79,8 +88,9 @@ fun ExperimentalScreen(
                 MonitorFeature(
                     uiState = uiState,
                     onMonitorChange = onMonitorChange,
-                    onHeadsUpChange = onHeadsUpChange,
-                    onOpenTargets = onOpenTargets,
+                    onOpenSettings = onOpenSettings,
+                    onOpenBatterySettings = onOpenBatterySettings,
+                    onDismissBatteryNotice = onDismissBatteryNotice,
                 )
             }
         }
@@ -91,8 +101,9 @@ fun ExperimentalScreen(
 private fun MonitorFeature(
     uiState: ExperimentalUiState,
     onMonitorChange: (Boolean) -> Unit,
-    onHeadsUpChange: (Boolean) -> Unit,
-    onOpenTargets: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenBatterySettings: () -> Unit,
+    onDismissBatteryNotice: () -> Unit,
 ) {
     Column {
         ListItem(
@@ -106,19 +117,29 @@ private fun MonitorFeature(
                 )
             },
         )
-        // Changing the selection while the watches are live would mean tearing
-        // them down and rebuilding them under the user, so the entry is closed
-        // until the monitor is switched off.
+        // One entry is closed while the monitor runs instead of every setting
+        // inside it, so the reason has to be stated once.
         val locked = uiState.monitorEnabled
         ListItem(
             modifier = if (locked) {
                 Modifier
             } else {
-                Modifier.clickable(onClick = onOpenTargets)
+                Modifier.clickable(onClick = onOpenSettings)
+            },
+            leadingContent = {
+                Icon(
+                    painter = painterResource(R.drawable.ic_action_manage),
+                    contentDescription = null,
+                    tint = if (locked) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                )
             },
             headlineContent = {
                 Text(
-                    text = stringResource(R.string.monitor_targets_title),
+                    text = stringResource(R.string.monitor_settings_title),
                     color = if (locked) {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     } else {
@@ -144,20 +165,6 @@ private fun MonitorFeature(
                 )
             },
         )
-        ListItem(
-            headlineContent = {
-                Text(text = stringResource(R.string.monitor_heads_up_title))
-            },
-            supportingContent = {
-                Text(text = stringResource(R.string.monitor_heads_up_summary))
-            },
-            trailingContent = {
-                Switch(
-                    checked = uiState.headsUp,
-                    onCheckedChange = onHeadsUpChange,
-                )
-            },
-        )
         Text(
             text = stringResource(R.string.monitor_explainer),
             modifier = Modifier.padding(horizontal = 16.dp),
@@ -165,6 +172,34 @@ private fun MonitorFeature(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         MonitorStatusText(uiState)
+        // Vendors remap the exemption intent to their own per-app battery page,
+        // where granting it does not put the app on the platform whitelist this
+        // reads. The notice can therefore be true forever on such a device, so
+        // it can be dismissed by hand as well as resolving itself.
+        if (uiState.showBatteryNotice) {
+            ListItem(
+                modifier = Modifier.clickable(onClick = onOpenBatterySettings),
+                headlineContent = {
+                    Text(
+                        text = stringResource(R.string.monitor_battery_title),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                },
+                supportingContent = {
+                    Text(text = stringResource(R.string.monitor_battery_summary))
+                },
+                trailingContent = {
+                    IconButton(onClick = onDismissBatteryNotice) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_action_close),
+                            contentDescription = stringResource(
+                                R.string.monitor_battery_dismiss,
+                            ),
+                        )
+                    }
+                },
+            )
+        }
     }
 }
 

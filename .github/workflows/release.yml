@@ -103,8 +103,17 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CHECKSUM: ${{ steps.artifacts.outputs.checksum }}
         run: |
+          # A tag carrying a suffix such as v1.4.1-beta1 is published as a
+          # prerelease, which keeps it out of "latest" and therefore out of the
+          # update check and the download link in the README.
+          case "$GITHUB_REF_NAME" in
+            *-*) prerelease="--prerelease" ;;
+            *) prerelease="" ;;
+          esac
+          echo "ref=$GITHUB_REF_NAME prerelease=${prerelease:-no}"
           gh release create "$GITHUB_REF_NAME" \
             --draft \
+            $prerelease \
             --title "$GITHUB_REF_NAME" \
             --notes "SHA-256 (app-release.apk): \`$CHECKSUM\`" \
             artifacts/app-release.apk \

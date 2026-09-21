@@ -2,7 +2,8 @@ package dev.izumi.appopsnext.monitor
 
 import android.content.ClipboardManager
 import android.content.Context
-import android.os.SystemClock
+import android.util.Log
+import dev.izumi.appopsnext.BuildConfig
 import dev.izumi.appopsnext.apps.InstalledAppsRepository
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
 import dev.izumi.appopsnext.settings.UserSettingsRepository
@@ -40,7 +41,7 @@ class AppOpsMonitorController(
     private val mutableStatus = MutableStateFlow<MonitorStatus?>(null)
     private val selfCheckProbe = AtomicReference<((AppOpAccessEvent) -> Unit)?>(null)
     private val watched = AtomicReference<Map<String, Set<String>>>(emptyMap())
-    private val lastNotifiedAt = HashMap<String, Long>()
+    private val accessLock = Any()
     private val ownPackage = context.packageName
     private var watchdog: Job? = null
 
@@ -105,11 +106,19 @@ class AppOpsMonitorController(
         }
     }
 
-    /** Re-posts the access notification, for example after a language change. */
+    /**
+     * Rebuilds the notifications, for example after a language change.
+     *
+     * This owns the ongoing notification's content as well, so a caller does not
+     * have to know whether any accesses have been folded into it yet.
+     */
     fun refreshNotifications() {
         val accesses = mutableRecentAccesses.value
-        if (accesses.isEmpty()) return
         scope.launch {
+            if (accesses.isEmpty()) {
+                notifier.postOngoing()
+                return@launch
+            }
             val headsUp = runCatching {
                 settingsRepository.settings.first().monitorHeadsUp
             }.getOrDefault(false)
@@ -117,14 +126,22 @@ class AppOpsMonitorController(
         }
     }
 
+    /**
+     * Drops the reported accesses and returns the notification to its plain
+     * form, so a count that has been read and dismissed does not carry on from
+     * where it left off.
+     */
+    fun clearAccesses() {
+        synchronized(accessLock) { mutableRecentAccesses.value = emptyList() }
+        notifier.postOngoing()
+    }
+
     fun stop() {
         watchdog?.cancel()
         watchdog = null
         runCatching { client.unregister() }
-        synchronized(lastNotifiedAt) { lastNotifiedAt.clear() }
         mutableStatus.value = null
         mutableRecentAccesses.value = emptyList()
-        notifier.clearAccesses()
         diagnosticLog.info(source = LOG_SOURCE, message = "Monitor stopped.")
     }
 
@@ -223,22 +240,22 @@ class AppOpsMonitorController(
     }
 
     private fun onAccess(event: AppOpAccessEvent) {
+        // Raw events only, and only in debug builds: the platform reports one
+        // logical access more than once, which is not visible anywhere else.
+        if (BuildConfig.DEBUG) {
+            Log.d(
+                RAW_LOG_TAG,
+                "kind=${event.kind} op=${event.opCode}/${AppOpCodes.nameOf(event.opCode)} " +
+                    "uid=${event.uid} pkg=${event.packageName} " +
+                    "allowed=${event.allowed} t=${System.currentTimeMillis()}",
+            )
+        }
         selfCheckProbe.get()?.invoke(event)
         if (event.packageName == ownPackage) return
         val operationName = AppOpCodes.nameOf(event.opCode) ?: return
         // Watches are registered per operation for every package, so the
         // selection is applied here.
         if (operationName !in watched.get()[event.packageName].orEmpty()) return
-
-        // The same access can arrive repeatedly while it stays open; one entry
-        // per app, operation and outcome within the window is enough.
-        val key = "${event.packageName}|$operationName|${event.allowed}"
-        val now = SystemClock.elapsedRealtime()
-        synchronized(lastNotifiedAt) {
-            val previous = lastNotifiedAt[key]
-            if (previous != null && now - previous < COALESCE_WINDOW_MILLIS) return
-            lastNotifiedAt[key] = now
-        }
 
         scope.launch {
             val app = runCatching {
@@ -254,22 +271,61 @@ class AppOpsMonitorController(
                 allowed = event.allowed,
                 observedAtMillis = System.currentTimeMillis(),
             )
-            val updated = (listOf(access) + mutableRecentAccesses.value).take(MAX_RECENT)
-            mutableRecentAccesses.value = updated
-            // One notification carrying every access keeps the status bar to a
-            // single icon however many arrive.
+            // Repeats inside the window are counted into the existing entry
+            // rather than dropped. Dropping them lost the fact that the access
+            // happened several times, and left the count on the icon wrong.
+            val (updated, isNew) = synchronized(accessLock) {
+                val current = mutableRecentAccesses.value
+                val index = current.indexOfFirst { it.repeats(access) }
+                val existing = current.getOrNull(index)
+                val result = when {
+                    existing == null ->
+                        (listOf(access) + current).take(MAX_RECENT) to true
+
+                    // One read can be noted several times a few milliseconds
+                    // apart, so anything this close is the same access rather
+                    // than the app touching the operation again.
+                    access.observedAtMillis - existing.observedAtMillis <
+                        SAME_ACCESS_WINDOW_MILLIS -> null to false
+
+                    else -> {
+                        val merged = existing.copy(
+                            count = existing.count + 1,
+                            observedAtMillis = access.observedAtMillis,
+                        )
+                        buildList {
+                            add(merged)
+                            current.forEachIndexed { at, item -> if (at != index) add(item) }
+                        } to false
+                    }
+                }
+                result.first?.let { mutableRecentAccesses.value = it }
+                result
+            }
+            if (updated == null) return@launch
             val headsUp = runCatching {
                 settingsRepository.settings.first().monitorHeadsUp
             }.getOrDefault(false)
-            notifier.notifyAccesses(updated, headsUp)
+            // A repeat updates the notification without interrupting again; only
+            // a genuinely new access is worth a second heads-up.
+            notifier.notifyAccesses(updated, headsUp = headsUp && isNew)
         }
     }
+
+    /** Same app, operation and outcome, close enough in time to be one entry. */
+    private fun MonitoredAccess.repeats(other: MonitoredAccess): Boolean =
+        packageName == other.packageName &&
+            operationName == other.operationName &&
+            allowed == other.allowed &&
+            other.observedAtMillis - observedAtMillis < COALESCE_WINDOW_MILLIS
 
     private companion object {
         const val LOG_SOURCE = "Monitor"
         const val SELF_CHECK_TIMEOUT_MILLIS = 4_000L
         const val SELF_CHECK_POLL_MILLIS = 50L
+        const val SAME_ACCESS_WINDOW_MILLIS = 1_000L
         const val COALESCE_WINDOW_MILLIS = 60_000L
+        const val RAW_LOG_TAG = "AppOpsMonitorRaw"
         const val WATCHDOG_INTERVAL_MILLIS = 5 * 60_000L
         const val MAX_RECENT = 100
     }

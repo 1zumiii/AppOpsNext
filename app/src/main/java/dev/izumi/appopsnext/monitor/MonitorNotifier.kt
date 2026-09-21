@@ -8,6 +8,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.drawable.Icon
 import dev.izumi.appopsnext.MainActivity
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
@@ -23,24 +24,81 @@ class MonitorNotifier(
     private val notificationManager =
         context.getSystemService(NotificationManager::class.java)
 
-    fun ongoingNotification(): Notification {
+    /**
+     * The single notification the monitor keeps while it runs.
+     *
+     * Reported accesses are folded into this one rather than posted separately,
+     * because two notifications from the same app compete for the one status-bar
+     * icon and the ongoing one wins, which hid the access count behind an icon
+     * that never changed. The running state stays visible as the sub-text so
+     * merging the two does not lose it.
+     */
+    fun ongoingNotification(
+        accesses: List<MonitoredAccess> = emptyList(),
+        checking: Boolean = false,
+        headsUp: Boolean = false,
+    ): Notification {
         createChannels()
-        return Notification.Builder(context, CHANNEL_STATUS)
-            .setSmallIcon(R.drawable.ic_notification_monitor)
-            .setContentTitle(context.getString(R.string.monitor_ongoing_title))
-            .setContentText(context.getString(R.string.monitor_ongoing_text))
+        // A channel's importance is fixed when it is created, so the way to let
+        // this one notification interrupt is to post it on the loud channel
+        // instead of adding a second notification beside it.
+        val builder = Notification
+            .Builder(context, if (headsUp) CHANNEL_ALERT else CHANNEL_STATUS)
             .setContentIntent(openAppIntent(OPEN_REQUEST_CODE))
             .setCategory(Notification.CATEGORY_SERVICE)
             .setOngoing(true)
-            .build()
+            .setOnlyAlertOnce(!headsUp)
+
+        return when {
+            checking -> builder
+                .setSmallIcon(R.drawable.ic_notification_monitor)
+                .setContentTitle(context.getString(R.string.monitor_ongoing_title))
+                .setContentText(context.getString(R.string.monitor_checking))
+                .build()
+
+            accesses.isEmpty() -> builder
+                .setSmallIcon(R.drawable.ic_notification_monitor)
+                .setContentTitle(context.getString(R.string.monitor_ongoing_title))
+                .setContentText(context.getString(R.string.monitor_ongoing_text))
+                .build()
+
+            else -> {
+                val latest = accesses.first()
+                // Dismissing is the natural way to say "I have read these", and
+                // the action covers the case where the platform pins the
+                // notification and it cannot be dismissed at all.
+                // Repeats are folded into one entry, so the number of entries is
+                // not the number of accesses the user was told about.
+                val total = accesses.sumOf(MonitoredAccess::count)
+                builder
+                    .setSmallIcon(MonitorStatusIcon.create(context, total))
+                    .setSubText(context.getString(R.string.monitor_ongoing_title))
+                    .setContentTitle(latest.appLabel)
+                    .setContentText(describe(latest))
+                    .setStyle(inboxStyle(accesses))
+                    .setNumber(total)
+                    .setWhen(latest.observedAtMillis)
+                    .setShowWhen(true)
+                    .setDeleteIntent(clearIntent())
+                    .addAction(
+                        Notification.Action.Builder(
+                            Icon.createWithResource(context, R.drawable.ic_action_close),
+                            context.getString(R.string.monitor_clear),
+                            clearIntent(),
+                        ).build(),
+                    )
+                    .build()
+            }
+        }
     }
 
     /**
-     * Posts the accesses as one notification that is updated in place.
+     * Updates the ongoing notification with the accesses so far.
      *
-     * [headsUp] selects between two channels because a channel's importance is
-     * fixed when it is created and cannot be raised later from code, so the
-     * quiet and the interrupting variant have to be separate channels.
+     * [headsUp] additionally raises a separate notification that can interrupt,
+     * because a channel's importance is fixed when it is created and the ongoing
+     * notification's channel is deliberately quiet. That second notification
+     * only exists when the user asked to be interrupted.
      *
      * @param accesses most recent first.
      */
@@ -52,11 +110,20 @@ class MonitorNotifier(
         ) {
             return
         }
-        createChannels()
-        val latest = accesses.first()
-        val lines = accesses.take(MAX_LINES).map(::describe)
-        val style = Notification.InboxStyle().apply {
-            lines.forEach(::addLine)
+        notificationManager.notify(
+            ONGOING_NOTIFICATION_ID,
+            ongoingNotification(accesses, headsUp = headsUp),
+        )
+    }
+
+    /** Re-posts the ongoing notification in its no-accesses form. */
+    fun postOngoing() {
+        notificationManager.notify(ONGOING_NOTIFICATION_ID, ongoingNotification())
+    }
+
+    private fun inboxStyle(accesses: List<MonitoredAccess>): Notification.InboxStyle =
+        Notification.InboxStyle().apply {
+            accesses.take(MAX_LINES).map(::describe).forEach(::addLine)
             if (accesses.size > MAX_LINES) {
                 setSummaryText(
                     context.getString(
@@ -66,28 +133,8 @@ class MonitorNotifier(
                 )
             }
         }
-        val notification = Notification
-            .Builder(context, if (headsUp) CHANNEL_ALERT else CHANNEL_SILENT)
-            .setSmallIcon(MonitorStatusIcon.create(context, accesses.size))
-            .setContentTitle(latest.appLabel)
-            .setContentText(describe(latest))
-            .setStyle(style)
-            .setNumber(accesses.size)
-            .setWhen(latest.observedAtMillis)
-            .setShowWhen(true)
-            .setContentIntent(openAppIntent(OPEN_REQUEST_CODE + 1))
-            .setCategory(Notification.CATEGORY_STATUS)
-            .setOnlyAlertOnce(!headsUp)
-            .setAutoCancel(true)
-            .build()
-        notificationManager.notify(ACCESS_NOTIFICATION_ID, notification)
-    }
 
-    fun clearAccesses() {
-        notificationManager.cancel(ACCESS_NOTIFICATION_ID)
-    }
-
-    /** `14:32 · WeChat used the clipboard` */
+    /** `14:32 · WeChat used the clipboard · 3 times` */
     private fun describe(access: MonitoredAccess): String {
         val operationLabel = AppOpDisplayCatalog.labelResOf(access.operationName)
             ?.let(context::getString)
@@ -95,7 +142,7 @@ class MonitorNotifier(
         val time = timeFormatter.format(
             Instant.ofEpochMilli(access.observedAtMillis),
         )
-        return context.getString(
+        val line = context.getString(
             if (access.allowed) {
                 R.string.monitor_access_allowed
             } else {
@@ -105,6 +152,11 @@ class MonitorNotifier(
             access.appLabel,
             operationLabel,
         )
+        return if (access.count > 1) {
+            context.getString(R.string.monitor_access_count, line, access.count)
+        } else {
+            line
+        }
     }
 
     private val timeFormatter: DateTimeFormatter
@@ -112,6 +164,15 @@ class MonitorNotifier(
             .ofLocalizedTime(FormatStyle.SHORT)
             .withLocale(Locale.getDefault())
             .withZone(ZoneId.systemDefault())
+
+    private fun clearIntent(): PendingIntent =
+        PendingIntent.getService(
+            context,
+            CLEAR_REQUEST_CODE,
+            Intent(context, AppOpsMonitorService::class.java)
+                .setAction(AppOpsMonitorService.ACTION_CLEAR),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
 
     private fun openAppIntent(requestCode: Int): PendingIntent =
         PendingIntent.getActivity(
@@ -134,31 +195,26 @@ class MonitorNotifier(
         )
         notificationManager.createNotificationChannel(
             NotificationChannel(
-                CHANNEL_SILENT,
-                context.getString(R.string.monitor_channel_silent),
-                NotificationManager.IMPORTANCE_LOW,
-            ),
-        )
-        notificationManager.createNotificationChannel(
-            NotificationChannel(
                 CHANNEL_ALERT,
                 context.getString(R.string.monitor_channel_alert),
                 NotificationManager.IMPORTANCE_HIGH,
             ),
         )
-        // The first release posted accesses to a single default-importance
-        // channel, which could neither interrupt nor stay quiet on request.
+        // Earlier releases posted accesses to their own quiet channel and, before
+        // that, to a single default-importance one. Both are now folded into the
+        // ongoing notification.
         notificationManager.deleteNotificationChannel(LEGACY_CHANNEL_ACCESS)
+        notificationManager.deleteNotificationChannel(LEGACY_CHANNEL_SILENT)
     }
 
     companion object {
         const val ONGOING_NOTIFICATION_ID = 4011
-        private const val ACCESS_NOTIFICATION_ID = 4013
         private const val OPEN_REQUEST_CODE = 4012
+        private const val CLEAR_REQUEST_CODE = 4014
         private const val MAX_LINES = 6
         private const val CHANNEL_STATUS = "monitor_status"
-        private const val CHANNEL_SILENT = "monitor_access_silent"
         private const val CHANNEL_ALERT = "monitor_access_alert"
         private const val LEGACY_CHANNEL_ACCESS = "monitor_access"
+        private const val LEGACY_CHANNEL_SILENT = "monitor_access_silent"
     }
 }

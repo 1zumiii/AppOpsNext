@@ -299,7 +299,6 @@
     <string name="monitor_ongoing_title">Access monitor running</string>
     <string name="monitor_ongoing_text">Watching sensitive permissions</string>
     <string name="monitor_channel_status">Monitor status</string>
-    <string name="monitor_channel_silent">Permission accesses (quiet)</string>
     <string name="monitor_channel_alert">Permission accesses (pop up)</string>
     <string name="monitor_access_allowed">%1$s · %2$s used %3$s</string>
     <string name="monitor_access_refused">%1$s · %2$s was refused %3$s</string>
@@ -319,7 +318,7 @@
     <string name="monitor_watch_active">active</string>
     <string name="monitor_watch_noted">noted</string>
     <string name="monitor_watch_started">refused</string>
-    <string name="monitor_selected_count">%1$d selected</string>
+    <string name="monitor_selected_count">%1$d operations</string>
     <string name="monitor_more_accesses">%1$d more</string>
     <string name="monitor_heads_up_title">Pop up for each access</string>
     <string name="monitor_heads_up_summary">Off: a quiet status bar icon with a count. On: the notification appears on screen.</string>
@@ -333,4 +332,10 @@
     <string name="update_failed">Check failed · retry</string>
     <string name="update_available_description">A new version is available</string>
     <string name="monitor_not_running">Not running · retried the next time you open the app</string>
+    <string name="monitor_access_count">%1$s · %2$d times</string>
+    <string name="monitor_settings_title">Monitor settings</string>
+    <string name="monitor_clear">Clear</string>
+    <string name="monitor_battery_title">Battery optimisation is on</string>
+    <string name="monitor_battery_summary">Vendor battery management can end this app and stop the monitor without notice. Tap to open system settings. Some ROMs keep this control elsewhere, so dismiss this notice once you have handled it.</string>
+    <string name="monitor_battery_dismiss">Dismiss this notice</string>
 </resources>

@@ -6,6 +6,7 @@ object UserSettingsDefaults {
     const val AUTO_APPLY_NEW_APP_TEMPLATE = false
     const val BACKGROUND_MONITOR = false
     const val MONITOR_HEADS_UP = false
+    const val SUPPRESS_BATTERY_NOTICE = false
 }
 
 data class UserSettings(
@@ -18,4 +19,6 @@ data class UserSettings(
         UserSettingsDefaults.BACKGROUND_MONITOR,
     val monitorHeadsUp: Boolean =
         UserSettingsDefaults.MONITOR_HEADS_UP,
+    val suppressBatteryNotice: Boolean =
+        UserSettingsDefaults.SUPPRESS_BATTERY_NOTICE,
 )
