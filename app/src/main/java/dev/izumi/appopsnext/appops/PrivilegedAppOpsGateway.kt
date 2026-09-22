@@ -17,6 +17,9 @@ interface PrivilegedAppOpsGateway {
     suspend fun getUidStates(packageName: String): ShellCommandResult =
         error("UID state reads are not implemented by this gateway")
 
+    suspend fun getWatchers(): ShellCommandResult =
+        error("AppOps watcher reads are not implemented by this gateway")
+
     suspend fun getHistory(
         operationName: String,
     ): ShellCommandResult =

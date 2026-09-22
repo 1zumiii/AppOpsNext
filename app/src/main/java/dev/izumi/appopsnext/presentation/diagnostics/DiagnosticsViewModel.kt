@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
+import dev.izumi.appopsnext.appops.AppOpsWatchersRepository
 import dev.izumi.appopsnext.appops.model.AppOpsReadState
 import dev.izumi.appopsnext.diagnostics.DiagnosticEnvironmentCollector
 import dev.izumi.appopsnext.diagnostics.DiagnosticReportComposer
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 
 class DiagnosticsViewModel(
     application: Application,
@@ -32,6 +34,11 @@ class DiagnosticsViewModel(
     private val appOpsRepository = getApplication<AppOpsNextApplication>().appOpsRepository
     private val appOpsReadState =
         MutableStateFlow<AppOpsReadState>(AppOpsReadState.WaitingForBackend)
+    private val watcherRegistry = MutableStateFlow("Not read in this session.")
+    private val monitorReport = combine(
+        watcherRegistry,
+        getApplication<AppOpsNextApplication>().appOpsMonitorController.status,
+    ) { registry, monitor -> "$registry\nmonitor=$monitor" }
 
     private val device = DeviceSummary(
         manufacturer = diagnosticEnvironment.manufacturer,
@@ -45,7 +52,8 @@ class DiagnosticsViewModel(
         privilegedServiceClient.state,
         appOpsReadState,
         diagnosticLog.lines,
-    ) { shizukuState, serviceState, readState, logLines ->
+        monitorReport,
+    ) { shizukuState, serviceState, readState, logLines, watchers ->
         DiagnosticsUiState(
             device = device,
             shizukuState = shizukuState,
@@ -57,6 +65,7 @@ class DiagnosticsViewModel(
                 privilegedServiceState = serviceState,
                 appOpsReadState = readState,
                 eventLines = logLines,
+                watcherRegistry = watchers,
             ),
             diagnosticEventCount = logLines.size,
         )
@@ -114,7 +123,22 @@ class DiagnosticsViewModel(
                         }
                     }
                 } else {
+                    watcherRegistry.value = "Backend unavailable; no current snapshot."
                     AppOpsReadState.WaitingForBackend
+                }
+                if (state is PrivilegedServiceState.Connected) {
+                    watcherRegistry.value = try {
+                        val snapshot = AppOpsWatchersRepository(privilegedServiceClient).read()
+                        "capturedAt=${java.time.Instant.now()}, recognized=${snapshot.recognized}, " +
+                            "malformedAccessKinds=${snapshot.malformedAccessKinds}, " +
+                            "modeRegistrations=${snapshot.modeWatchers.size}\n" +
+                            snapshot.accessWatchers.joinToString("\n") +
+                            "\nRegistration identity may be shared by other Shizuku clients; delivery is not verified."
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (error: Exception) {
+                        "Registry unavailable: ${error.message}"
+                    }
                 }
             }
         }

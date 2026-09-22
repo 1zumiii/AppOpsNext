@@ -20,7 +20,7 @@ history — with a native Kotlin and Jetpack Compose interface powered by
 | Newly installed apps | Opt in to automatic template application, catch up on pending installations, and inspect saved per-rule results. |
 | History | Explore permission distribution, app statistics, and timelines; choose and reorder the operations you follow. |
 | Settings and diagnostics | Switch between English, Simplified Chinese, or the system language, inspect connection status and diagnostic reports, and see quietly whether a newer release exists. |
-| Experimental | Watch chosen operations for chosen apps and be notified when one is used. Each app-and-permission pair is a monitoring point with its own reporting interval, notification loudness, outcome filter, and an option to report only what happens while the app is off screen. Nothing is watched until you pick it, and a self-check reports whether the device supports it. |
+| Experimental | Watch chosen operations for chosen apps, with per-point reporting intervals, outcome filters and off-screen-only reporting. Notification permission is required for alerts. A registry check reports confirmed or unconfirmed coverage. Also inspect a snapshot of processes registered for permission mode changes. |
 
 ## Install and get started
 
@@ -66,7 +66,11 @@ evidence and known limitations.
 History comes from records retained by Android. AppOpsNext prefers individual
 access records and falls back to time-bucketed system statistics where needed,
 such as for clipboard access. Retention and timestamp precision depend on the
-device; this is not a complete, independently recorded audit log.
+device; this is not a complete, independently recorded audit log. Denied attempts
+are shown as interval counts alongside accesses, including when individual access
+records exist. Interval boundaries are labelled; they are not individual rejection
+timestamps. Aggregate accesses are not counted again when discrete records are
+available. The seven-day chart continues to count accesses only.
 
 - Each operation's last successful result is saved locally and restored when
   the app reopens, with its update time shown on the page.
@@ -138,8 +142,10 @@ entirely your decision.
   manually, and verify the connection. Android controls which records exist.
 - **The background monitor reports nothing:** it is experimental and depends
   on a privileged interface that not every ROM provides. Turn it on again and
-  read the self-check result; it distinguishes an unsupported device from a
-  partly registered watch. Also confirm at least one app and operation are
+  read the registry check result; it can be confirmed, unconfirmed or failed,
+  and partial registration and callback parsing errors stay visible. Matching
+  registrations do not prove callback delivery. Enable notification permission
+  and the monitoring notification channels. Also confirm at least one app and operation are
   selected, since nothing is watched by default.
 - **Monitor counts differ from app calls:** the count represents reported
   events, which Android may emit more than once for one call. A monitoring

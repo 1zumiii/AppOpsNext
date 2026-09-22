@@ -11,6 +11,9 @@ data class AppOpHistoryEvent(
     val flags: String,
     val accessCount: Int = 1,
     val isAggregated: Boolean = false,
+    val rejectCount: Int = 0,
+    /** Aggregate counts cover this interval; accessTimeMillis is its end, not an attempt time. */
+    val intervalStartTimeMillis: Long? = null,
 )
 
 data class HistoryPermission(

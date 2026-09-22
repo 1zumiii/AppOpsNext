@@ -59,6 +59,9 @@ internal class NativeDaemonGateway(
         )
     }
 
+    override suspend fun getWatchers(): ShellCommandResult =
+        connection.execute(NativeDaemonCommand(verb = "GET_WATCHERS"))
+
     override suspend fun getHistory(
         operationName: String,
     ): ShellCommandResult {

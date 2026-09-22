@@ -29,6 +29,8 @@ import dev.izumi.appopsnext.presentation.components.AppNavigationBar
 import dev.izumi.appopsnext.presentation.components.MainDestination
 import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticsUiState
 import dev.izumi.appopsnext.presentation.experimental.ExperimentalScreen
+import dev.izumi.appopsnext.presentation.experimental.WatchersScreen
+import dev.izumi.appopsnext.presentation.experimental.WatchersUiState
 import dev.izumi.appopsnext.presentation.experimental.ExperimentalUiState
 import dev.izumi.appopsnext.presentation.experimental.MonitorOperationsScreen
 import dev.izumi.appopsnext.presentation.experimental.MonitorSettingsScreen
@@ -84,7 +86,10 @@ fun AppOpsRootScreen(
     onForegroundAlternativeRequested: () -> Unit,
     onHideSystemAppsChange: (Boolean) -> Unit,
     experimentalUiState: ExperimentalUiState,
+    watchersUiState: WatchersUiState,
+    onRefreshWatchers: () -> Unit,
     onMonitorEnabledChange: (Boolean) -> Unit,
+    onEnableUnconfirmedMonitor: () -> Unit,
     onMonitorHeadsUpChange: (Boolean) -> Unit,
     onCheckForUpdate: () -> Unit,
     onOpenBatterySettings: () -> Unit,
@@ -194,7 +199,7 @@ fun AppOpsRootScreen(
         enabled = selectedApp == null &&
             monitorPointKey == null &&
             monitorAppPackage == null &&
-            experimentalRoute == ROUTE_MONITOR_SETTINGS,
+            (experimentalRoute == ROUTE_MONITOR_SETTINGS || experimentalRoute == ROUTE_WATCHERS),
     ) {
         experimentalRoute = ROUTE_EXPERIMENTAL
     }
@@ -316,10 +321,18 @@ fun AppOpsRootScreen(
                 onHeadsUpChange = onMonitorHeadsUpChange,
             )
 
+            experimentalRoute == ROUTE_WATCHERS -> WatchersScreen(
+                uiState = watchersUiState,
+                onRefresh = onRefreshWatchers,
+                onBack = { experimentalRoute = ROUTE_EXPERIMENTAL },
+            )
+
             else -> ExperimentalScreen(
                 uiState = experimentalUiState,
                 onBack = { experimentalRoute = null },
                 onMonitorChange = onMonitorEnabledChange,
+                onEnableUnconfirmedMonitor = onEnableUnconfirmedMonitor,
+                onOpenWatchers = { experimentalRoute = ROUTE_WATCHERS },
                 onOpenSettings = { experimentalRoute = ROUTE_MONITOR_SETTINGS },
                 onOpenBatterySettings = onOpenBatterySettings,
                 onDismissBatteryNotice = onDismissBatteryNotice,
@@ -473,6 +486,7 @@ private val InstalledAppStateSaver = listSaver<InstalledApp?, Any>(
 
 private const val SAVED_APP_FIELD_COUNT = 4
 private const val ROUTE_EXPERIMENTAL = "experimental"
+private const val ROUTE_WATCHERS = "watchers"
 private const val ROUTE_MONITOR_SETTINGS = "monitor_settings"
 private const val ROUTE_MONITOR_TARGETS = "monitor_targets"
 private const val ROUTE_MONITOR_POINTS = "monitor_points"

@@ -12,7 +12,7 @@ import rikka.shizuku.ShizukuBinderWrapper
  * connection callback never arrived, on a device where Shizuku's own binder was
  * working; forwarding a transaction uses that working layer instead.
  */
-internal class AppOpsMonitorClient(private val onMalformed: (String) -> Unit) {
+internal class AppOpsMonitorClient {
     /** Which of the three watches are live, so a partial result stays visible. */
     data class Registration(
         val active: Boolean,
@@ -40,6 +40,7 @@ internal class AppOpsMonitorClient(private val onMalformed: (String) -> Unit) {
     fun register(
         opCodes: IntArray,
         onAccess: (AppOpAccessEvent) -> Unit,
+        onMalformed: (String) -> Unit,
     ): Registration {
         unregister()
         check(registeredService == null) { "Previous AppOps watches could not be removed; retry later" }

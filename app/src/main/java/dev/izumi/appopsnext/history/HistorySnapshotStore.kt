@@ -79,7 +79,9 @@ class HistorySnapshotStore(
         return try {
             if (!file.isFile || file.length() > MAX_FILE_BYTES) return emptyMap()
             DataInputStream(BufferedInputStream(file.inputStream())).use { input ->
-                if (input.readInt() != MAGIC || input.readInt() != VERSION) return emptyMap()
+                if (input.readInt() != MAGIC) return emptyMap()
+                val version = input.readInt()
+                if (version !in 1..VERSION) return emptyMap()
                 val operationCount = input.readBoundedCount(MAX_OPERATIONS)
                 val snapshots = LinkedHashMap<String, HistorySnapshot>(operationCount)
                 var totalEvents = 0
@@ -89,7 +91,7 @@ class HistorySnapshotStore(
                     val eventCount = input.readBoundedCount(MAX_EVENTS - totalEvents)
                     totalEvents += eventCount
                     val events = ArrayList<ResolvedHistoryEvent>(eventCount)
-                    repeat(eventCount) { events += input.readResolvedEvent() }
+                    repeat(eventCount) { events += input.readResolvedEvent(version) }
                     snapshots[operationName] = HistorySnapshot(events, fetchedAtMillis)
                 }
                 snapshots
@@ -129,7 +131,7 @@ class HistorySnapshotStore(
         return true
     }
 
-    private fun DataInputStream.readResolvedEvent(): ResolvedHistoryEvent = ResolvedHistoryEvent(
+    private fun DataInputStream.readResolvedEvent(version: Int): ResolvedHistoryEvent = ResolvedHistoryEvent(
         event = AppOpHistoryEvent(
             uid = readInt(),
             packageName = readBoundedString(),
@@ -141,6 +143,8 @@ class HistorySnapshotStore(
             flags = readBoundedString(),
             accessCount = readInt(),
             isAggregated = readBoolean(),
+            rejectCount = if (version >= 2) readBoundedCount(Int.MAX_VALUE) else 0,
+            intervalStartTimeMillis = if (version >= 2) readNullableLong() else null,
         ),
         app = InstalledApp(
             label = readBoundedString(),
@@ -162,6 +166,8 @@ class HistorySnapshotStore(
         writeBoundedString(event.flags)
         writeInt(event.accessCount)
         writeBoolean(event.isAggregated)
+        writeInt(event.rejectCount)
+        writeNullableLong(event.intervalStartTimeMillis)
         val app = resolved.app
         writeBoundedString(app.label)
         writeBoundedString(app.packageName)
@@ -222,7 +228,7 @@ class HistorySnapshotStore(
 
     private companion object {
         const val MAGIC = 0x48534E50 // HSNP
-        const val VERSION = 1
+        const val VERSION = 2
         const val MAX_FILE_BYTES = 32L * 1024 * 1024
         const val MAX_OPERATIONS = 512
         const val MAX_EVENTS = 100_000

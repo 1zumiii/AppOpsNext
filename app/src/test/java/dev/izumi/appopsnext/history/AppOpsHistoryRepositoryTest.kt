@@ -10,6 +10,33 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AppOpsHistoryRepositoryTest {
+    @Test fun `keeps aggregate rejections beside discrete accesses without duplicate access counts`() = runBlocking {
+        val repository = AppOpsHistoryRepository(FakeGateway("""
+            Aggregated accesses:
+              snapshot:
+                begin = 2026-09-22 09:00:00.000
+                end = 2026-09-22 10:00:00.000
+                Uid u0a166:
+                  Package com.example.camera:
+                    Attribution null:
+                      CAMERA:
+                        [top-s] = access=8, reject=2, duration=+1s
+                        [bg-s] = reject=3
+            Discrete accesses:
+              Uid: 10166
+                Package: com.example.camera
+                  CAMERA
+                    Attribution: null
+                      Access [top-s] at 2026-09-22 09:43:00.000
+        """.trimIndent()))
+        val result = repository.loadOperationHistory("CAMERA") as AppOpHistoryLoadResult.Success
+        assertEquals(3, result.events.size)
+        assertEquals(1, result.events.sumOf { it.accessCount })
+        assertEquals(5, result.events.sumOf { it.rejectCount })
+        assertTrue(result.events.filter { it.isAggregated }.all { it.accessCount == 0 && it.durationMillis == null })
+        assertTrue(result.events.filter { !it.isAggregated }.all { it.rejectCount == 0 })
+    }
+
     @Test
     fun `falls back to aggregate snapshots when discrete history is empty`() =
         runBlocking {

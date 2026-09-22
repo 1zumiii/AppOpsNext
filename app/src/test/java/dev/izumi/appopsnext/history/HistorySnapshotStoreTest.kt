@@ -14,6 +14,43 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HistorySnapshotStoreTest {
+    @Test fun `reads beta2 version one snapshots without losing existing records`() = runBlocking {
+        withSnapshotFile { file ->
+            // A real v1 layout, written independently of the current serializer.
+            DataOutputStream(file.outputStream()).use { out ->
+                fun string(value: String) {
+                    val bytes = value.toByteArray(Charsets.UTF_8)
+                    out.writeInt(bytes.size)
+                    out.write(bytes)
+                }
+                out.writeInt(0x48534E50)
+                out.writeInt(1)
+                out.writeInt(1)
+                string("CAMERA")
+                out.writeLong(123L)
+                out.writeInt(1)
+                out.writeInt(10166)
+                string("com.example.camera")
+                string("CAMERA")
+                out.writeBoolean(false)
+                out.writeLong(99L)
+                out.writeBoolean(false)
+                string("top")
+                string("s")
+                out.writeInt(2)
+                out.writeBoolean(true)
+                string("Camera")
+                string("com.example.camera")
+                out.writeInt(10166)
+                out.writeBoolean(false)
+            }
+            val loaded = HistorySnapshotStore(file).read().getValue("CAMERA")
+            assertEquals(123L, loaded.fetchedAtMillis)
+            assertEquals(2, loaded.events.single().event.accessCount)
+            assertEquals(0, loaded.events.single().event.rejectCount)
+            assertEquals(null, loaded.events.single().event.intervalStartTimeMillis)
+        }
+    }
     @Test fun `staging updates memory and one flush persists the full batch`() = runBlocking {
         withSnapshotFile { file ->
             val store = HistorySnapshotStore(file)
@@ -129,6 +166,8 @@ class HistorySnapshotStoreTest {
             flags = "SELF",
             accessCount = 7,
             isAggregated = true,
+            rejectCount = 5,
+            intervalStartTimeMillis = 50L,
         ),
         app = InstalledApp(
             label = "Example",

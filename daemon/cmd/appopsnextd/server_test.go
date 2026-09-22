@@ -11,6 +11,22 @@ import (
 
 var errReadFailure = errors.New("read failure")
 
+func TestParseWatcherQuery(t *testing.T) {
+	actual, err := parseCommand("GET_WATCHERS")
+	expected := []string{"/system/bin/dumpsys", "appops", "--watchers"}
+	if err != nil || !reflect.DeepEqual(actual.arguments, expected) {
+		t.Fatalf("command = %#v, error = %v", actual, err)
+	}
+}
+
+func TestParseRejectsWatcherArguments(t *testing.T) {
+	for _, request := range []string{"GET_WATCHERS extra", "GET_WATCHERS ;id", "GET_WATCHERS --package android", "GET_WATCHERS;id"} {
+		if _, err := parseCommand(request); err == nil {
+			t.Fatalf("accepted malformed request %q", request)
+		}
+	}
+}
+
 type failingReader struct{}
 
 func (failingReader) Read([]byte) (int, error) {

@@ -119,7 +119,9 @@ class AggregatedAppOpsHistoryParser {
                         ?.groupValues
                         ?.get(1)
                         ?.let(::parseDurationMillis)
-                    if (accessCount == null && duration == null) {
+                    val rejectCount = REJECT_COUNT_PATTERN.find(metrics)
+                        ?.groupValues?.get(1)?.toIntOrNull() ?: 0
+                    if (accessCount == null && duration == null && rejectCount == 0) {
                         return@forEach
                     }
                     val stateAndFlags = value.groupValues[1]
@@ -143,8 +145,10 @@ class AggregatedAppOpsHistoryParser {
                         } else {
                             ""
                         },
-                        accessCount = accessCount ?: 1,
+                        accessCount = accessCount ?: if (duration != null) 1 else 0,
                         isAggregated = true,
+                        rejectCount = rejectCount,
+                        intervalStartTimeMillis = begin,
                     )
                 }
             }
@@ -209,6 +213,7 @@ class AggregatedAppOpsHistoryParser {
         val OPERATION_PATTERN = Regex("""[A-Z][A-Z0-9_]*:""")
         val VALUE_PATTERN = Regex("""\[([^\]]+)]\s*=\s*(.+)""")
         val ACCESS_COUNT_PATTERN = Regex("""(?:^|,\s*)access=(\d+)""")
+        val REJECT_COUNT_PATTERN = Regex("""(?:^|,\s*)reject=(\d+)(?=,|\s*$)""")
         val DURATION_PATTERN = Regex("""(?:^|,\s*)duration=(\+\S+)""")
         val DURATION_VALUE_PATTERN = Regex(
             """\+(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?""" +

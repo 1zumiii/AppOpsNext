@@ -1,6 +1,10 @@
 package dev.izumi.appopsnext.appops.command
 
 object AppOpsCommands {
+    /** Ask the service to omit access history instead of truncating a full dump. */
+    fun getWatchers(): List<String> =
+        listOf(DUMPSYS_BINARY, APP_OPS_SERVICE, "--watchers")
+
     fun getPackageOps(packageName: String): List<String> {
         validatePackageName(packageName)
 

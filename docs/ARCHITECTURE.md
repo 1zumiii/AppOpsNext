@@ -36,6 +36,29 @@ The `monitor` package is the one privileged path that does not go through
 `PrivilegedAppOpsGateway`. Watch callbacks cannot be delivered over a
 request-and-response pipe, so it registers them directly against the AppOps
 service through a forwarded binder call and keeps that dependency to itself.
+Its registry checks use `PrivilegedAppOpsGateway.getWatchers()` after registration
+and every five minutes. A check requires each successfully registered callback
+kind to have one unrestricted row under Shizuku's UID covering all selected
+operations. This is corroboration, not unique ownership: another Shizuku client
+may own a matching registration, and a matching set cannot prove individual
+code-to-name mappings or callback delivery.
+Unsupported dumps remain unconfirmed and can be explicitly accepted by the user.
+Once a session has matched the registry, a later miss triggers bounded recovery;
+a session that never matched falls back to pinging the AppOps binder, because a
+miss there may only mean a different dump format. Unreadable registries leave the
+monitor running with a visible unconfirmed status. The registry prints
+`AppOpsManager`'s internal operation names, which differ from the public names
+for a few codes, so `AppOpCodes.registryNameOf()` maps them. Malformed callbacks are logged
+once per callback registration and shown in the monitor status, scoped to the live
+registration. Notification permission and enabled monitoring channels are needed
+for alerts; the experimental page explains this and links to notification settings.
+
+`AppOpsWatchersParser` also joins mode callbacks across the operation, package and
+all-callback indices. Those scopes are additive, not an intersection. The snapshot
+UI resolves caller UIDs to all visible candidate packages without claiming a unique
+owner for shared UIDs or that any specific change was delivered. Refresh failures
+clear the old display; snapshot times stay visible. This is not an audit log.
+
 `MonitorLifecycle` serializes registration and cleanup, invalidates sessions
 immediately on stop, and orders event publication with clear/stop. Callback
 arrival times use a monotonic clock for grouping and a wall clock for display.
@@ -282,6 +305,15 @@ open the persisted rule results through the existing batch result dialog. The
 most recent 50 installation reports plus all pending installations are retained.
 
 ## History refresh lifecycle
+
+Aggregate history retains `rejectCount` and the interval start alongside the end
+time. When discrete accesses exist, only the aggregate rejection counts are added;
+their access counts and durations are zeroed to avoid duplicate successful accesses.
+Android's discrete access section does not supply individual rejection timestamps.
+The UI shows separate access/denial counts and explicit aggregate intervals; the
+daily chart remains access-only. Snapshot format v2 persists these fields while
+reading beta2's v1 snapshots with zero captured denials and unknown interval starts.
+Those old snapshots retain their fetch time and can be refreshed normally.
 
 History polling requires a visible history screen, a foreground activity, and an
 available backend. Losing any of these conditions cancels the current refresh

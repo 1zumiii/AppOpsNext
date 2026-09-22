@@ -7,6 +7,7 @@ data class AppHistorySummary(
     val app: InstalledApp,
     val accessCount: Int,
     val latestAccessTimeMillis: Long,
+    val rejectCount: Int = 0,
 )
 
 object HistoryAppStatistics {
@@ -26,11 +27,14 @@ object HistoryAppStatistics {
                     latestAccessTimeMillis = appEvents.maxOf {
                         it.event.accessTimeMillis
                     },
+                    rejectCount = appEvents.sumOf { it.event.rejectCount },
                 )
             }
             .sortedWith(
                 compareByDescending<AppHistorySummary> {
                     it.accessCount
+                }.thenByDescending {
+                    it.rejectCount
                 }.thenBy {
                     it.app.label.lowercase(Locale.ROOT)
                 }.thenBy {

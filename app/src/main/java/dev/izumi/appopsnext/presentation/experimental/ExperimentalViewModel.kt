@@ -124,11 +124,16 @@ class ExperimentalViewModel(
         initialValue = ExperimentalUiState(),
     )
 
-    /**
-     * The self-check runs before the setting is stored, so a device that cannot
-     * deliver the callbacks never ends up with the switch left on.
-     */
-    fun setMonitorEnabled(enabled: Boolean) {
+    fun setMonitorEnabled(enabled: Boolean) = changeMonitorEnabled(enabled, allowUnconfirmed = false)
+
+    fun enableUnconfirmedMonitor() {
+        if (selfCheckResult.value == MonitorSelfCheckResult.Unconfirmed) {
+            changeMonitorEnabled(true, allowUnconfirmed = true)
+        }
+    }
+
+    /** Store the setting only after confirmation, or an explicit unconfirmed opt-in. */
+    private fun changeMonitorEnabled(enabled: Boolean, allowUnconfirmed: Boolean) {
         if (busy.value) return
         if (!enabled) {
             busy.value = true
@@ -152,7 +157,9 @@ class ExperimentalViewModel(
                 AppOpsMonitorService.start(getApplication(), checking = true)
                 val result = controller.runSelfCheck()
                 selfCheckResult.value = result
-                if (result is MonitorSelfCheckResult.Passed) {
+                if (result is MonitorSelfCheckResult.Passed ||
+                    (allowUnconfirmed && result is MonitorSelfCheckResult.Unconfirmed)
+                ) {
                     settingsRepository.setBackgroundMonitor(true)
                     AppOpsMonitorService.start(getApplication())
                     enabledSuccessfully = true

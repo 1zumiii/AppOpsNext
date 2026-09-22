@@ -11,6 +11,7 @@ object DiagnosticReportComposer {
         privilegedServiceState: PrivilegedServiceState,
         appOpsReadState: AppOpsReadState,
         eventLines: List<String>,
+        watcherRegistry: String = "Not read in this session.",
     ): String = buildString {
         appendLine("AppOpsNext diagnostic report")
         appendLine(
@@ -49,6 +50,9 @@ object DiagnosticReportComposer {
         appendLine("[AppOps backend]")
         appendLine("backend=${describe(privilegedServiceState)}")
         appendLine("selfCheck=${describe(appOpsReadState)}")
+        appendLine()
+        appendLine("[Watcher registry]")
+        appendLine(watcherRegistry)
         appendLine()
         appendLine("[Events]")
         if (eventLines.isEmpty()) {

@@ -99,11 +99,15 @@ class AppOpsMonitorService : Service() {
     }
 
     private fun postForeground(checking: Boolean, headsUp: Boolean) {
+        // Before a session has started there is no point count to show, and
+        // starting one checks the registration, so it is shown as a check.
+        val points = if (checking) null else controller.watchedPointCount
         startForeground(
             MonitorNotifier.ONGOING_NOTIFICATION_ID,
             MonitorNotifier(this).ongoingNotification(
-                checking = checking,
+                checking = points == null,
                 useAlertChannel = headsUp,
+                watchedPoints = points ?: 0,
             ),
             ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
         )

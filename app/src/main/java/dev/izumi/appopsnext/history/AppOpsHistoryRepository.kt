@@ -43,10 +43,17 @@ class AppOpsHistoryRepository(
                 operationName,
                 result.stdout,
             )
+            val aggregated = aggregatedParser.parse(operationName, result.stdout)
+            // Android's discrete section records accesses, not denied attempts.
+            // Keep the aggregate rejections even when discrete accesses exist,
+            // without counting the aggregate accesses or durations a second time.
+            val events = if (discreteEvents.isEmpty()) aggregated else {
+                discreteEvents + aggregated.filter { it.rejectCount > 0 }.map {
+                    it.copy(accessCount = 0, durationMillis = null)
+                }
+            }
             AppOpHistoryLoadResult.Success(
-                events = discreteEvents.ifEmpty {
-                    aggregatedParser.parse(operationName, result.stdout)
-                },
+                events = events.sortedByDescending { it.accessTimeMillis },
             )
         }
     }

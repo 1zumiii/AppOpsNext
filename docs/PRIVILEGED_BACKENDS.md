@@ -32,6 +32,7 @@ operation names validated first, on the app side and again in the daemon.
 | `GET_PACKAGE_OP` | `cmd appops get <package> <op>` |
 | `GET_UID_OPS` | `cmd appops get <uid>` |
 | `GET_UID_STATES` | `dumpsys appops --package <package>` |
+| `GET_WATCHERS` | `dumpsys appops --watchers` (no arguments) |
 | `GET_HISTORY` | `dumpsys appops --history --include-discrete 0 --op <op>` |
 | `SET_PACKAGE` | `cmd appops set <package> <op> <mode>` |
 | `SET_UID` | `cmd appops set --uid <package> <op> <mode>` |
@@ -43,6 +44,12 @@ lines on an ordinary device, which is not something to run while callbacks are
 arriving. A ROM that does not support `--package`, or prints the block in a
 different shape, yields no usable state; the monitor then reports the access
 rather than dropping it.
+
+`GET_WATCHERS` uses the platform's watcher-only option, avoiding a full history
+dump or a fixed line cutoff. It is exposed as appended AIDL method 11; existing
+transaction numbers stay unchanged. An unsupported option, malformed response,
+timeout or missing match cannot pass the monitor's registry check. The parser
+also supplies the experimental mode-listener snapshot and diagnostic report.
 
 ## Compatibility evidence
 
