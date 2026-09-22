@@ -9,6 +9,7 @@ import dev.izumi.appopsnext.settings.UserSettingsRepository
 import dev.izumi.appopsnext.shizuku.PrivilegedServiceClient
 import dev.izumi.appopsnext.templates.PermissionTemplateRepository
 import dev.izumi.appopsnext.history.HistoryPermissionSettingsRepository
+import dev.izumi.appopsnext.history.HistoryArchiveStore
 import dev.izumi.appopsnext.history.HistorySnapshotStore
 import dev.izumi.appopsnext.monitor.AppOpsMonitorController
 import dev.izumi.appopsnext.monitor.MonitorTargetsRepository
@@ -34,6 +35,10 @@ class AppOpsNextApplication : Application() {
         HistorySnapshotStore(
             File(noBackupFilesDir, "history-snapshots-v1.bin"),
         )
+    }
+    /** Kept out of backups like the snapshots: it is a record of other apps' accesses. */
+    val historyArchiveStore: HistoryArchiveStore by lazy {
+        HistoryArchiveStore(File(noBackupFilesDir, "history-archive-v1.bin"))
     }
 
     val installedAppsRepository: InstalledAppsRepository by lazy {

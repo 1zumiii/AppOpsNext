@@ -1,5 +1,11 @@
 package dev.izumi.appopsnext.presentation.history
 
+import android.text.format.DateUtils
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -47,10 +53,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -75,6 +85,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun HistoryOverviewScreen(
     uiState: HistoryUiState,
+    timeRange: HistoryTimeRange,
+    onTimeRangeChange: (HistoryTimeRange) -> Unit,
     onRefresh: () -> Unit,
     onPermissionSelected: (HistoryPermission) -> Unit,
     onPermissionsChanged: (List<String>) -> Unit,
@@ -124,11 +136,25 @@ fun HistoryOverviewScreen(
                         onClick = onRefresh,
                         enabled = !uiState.isLoading,
                     ) {
+                        // Turning while a refresh runs, so the tap visibly did something.
+                        val rotation = if (uiState.isLoading) {
+                            rememberInfiniteTransition(label = "refresh").animateFloat(
+                                initialValue = 0f,
+                                targetValue = 360f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(durationMillis = 900, easing = LinearEasing),
+                                ),
+                                label = "refreshRotation",
+                            ).value
+                        } else {
+                            0f
+                        }
                         Icon(
                             painter = painterResource(R.drawable.ic_refresh),
                             contentDescription = stringResource(
                                 R.string.history_refresh,
                             ),
+                            modifier = Modifier.rotate(rotation),
                         )
                     }
                 },
@@ -138,8 +164,19 @@ fun HistoryOverviewScreen(
             )
         },
     ) { contentPadding ->
+        val rangedState = remember(uiState, timeRange) {
+            val now = System.currentTimeMillis()
+            val zoneId = ZoneId.systemDefault()
+            uiState.copy(
+                permissions = uiState.permissions.map {
+                    HistoryFilter.apply(it, timeRange, null, now, zoneId)
+                },
+            )
+        }
         HistoryOverviewContent(
-            uiState = uiState,
+            uiState = rangedState,
+            timeRange = timeRange,
+            onTimeRangeChange = onTimeRangeChange,
             onPermissionSelected = onPermissionSelected,
             onPermissionOrderChanged = onPermissionOrderChanged,
             modifier = Modifier
@@ -172,6 +209,8 @@ fun HistoryOverviewScreen(
 @Composable
 private fun HistoryOverviewContent(
     uiState: HistoryUiState,
+    timeRange: HistoryTimeRange,
+    onTimeRangeChange: (HistoryTimeRange) -> Unit,
     onPermissionSelected: (HistoryPermission) -> Unit,
     onPermissionOrderChanged: (List<String>) -> Unit,
     modifier: Modifier = Modifier,
@@ -355,6 +394,27 @@ private fun HistoryOverviewContent(
                     )
                 }
             } else {
+                item {
+                    HistoryFilterBar(
+                        range = timeRange,
+                        ranges = HistoryTimeRange.available(uiState.saveIndividualHistory),
+                        onRangeChange = onTimeRangeChange,
+                    )
+                }
+                // Every permission refreshes together, so one time stands for all of them.
+                uiState.lastUpdatedAtMillis?.let { updatedAt ->
+                    item {
+                        Text(
+                            text = stringResource(
+                                R.string.history_snapshot_updated,
+                                DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+                                    .format(Date(updatedAt)),
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
                 if (uiState.permissions.any { it.lastUpdatedAtMillis != null }) {
                     item {
                         PermissionDistributionChart(
@@ -419,6 +479,11 @@ fun PermissionHistoryDetailScreen(
     permission: HistoryPermission,
     history: PermissionHistory?,
     isLoading: Boolean,
+    savingIndividualRecords: Boolean,
+    timeRange: HistoryTimeRange,
+    onTimeRangeChange: (HistoryTimeRange) -> Unit,
+    appFilter: String?,
+    onAppFilterChange: (String?) -> Unit,
     onBack: () -> Unit,
     onAppsSelected: () -> Unit,
     onAppSelected: (InstalledApp) -> Unit,
@@ -427,6 +492,26 @@ fun PermissionHistoryDetailScreen(
     var showInformation by remember(permission.shellOperationName) {
         mutableStateOf(false)
     }
+    var showAppFilter by remember { mutableStateOf(false) }
+    val zoneId = remember { ZoneId.systemDefault() }
+    val ranged = remember(history, timeRange) {
+        history?.let { HistoryFilter.apply(it, timeRange, null, System.currentTimeMillis(), zoneId) }
+    }
+    val filtered = remember(ranged, appFilter) {
+        ranged?.let { it.copy(events = it.events.filter { event -> appFilter == null || event.app.packageName == appFilter }) }
+    }
+    // The chart always shows the last seven days, whatever the range.
+    val chartEvents = remember(history, appFilter) {
+        history?.events.orEmpty().filter { appFilter == null || it.app.packageName == appFilter }
+    }
+    val timeline = remember(filtered) { HistoryFilter.timeline(filtered?.events.orEmpty()) }
+    val hasIndividualRecords = history?.individualRecordsAvailable == true
+    val appSummaries = remember(ranged) {
+        HistoryAppStatistics.summarize(ranged?.events.orEmpty(), hasIndividualRecords)
+    }
+    val appFilterLabel = appFilter?.let { packageName ->
+        history?.events?.firstOrNull { it.app.packageName == packageName }?.app?.label ?: packageName
+    } ?: stringResource(R.string.history_filter_all_apps)
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -469,7 +554,6 @@ fun PermissionHistoryDetailScreen(
             )
         },
     ) { contentPadding ->
-        val events = history?.events.orEmpty()
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -477,6 +561,17 @@ fun PermissionHistoryDetailScreen(
             contentPadding = HistoryContentPadding,
             verticalArrangement = Arrangement.Top,
         ) {
+            item {
+                HistoryFilterBar(
+                    range = timeRange,
+                    ranges = HistoryTimeRange.available(savingIndividualRecords),
+                    onRangeChange = onTimeRangeChange,
+                    appFilterLabel = appFilterLabel,
+                    appFilterActive = appFilter != null,
+                    onAppFilterClick = { showAppFilter = true },
+                    modifier = Modifier.padding(bottom = 12.dp),
+                )
+            }
             history?.failureReason?.let { failureReason ->
                 item {
                     HistoryStatusCard(
@@ -487,16 +582,26 @@ fun PermissionHistoryDetailScreen(
             }
             item {
                 DetailSummary(
-                    recordCount = history?.recordCount ?: 0,
-                    rejectCount = history?.rejectCount ?: 0,
-                    appCount = history?.appCount ?: 0,
+                    recordCount = filtered?.recordCount ?: 0,
+                    rejectCount = filtered?.rejectCount ?: 0,
+                    appCount = filtered?.appCount ?: 0,
                     onAppsSelected = onAppsSelected,
                     modifier = Modifier.padding(bottom = 12.dp),
                 )
             }
+            filtered?.intervalAccessCount?.takeIf { it > 0 }?.let { intervalAccesses ->
+                item {
+                    Text(
+                        text = stringResource(R.string.history_interval_accesses_apart, intervalAccesses),
+                        modifier = Modifier.padding(bottom = 12.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             item {
                 SevenDayHistoryChart(
-                    events = events,
+                    events = chartEvents,
                     modifier = Modifier.padding(bottom = 12.dp),
                 )
             }
@@ -519,7 +624,7 @@ fun PermissionHistoryDetailScreen(
                         CircularProgressIndicator()
                     }
                 }
-            } else if (events.isEmpty()) {
+            } else if (timeline.isEmpty) {
                 item {
                     Text(
                         text = stringResource(R.string.history_empty),
@@ -529,7 +634,7 @@ fun PermissionHistoryDetailScreen(
                 }
             } else {
                 itemsIndexed(
-                    items = events,
+                    items = timeline.individual,
                     key = { index, item ->
                         "${item.event.packageName}:" +
                             "${item.event.accessTimeMillis}:" +
@@ -539,14 +644,68 @@ fun PermissionHistoryDetailScreen(
                     TimelineHistoryItem(
                         item = item,
                         isFirst = index == 0,
-                        isLast = index == events.lastIndex,
+                        isLast = index == timeline.individual.lastIndex,
                         onClick = { onAppSelected(item.app) },
                     )
+                }
+                if (timeline.intervals.isNotEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier.padding(
+                                top = if (timeline.individual.isEmpty()) 0.dp else 8.dp,
+                                bottom = 12.dp,
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.history_intervals_header),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                text = stringResource(
+                                    when {
+                                        !hasIndividualRecords -> R.string.history_intervals_only_note
+                                        savingIndividualRecords -> R.string.history_intervals_gap_note
+                                        else -> R.string.history_intervals_older_note
+                                    },
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    itemsIndexed(
+                        items = timeline.intervals,
+                        key = { index, item ->
+                            "interval:${item.event.packageName}:" +
+                                "${item.event.accessTimeMillis}:" +
+                                "${item.event.attributionTag}:$index"
+                        },
+                    ) { index, item ->
+                        TimelineHistoryItem(
+                            item = item,
+                            isFirst = index == 0,
+                            isLast = index == timeline.intervals.lastIndex,
+                            onClick = { onAppSelected(item.app) },
+                        )
+                    }
                 }
             }
         }
     }
 
+    if (showAppFilter) {
+        HistoryAppFilterDialog(
+            summaries = appSummaries,
+            selectedPackage = appFilter,
+            onSelect = { packageName ->
+                showAppFilter = false
+                onAppFilterChange(packageName)
+            },
+            onDismiss = { showAppFilter = false },
+        )
+    }
     if (showInformation) {
         PermissionHistoryInformationDialog(
             permission = permission,
@@ -694,17 +853,6 @@ private fun PermissionHistoryCard(
                 ),
                 style = MaterialTheme.typography.bodyMedium,
             )
-            history.lastUpdatedAtMillis?.let { updatedAt ->
-                Text(
-                    text = stringResource(
-                        R.string.history_snapshot_updated,
-                        DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
-                            .format(Date(updatedAt)),
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
             Text(
                 text = stringResource(
                     R.string.history_latest_record,
@@ -910,14 +1058,20 @@ private fun TimelineHistoryItem(
 ) {
     val lineColor = MaterialTheme.colorScheme.outlineVariant
     val markerColor = MaterialTheme.colorScheme.primary
+    val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
         ?: Locale.getDefault()
-    val timestamp = remember(item.event.accessTimeMillis, locale) {
-        DateFormat.getDateTimeInstance(
-            DateFormat.MEDIUM,
-            DateFormat.MEDIUM,
-            locale,
-        ).format(Date(item.event.accessTimeMillis))
+    // Record times come rounded to the minute, so seconds say nothing; a range that stays
+    // within one day names the day once, and the current year is left out.
+    val intervalStart = item.event.intervalStartTimeMillis.takeIf { item.event.isAggregated }
+    val timeText = remember(item.event.accessTimeMillis, intervalStart, locale) {
+        val flags = DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME or
+            DateUtils.FORMAT_ABBREV_MONTH
+        if (intervalStart != null) {
+            DateUtils.formatDateRange(context, intervalStart, item.event.accessTimeMillis, flags)
+        } else {
+            DateUtils.formatDateTime(context, item.event.accessTimeMillis, flags)
+        }
     }
     Row(
         modifier = modifier
@@ -943,10 +1097,12 @@ private fun TimelineHistoryItem(
                         cap = StrokeCap.Round,
                     )
                 }
+                // A hollow marker is an interval count, a filled one a single record.
                 drawCircle(
                     color = markerColor,
                     radius = 5.dp.toPx(),
                     center = Offset(centerX, markerY),
+                    style = if (item.event.isAggregated) Stroke(width = 2.dp.toPx()) else Fill,
                 )
             }
             .clickable(onClick = onClick),
@@ -979,13 +1135,11 @@ private fun TimelineHistoryItem(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = if (item.event.isAggregated) {
-                    item.event.intervalStartTimeMillis?.let { start ->
-                        stringResource(R.string.history_interval_range,
-                            DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.MEDIUM, locale).format(Date(start)),
-                            timestamp)
-                    } ?: stringResource(R.string.history_interval_end, timestamp)
-                } else timestamp,
+                text = if (item.event.isAggregated && intervalStart == null) {
+                    stringResource(R.string.history_interval_end, timeText)
+                } else {
+                    timeText
+                },
                 style = MaterialTheme.typography.bodyMedium,
             )
             Row(
@@ -1015,9 +1169,8 @@ private fun TimelineHistoryItem(
             if (item.event.isAggregated) {
                 Text(
                     text = stringResource(
-                        R.string.history_access_reject_counts,
+                        R.string.history_aggregated_access_count,
                         item.event.accessCount,
-                        item.event.rejectCount,
                     ),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

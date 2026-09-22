@@ -56,6 +56,9 @@ class UserSettingsRepository(
                 suppressAllOperationsWarning =
                     preferences[Keys.SUPPRESS_ALL_OPERATIONS_WARNING]
                         ?: UserSettingsDefaults.SUPPRESS_ALL_OPERATIONS_WARNING,
+                saveIndividualHistory =
+                    preferences[Keys.SAVE_INDIVIDUAL_HISTORY]
+                        ?: UserSettingsDefaults.SAVE_INDIVIDUAL_HISTORY,
             )
         }
 
@@ -101,6 +104,12 @@ class UserSettingsRepository(
         }
     }
 
+    suspend fun setSaveIndividualHistory(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[Keys.SAVE_INDIVIDUAL_HISTORY] = enabled
+        }
+    }
+
     suspend fun setBatteryNoticeSuppressed(suppressed: Boolean) {
         dataStore.edit { preferences ->
             preferences[Keys.SUPPRESS_BATTERY_NOTICE] = suppressed
@@ -108,6 +117,7 @@ class UserSettingsRepository(
     }
 
     private object Keys {
+        val SAVE_INDIVIDUAL_HISTORY = booleanPreferencesKey("save_individual_history")
         val HIDE_SYSTEM_APPS = booleanPreferencesKey("hide_system_apps")
         val SUPPRESS_DENY_FALLBACK_NOTICE =
             booleanPreferencesKey("suppress_deny_fallback_notice")

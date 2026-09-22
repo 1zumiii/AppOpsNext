@@ -41,7 +41,10 @@ fun HistoryAppStatisticsScreen(
     modifier: Modifier = Modifier,
 ) {
     val summaries = remember(history?.events) {
-        HistoryAppStatistics.summarize(history?.events.orEmpty())
+        HistoryAppStatistics.summarize(
+            history?.events.orEmpty(),
+            history?.individualRecordsAvailable == true,
+        )
     }
     Scaffold(
         modifier = modifier,
@@ -152,9 +155,14 @@ private fun HistoryAppStatisticsItem(
             }
             Text(
                 text = stringResource(
-                    R.string.history_access_reject_counts,
+                    if (summary.intervalAccessCount > 0) {
+                        R.string.history_access_reject_interval_counts
+                    } else {
+                        R.string.history_access_reject_counts
+                    },
                     summary.accessCount,
                     summary.rejectCount,
+                    summary.intervalAccessCount,
                 ),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,

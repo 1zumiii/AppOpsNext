@@ -338,5 +338,5 @@ private fun partialWatchMessage(status: MonitorStatus?): String? {
         if (!status.startedWatch) add(stringResource(R.string.monitor_watch_started))
     }
     if (missing.isEmpty()) return null
-    return stringResource(R.string.monitor_partial_watch, missing.joinToString("、"))
+    return stringResource(R.string.monitor_partial_watch, missing.joinToString(stringResource(R.string.list_separator)))
 }

@@ -135,6 +135,12 @@ class MainActivity : ComponentActivity() {
                         appDetailViewModel::requestForegroundAlternative,
                     onHideSystemAppsChange =
                         settingsViewModel::setHideSystemApps,
+                    onSaveIndividualHistoryChange =
+                        settingsViewModel::setSaveIndividualHistory,
+                    countSavedHistory =
+                        settingsViewModel::countSavedHistory,
+                    onDeleteSavedHistory =
+                        settingsViewModel::deleteSavedHistory,
                     onAppLanguageChange =
                         settingsViewModel::setAppLanguage,
                     onCreateTemplate = templatesViewModel::createTemplate,

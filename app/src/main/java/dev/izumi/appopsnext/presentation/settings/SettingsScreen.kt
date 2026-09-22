@@ -44,6 +44,7 @@ fun SettingsScreen(
     uiState: SettingsUiState,
     diagnosticsUiState: DiagnosticsUiState,
     onHideSystemAppsChange: (Boolean) -> Unit,
+    onOpenSavedHistory: () -> Unit,
     onOpenExperimental: () -> Unit,
     onCheckForUpdate: () -> Unit,
     onAppLanguageChange: (AppLanguage) -> Unit,
@@ -117,6 +118,14 @@ fun SettingsScreen(
                         Text(text = appLanguageLabel(uiState.appLanguage))
                     },
                 )
+            }
+            item {
+                SettingsSectionTitle(
+                    text = stringResource(R.string.settings_history_section),
+                )
+            }
+            item {
+                SavedHistoryEntry(uiState = uiState, onOpen = onOpenSavedHistory)
             }
             item {
                 SettingsSectionTitle(

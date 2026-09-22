@@ -1,16 +1,12 @@
 package dev.izumi.appopsnext.history
 
-import dev.izumi.appopsnext.apps.model.InstalledApp
-import dev.izumi.appopsnext.history.model.AppOpHistoryEvent
 import dev.izumi.appopsnext.presentation.history.ResolvedHistoryEvent
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
-import java.io.FilterOutputStream
 import java.io.IOException
-import java.io.OutputStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption.ATOMIC_MOVE
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
@@ -91,7 +87,7 @@ class HistorySnapshotStore(
                     val eventCount = input.readBoundedCount(MAX_EVENTS - totalEvents)
                     totalEvents += eventCount
                     val events = ArrayList<ResolvedHistoryEvent>(eventCount)
-                    repeat(eventCount) { events += input.readResolvedEvent(version) }
+                    repeat(eventCount) { events += input.readHistoryEvent(version) }
                     snapshots[operationName] = HistorySnapshot(events, fetchedAtMillis)
                 }
                 snapshots
@@ -113,7 +109,7 @@ class HistorySnapshotStore(
         Files.createDirectories(parent.toPath())
         val temp = File.createTempFile("${file.name}.", ".tmp", parent)
         try {
-            DataOutputStream(BufferedOutputStream(BoundedOutputStream(temp.outputStream()))).use { output ->
+            DataOutputStream(BufferedOutputStream(BoundedOutputStream(temp.outputStream(), MAX_FILE_BYTES))).use { output ->
                 output.writeInt(MAGIC)
                 output.writeInt(VERSION)
                 output.writeInt(snapshots.size)
@@ -121,7 +117,7 @@ class HistorySnapshotStore(
                     output.writeBoundedString(operationName)
                     output.writeLong(snapshot.fetchedAtMillis)
                     output.writeInt(snapshot.events.size)
-                    snapshot.events.forEach { output.writeResolvedEvent(it) }
+                    snapshot.events.forEach { output.writeHistoryEvent(it) }
                 }
             }
             Files.move(temp.toPath(), file.toPath(), ATOMIC_MOVE, REPLACE_EXISTING)
@@ -131,107 +127,12 @@ class HistorySnapshotStore(
         return true
     }
 
-    private fun DataInputStream.readResolvedEvent(version: Int): ResolvedHistoryEvent = ResolvedHistoryEvent(
-        event = AppOpHistoryEvent(
-            uid = readInt(),
-            packageName = readBoundedString(),
-            operationName = readBoundedString(),
-            attributionTag = readNullableString(),
-            accessTimeMillis = readLong(),
-            durationMillis = readNullableLong(),
-            uidState = readBoundedString(),
-            flags = readBoundedString(),
-            accessCount = readInt(),
-            isAggregated = readBoolean(),
-            rejectCount = if (version >= 2) readBoundedCount(Int.MAX_VALUE) else 0,
-            intervalStartTimeMillis = if (version >= 2) readNullableLong() else null,
-        ),
-        app = InstalledApp(
-            label = readBoundedString(),
-            packageName = readBoundedString(),
-            uid = readInt(),
-            isSystemApp = readBoolean(),
-        ),
-    )
-
-    private fun DataOutputStream.writeResolvedEvent(resolved: ResolvedHistoryEvent) {
-        val event = resolved.event
-        writeInt(event.uid)
-        writeBoundedString(event.packageName)
-        writeBoundedString(event.operationName)
-        writeNullableString(event.attributionTag)
-        writeLong(event.accessTimeMillis)
-        writeNullableLong(event.durationMillis)
-        writeBoundedString(event.uidState)
-        writeBoundedString(event.flags)
-        writeInt(event.accessCount)
-        writeBoolean(event.isAggregated)
-        writeInt(event.rejectCount)
-        writeNullableLong(event.intervalStartTimeMillis)
-        val app = resolved.app
-        writeBoundedString(app.label)
-        writeBoundedString(app.packageName)
-        writeInt(app.uid)
-        writeBoolean(app.isSystemApp)
-    }
-
-    private fun DataInputStream.readBoundedCount(maximum: Int): Int = readInt().also {
-        if (it < 0 || it > maximum) throw IOException("Invalid snapshot count")
-    }
-
-    private fun DataInputStream.readBoundedString(): String {
-        val byteCount = readBoundedCount(MAX_STRING_BYTES)
-        val bytes = ByteArray(byteCount)
-        readFully(bytes)
-        return bytes.toString(Charsets.UTF_8)
-    }
-
-    private fun DataOutputStream.writeBoundedString(value: String) {
-        val bytes = value.toByteArray(Charsets.UTF_8)
-        if (bytes.size > MAX_STRING_BYTES) throw IOException("Snapshot string is too large")
-        writeInt(bytes.size)
-        write(bytes)
-    }
-
-    private fun DataInputStream.readNullableString(): String? = if (readBoolean()) readBoundedString() else null
-
-    private fun DataOutputStream.writeNullableString(value: String?) {
-        writeBoolean(value != null)
-        if (value != null) writeBoundedString(value)
-    }
-
-    private fun DataInputStream.readNullableLong(): Long? = if (readBoolean()) readLong() else null
-
-    private fun DataOutputStream.writeNullableLong(value: Long?) {
-        writeBoolean(value != null)
-        if (value != null) writeLong(value)
-    }
-
-    private class BoundedOutputStream(output: OutputStream) : FilterOutputStream(output) {
-        private var bytesWritten = 0L
-
-        override fun write(value: Int) {
-            reserve(1)
-            out.write(value)
-        }
-
-        override fun write(bytes: ByteArray, offset: Int, length: Int) {
-            reserve(length)
-            out.write(bytes, offset, length)
-        }
-
-        private fun reserve(count: Int) {
-            bytesWritten += count
-            if (bytesWritten > MAX_FILE_BYTES) throw IOException("Snapshot file is too large")
-        }
-    }
-
     private companion object {
         const val MAGIC = 0x48534E50 // HSNP
-        const val VERSION = 2
+        /** The snapshot's own version is its event layout. */
+        const val VERSION = HISTORY_EVENT_LAYOUT_VERSION
         const val MAX_FILE_BYTES = 32L * 1024 * 1024
         const val MAX_OPERATIONS = 512
         const val MAX_EVENTS = 100_000
-        const val MAX_STRING_BYTES = 1 * 1024 * 1024
     }
 }
