@@ -488,6 +488,7 @@ fun PermissionHistoryDetailScreen(
             item {
                 DetailSummary(
                     recordCount = history?.recordCount ?: 0,
+                    rejectCount = history?.rejectCount ?: 0,
                     appCount = history?.appCount ?: 0,
                     onAppsSelected = onAppsSelected,
                     modifier = Modifier.padding(bottom = 12.dp),
@@ -689,6 +690,7 @@ private fun PermissionHistoryCard(
                     R.string.history_permission_summary,
                     history.recordCount,
                     history.appCount,
+                    history.rejectCount,
                 ),
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -718,6 +720,7 @@ private fun PermissionHistoryCard(
 @Composable
 private fun DetailSummary(
     recordCount: Int,
+    rejectCount: Int,
     appCount: Int,
     onAppsSelected: () -> Unit,
     modifier: Modifier = Modifier,
@@ -729,6 +732,11 @@ private fun DetailSummary(
         SummaryMetric(
             value = recordCount.toString(),
             label = stringResource(R.string.history_system_records),
+            modifier = Modifier.weight(1f),
+        )
+        SummaryMetric(
+            value = rejectCount.toString(),
+            label = stringResource(R.string.history_rejections),
             modifier = Modifier.weight(1f),
         )
         SummaryMetric(
@@ -971,7 +979,13 @@ private fun TimelineHistoryItem(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = timestamp,
+                text = if (item.event.isAggregated) {
+                    item.event.intervalStartTimeMillis?.let { start ->
+                        stringResource(R.string.history_interval_range,
+                            DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.MEDIUM, locale).format(Date(start)),
+                            timestamp)
+                    } ?: stringResource(R.string.history_interval_end, timestamp)
+                } else timestamp,
                 style = MaterialTheme.typography.bodyMedium,
             )
             Row(
@@ -1001,8 +1015,9 @@ private fun TimelineHistoryItem(
             if (item.event.isAggregated) {
                 Text(
                     text = stringResource(
-                        R.string.history_aggregated_access_count,
+                        R.string.history_access_reject_counts,
                         item.event.accessCount,
+                        item.event.rejectCount,
                     ),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

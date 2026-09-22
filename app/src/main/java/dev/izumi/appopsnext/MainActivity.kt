@@ -18,6 +18,7 @@ import dev.izumi.appopsnext.presentation.app_list.AppListViewModel
 import dev.izumi.appopsnext.presentation.batch.BatchOperationsViewModel
 import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticsViewModel
 import dev.izumi.appopsnext.presentation.experimental.ExperimentalViewModel
+import dev.izumi.appopsnext.presentation.experimental.WatchersViewModel
 import dev.izumi.appopsnext.presentation.history.HistoryViewModel
 import dev.izumi.appopsnext.presentation.settings.SettingsViewModel
 import dev.izumi.appopsnext.presentation.templates.TemplatesViewModel
@@ -32,6 +33,7 @@ class MainActivity : ComponentActivity() {
     private val templatesViewModel: TemplatesViewModel by viewModels()
     private val batchOperationsViewModel: BatchOperationsViewModel by viewModels()
     private val experimentalViewModel: ExperimentalViewModel by viewModels()
+    private val watchersViewModel: WatchersViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,6 +62,7 @@ class MainActivity : ComponentActivity() {
                 appDetailViewModel.searchQuery.collectAsStateWithLifecycle()
             val experimentalUiState =
                 experimentalViewModel.uiState.collectAsStateWithLifecycle()
+            val watchersUiState = watchersViewModel.uiState.collectAsStateWithLifecycle()
 
             AppOpsNextTheme {
                 AppOpsRootScreen(
@@ -73,8 +76,12 @@ class MainActivity : ComponentActivity() {
                     batchOperationUiState = batchOperationUiState.value,
                     appOpSearchQuery = appOpSearchQuery.value,
                     experimentalUiState = experimentalUiState.value,
+                    watchersUiState = watchersUiState.value,
+                    onRefreshWatchers = watchersViewModel::refresh,
                     onMonitorEnabledChange =
                         experimentalViewModel::setMonitorEnabled,
+                    onEnableUnconfirmedMonitor =
+                        experimentalViewModel::enableUnconfirmedMonitor,
                     onMonitorHeadsUpChange =
                         experimentalViewModel::setHeadsUp,
                     onCheckForUpdate =

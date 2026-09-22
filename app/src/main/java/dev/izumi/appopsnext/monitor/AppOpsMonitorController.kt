@@ -1,12 +1,14 @@
 package dev.izumi.appopsnext.monitor
 
-import android.content.ClipboardManager
 import android.content.Context
 import android.os.Process
 import android.os.SystemClock
 import android.os.UserHandle
 import dev.izumi.appopsnext.apps.InstalledAppsRepository
 import dev.izumi.appopsnext.appops.PrivilegedAppOpsGateway
+import dev.izumi.appopsnext.appops.AppOpsWatchersRepository
+import dev.izumi.appopsnext.appops.parser.AccessWatchKind
+import dev.izumi.appopsnext.appops.parser.WatchRegistration
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
 import dev.izumi.appopsnext.settings.UserSettingsRepository
@@ -23,7 +25,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
+import rikka.shizuku.Shizuku
 
 /** One cancellable session owns registration, callbacks and notification publication. */
 class AppOpsMonitorController(
@@ -37,13 +39,11 @@ class AppOpsMonitorController(
     private val notifier: MonitorNotifier = MonitorNotifier(context),
 ) {
     private val foregroundStates = ForegroundStateProbe(gateway)
-    private val client = AppOpsMonitorClient { reason ->
-        diagnosticLog.warning(LOG_SOURCE, "Rejected AppOps callback: $reason")
-    }
+    private val client = AppOpsMonitorClient()
+    private val watchers = AppOpsWatchersRepository(gateway)
     private val lifecycle = MonitorLifecycle<MonitorStatus>(scope) { client.unregister() }
     private val mutableStatus = MutableStateFlow<MonitorStatus?>(null)
     private val mutableFailure = MutableStateFlow<String?>(null)
-    private val selfCheckProbe = AtomicReference<((AppOpAccessEvent) -> Unit)?>(null)
     private val ownUid = context.applicationInfo.uid
     // Accessed only inside lifecycle.publish/clear/stop.
     private var sessionData: SessionData? = null
@@ -52,7 +52,15 @@ class AppOpsMonitorController(
     val failure = mutableFailure.asStateFlow()
     val isRunning: Boolean get() = mutableStatus.value != null
 
+    /** Points watched by the running session, or null before one has started. */
+    val watchedPointCount: Int?
+        get() = lifecycle.session()?.let { session ->
+            lifecycle.publish(session) { sessionData?.pointCount }
+        }
+
     private class SessionData(
+        /** The selected operations as the watcher registry prints them. */
+        val operationNames: Set<String>,
         /** The monitor's own notification setting, which a point may override. */
         val defaultHeadsUp: Boolean,
         /** Whether any point may interrupt, which fixes the channel for the session. */
@@ -62,7 +70,16 @@ class AppOpsMonitorController(
         /** Per-point settings, for the points that are actually watched. */
         val points: Map<Pair<String, String>, MonitorPointSettings>,
         val accumulator: MonitorAccessAccumulator = MonitorAccessAccumulator(),
-    )
+    ) {
+        /**
+         * Whether the registry has matched this session's registration. Until
+         * it has, a miss may only mean this device prints the registry
+         * differently, so it is not taken as a lost registration.
+         */
+        var registryConfirmed = false
+
+        val pointCount: Int get() = watched.values.sumOf { it.size }
+    }
 
     private data class QueuedAccess(
         val event: AppOpAccessEvent,
@@ -71,14 +88,15 @@ class AppOpsMonitorController(
         val revision: Long,
     )
 
-    suspend fun start(extraOperations: Set<String> = emptySet()): Result<MonitorStatus> =
+    suspend fun start(): Result<MonitorStatus> =
         withContext(Dispatchers.IO) {
             try {
                 Result.success(lifecycle.start { session ->
                     val targets = targetsRepository.targets.first()
-                    val names = targets.flatMapTo(mutableSetOf()) { it.operationNames } + extraOperations
+                    val names = targets.flatMapTo(mutableSetOf()) { it.operationNames }
                     val codes = names.mapNotNull(AppOpCodes::codeOf).toIntArray()
                     check(codes.isNotEmpty()) { "No operations are selected" }
+                    check(codes.size == names.size) { "Some selected operations have no known watch code" }
                     val watchedOperations = targets.associate { it.packageName to it.operationNames }
                     val defaultHeadsUp = settingsRepository.settings.first().monitorHeadsUp
                     // Settings for a point that is no longer watched are kept in
@@ -88,6 +106,7 @@ class AppOpsMonitorController(
                         .filter { it.operationName in watchedOperations[it.packageName].orEmpty() }
                         .associateBy { it.packageName to it.operationName }
                     val data = SessionData(
+                        operationNames = codes.asList().mapNotNullTo(mutableSetOf(), AppOpCodes::registryNameOf),
                         defaultHeadsUp = defaultHeadsUp,
                         // A channel's importance is fixed once it is created, so the
                         // session has to settle on one up front: the loud one as
@@ -108,7 +127,6 @@ class AppOpsMonitorController(
                         val wallTime = System.currentTimeMillis()
                         val elapsedTime = SystemClock.elapsedRealtime()
                         lifecycle.publish(session) {
-                            selfCheckProbe.get()?.invoke(event)
                             val name = AppOpCodes.nameOf(event.opCode)
                             // The user handle keeps other profiles, such as a private
                             // space, out even when they hold the same package name. An
@@ -137,8 +155,19 @@ class AppOpsMonitorController(
                             }
                         }
                     }
+                    val registrationRevision = AtomicLong()
                     fun register(): MonitorStatus {
-                        val registration = client.register(codes, onAccess)
+                        val revision = registrationRevision.incrementAndGet()
+                        val malformed = AtomicReference<String?>(null)
+                        val registration = client.register(codes, onAccess) { reason ->
+                            lifecycle.publish(session) {
+                                if (registrationRevision.get() == revision) {
+                                    malformed.set(reason)
+                                    mutableStatus.value = mutableStatus.value?.copy(callbackFailure = reason)
+                                    diagnosticLog.warning(LOG_SOURCE, "Rejected AppOps callback: $reason")
+                                }
+                            }
+                        }
                         check(registration.any) {
                             "No watch could be registered: ${registration.failures.joinToString()}"
                         }
@@ -151,7 +180,7 @@ class AppOpsMonitorController(
                         lifecycle.publish(session) {
                             sessionData = data
                             mutableFailure.value = null
-                            mutableStatus.value = result
+                            mutableStatus.value = result.copy(callbackFailure = malformed.get())
                         }
                         return result
                     }
@@ -217,9 +246,22 @@ class AppOpsMonitorController(
                     session.scope.launch {
                         while (isActive) {
                             delay(WATCHDOG_INTERVAL_MILLIS)
-                            if (client.isServiceAlive()) continue
+                            val registry = checkRegistration()
+                            val confirmed = lifecycle.publish(session) { data.registryConfirmed } ?: break
+                            // A session the user enabled without a registry match
+                            // falls back to asking whether the service is alive.
+                            val lost = if (confirmed) {
+                                registry == WatchRegistration.MISSING
+                            } else {
+                                !client.isServiceAlive()
+                            }
+                            if (!lost) continue
                             val recovery = retryMonitorRegistration {
                                 lifecycle.reconnect(session, ::register)
+                                val reregistered = checkRegistration()
+                                check(!confirmed || reregistered != WatchRegistration.MISSING) {
+                                    "AppOps watch registration is missing from the system registry"
+                                }
                             }
                             if (recovery.isFailure) {
                                 val lastError = recovery.exceptionOrNull()
@@ -232,6 +274,9 @@ class AppOpsMonitorController(
                             }
                         }
                     }
+                    // Every start is checked here, including a restored session,
+                    // rather than only an explicit enable.
+                    checkRegistration()
                     result
                 })
             } catch (cancelled: CancellationException) {
@@ -262,7 +307,7 @@ class AppOpsMonitorController(
 
     private fun postNotification(data: SessionData, alert: Boolean) {
         try {
-            if (data.accumulator.accesses.isEmpty()) notifier.postOngoing(data.alertChannel)
+            if (data.accumulator.accesses.isEmpty()) notifier.postOngoing(data.alertChannel, data.pointCount)
             else notifier.notifyAccesses(data.accumulator.accesses, data.alertChannel, alert)
         } catch (error: Exception) {
             diagnosticLog.error(LOG_SOURCE, "Monitor notification failed.", error)
@@ -281,39 +326,53 @@ class AppOpsMonitorController(
         lifecycle.stop {
             mutableStatus.value = null
             if (clearFailure) mutableFailure.value = null
-            selfCheckProbe.set(null)
             sessionData = null
             notifier.cancel()
         }
     }
 
     suspend fun runSelfCheck(): MonitorSelfCheckResult {
-        val registration = start(setOf(AppOpCodes.SELF_CHECK_OP))
+        val registration = start()
         registration.exceptionOrNull()?.let {
             return MonitorSelfCheckResult.Failed(it.message ?: it::class.java.simpleName)
         }
-        val clipboardOp = AppOpCodes.codeOf(AppOpCodes.SELF_CHECK_OP)
-            ?: return MonitorSelfCheckResult.Failed("Unknown self-check operation")
-        val observedCode = MutableStateFlow<Int?>(null)
-        selfCheckProbe.set { event ->
-            if (event.uid == ownUid && event.packageName == context.packageName) {
-                observedCode.compareAndSet(null, event.opCode)
-            }
+        // start() has already compared the registration with the registry.
+        val status = mutableStatus.value
+        status?.callbackFailure?.let { return MonitorSelfCheckResult.Failed(it) }
+        return when (status?.registry) {
+            WatchRegistration.CONFIRMED -> MonitorSelfCheckResult.Passed
+            else -> MonitorSelfCheckResult.Unconfirmed
         }
-        try {
-            withContext(Dispatchers.Main) {
-                context.getSystemService(ClipboardManager::class.java)?.primaryClip
-            }
-            val reported = withTimeoutOrNull(4_000L) { observedCode.first { it != null } }
-            diagnosticLog.info(LOG_SOURCE, "Self-check finished. expectedOp=$clipboardOp, reportedOp=$reported")
-            return when (reported) {
-                null -> MonitorSelfCheckResult.NoEvent
-                clipboardOp -> MonitorSelfCheckResult.Passed
-                else -> MonitorSelfCheckResult.Failed("operation code mismatch ($reported != $clipboardOp)")
-            }
-        } finally {
-            selfCheckProbe.set(null)
+    }
+
+    private suspend fun checkRegistration(): WatchRegistration {
+        val session = lifecycle.session() ?: return WatchRegistration.UNKNOWN
+        val expected = lifecycle.publish(session) {
+            sessionData?.operationNames to mutableStatus.value
+        } ?: return WatchRegistration.UNKNOWN
+        val status = expected.second ?: return WatchRegistration.UNKNOWN
+        val kinds = buildSet {
+            if (status.activeWatch) add(AccessWatchKind.ACTIVE)
+            if (status.startedWatch) add(AccessWatchKind.STARTED)
+            if (status.notedWatch) add(AccessWatchKind.NOTED)
         }
+        val result = try {
+            val snapshot = watchers.read()
+            snapshot.registration(expected.first.orEmpty(), kinds, Shizuku.getUid()).also {
+                diagnosticLog.info(LOG_SOURCE, "Watcher registry=$it, expected=${expected.first}, " +
+                    "kinds=$kinds, registrations=${snapshot.accessWatchers}")
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            diagnosticLog.warning(LOG_SOURCE, "Watcher registry unavailable: ${error.message}")
+            WatchRegistration.UNKNOWN
+        }
+        lifecycle.publish(session) {
+            mutableStatus.value = mutableStatus.value?.copy(registry = result)
+            if (result == WatchRegistration.CONFIRMED) sessionData?.registryConfirmed = true
+        }
+        return result
     }
 
     private companion object {

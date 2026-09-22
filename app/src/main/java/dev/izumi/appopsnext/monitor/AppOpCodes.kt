@@ -9,7 +9,8 @@ import dev.izumi.appopsnext.appops.model.AppOpNames
  * The watch interfaces take codes rather than names, so this table is the bridge
  * to the shell names used everywhere else. The list is append-only upstream
  * because the codes are persisted, and it was identical in API 35 and 36.
- * A wrong entry surfaces through the self-check rather than failing silently.
+ * Code 96 is a deprecated operation without a public name, so it has no row.
+ * The registry check compares the selected names with the registered set.
  */
 internal object AppOpCodes {
     private val codeToName: Map<Int, String> = mapOf(
@@ -109,57 +110,58 @@ internal object AppOpCodes {
         93 to "android:interact_across_profiles",
         94 to "android:activate_platform_vpn",
         95 to "android:loader_usage_stats",
-        96 to "android:auto_revoke_permissions_if_unused",
-        97 to "android:auto_revoke_managed_by_installer",
-        98 to "android:no_isolated_storage",
-        99 to "android:phone_call_microphone",
-        100 to "android:phone_call_camera",
-        101 to "android:record_audio_hotword",
-        102 to "android:manage_ongoing_calls",
-        103 to "android:manage_credentials",
-        104 to "android:use_icc_auth_with_device_identifier",
-        105 to "android:record_audio_output",
-        106 to "android:schedule_exact_alarm",
-        107 to "android:fine_location_source",
-        108 to "android:coarse_location_source",
-        109 to "android:manage_media",
-        110 to "android:bluetooth_connect",
-        111 to "android:uwb_ranging",
-        112 to "android:activity_recognition_source",
-        113 to "android:bluetooth_advertise",
-        114 to "android:record_incoming_phone_audio",
-        115 to "android:nearby_wifi_devices",
-        116 to "android:establish_vpn_service",
-        117 to "android:establish_vpn_manager",
-        118 to "android:access_restricted_settings",
-        119 to "android:receive_ambient_trigger_audio",
-        120 to "android:receive_explicit_user_interaction_audio",
-        121 to "android:run_user_initiated_jobs",
-        122 to "android:read_media_visual_user_selected",
-        123 to "android:system_exempt_from_suspension",
-        124 to "android:system_exempt_from_dismissible_notifications",
-        125 to "android:read_write_health_data",
-        126 to "android:foreground_service_special_use",
-        127 to "android:system_exempt_from_power_restrictions",
-        128 to "android:system_exempt_from_hibernation",
-        129 to "android:system_exempt_from_activity_bg_start_restriction",
-        130 to "android:deprecated_2",
-        131 to "android:use_full_screen_intent",
-        132 to "android:camera_sandboxed",
-        133 to "android:record_audio_sandboxed",
-        134 to "android:receive_sandbox_trigger_audio",
-        135 to "android:deprecated_3",
-        136 to "android:create_accessibility_overlay",
-        137 to "android:media_routing_control",
-        138 to "android:enable_mobile_data_by_user",
-        139 to "android:reserved_for_testing",
-        140 to "android:rapid_clear_notifications_by_listener",
-        141 to "android:read_system_grammatical_gender",
-        142 to "android:deprecated_4",
-        143 to "android:archive_icon_overlay",
-        144 to "android:unarchival_support",
-        145 to "android:emergency_location",
-        146 to "android:receive_sensitive_notifications",
+        97 to "android:auto_revoke_permissions_if_unused",
+        98 to "android:auto_revoke_managed_by_installer",
+        99 to "android:no_isolated_storage",
+        100 to "android:phone_call_microphone",
+        101 to "android:phone_call_camera",
+        102 to "android:record_audio_hotword",
+        103 to "android:manage_ongoing_calls",
+        104 to "android:manage_credentials",
+        105 to "android:use_icc_auth_with_device_identifier",
+        106 to "android:record_audio_output",
+        107 to "android:schedule_exact_alarm",
+        108 to "android:fine_location_source",
+        109 to "android:coarse_location_source",
+        110 to "android:manage_media",
+        111 to "android:bluetooth_connect",
+        112 to "android:uwb_ranging",
+        113 to "android:activity_recognition_source",
+        114 to "android:bluetooth_advertise",
+        115 to "android:record_incoming_phone_audio",
+        116 to "android:nearby_wifi_devices",
+        117 to "android:establish_vpn_service",
+        118 to "android:establish_vpn_manager",
+        119 to "android:access_restricted_settings",
+        120 to "android:receive_ambient_trigger_audio",
+        121 to "android:receive_explicit_user_interaction_audio",
+        122 to "android:run_user_initiated_jobs",
+        123 to "android:read_media_visual_user_selected",
+        124 to "android:system_exempt_from_suspension",
+        125 to "android:system_exempt_from_dismissible_notifications",
+        126 to "android:read_write_health_data",
+        127 to "android:foreground_service_special_use",
+        128 to "android:system_exempt_from_power_restrictions",
+        129 to "android:system_exempt_from_hibernation",
+        130 to "android:system_exempt_from_activity_bg_start_restriction",
+        131 to "android:capture_consentless_bugreport_on_userdebug_build",
+        132 to "android:deprecated_2",
+        133 to "android:use_full_screen_intent",
+        134 to "android:camera_sandboxed",
+        135 to "android:record_audio_sandboxed",
+        136 to "android:receive_sandbox_trigger_audio",
+        137 to "android:deprecated_3",
+        138 to "android:create_accessibility_overlay",
+        139 to "android:media_routing_control",
+        140 to "android:enable_mobile_data_by_user",
+        141 to "android:reserved_for_testing",
+        142 to "android:rapid_clear_notifications_by_listener",
+        143 to "android:read_system_grammatical_gender",
+        144 to "android:deprecated_4",
+        145 to "android:archive_icon_overlay",
+        146 to "android:unarchival_support",
+        147 to "android:emergency_location",
+        148 to "android:receive_sensitive_notifications",
     )
 
     private val nameToCode: Map<String, Int> =
@@ -170,6 +172,21 @@ internal object AppOpCodes {
         nameToCode[AppOpNames.stableName(operationName)]
 
     fun nameOf(code: Int): String? = codeToName[code]
+
+    /**
+     * The watcher registry prints AppOpsManager's internal names, which differ
+     * from the public name for these codes.
+     */
+    private val registryNameOverrides: Map<Int, String> = mapOf(
+        42 to "MONITOR_HIGH_POWER_LOCATION",
+        120 to "RECEIVE_SOUNDTRIGGER_AUDIO",
+        141 to "OP_RESERVED_FOR_TESTING",
+        146 to "UNARCHIVAL_CONFIRMATION",
+    )
+
+    /** The name `dumpsys appops --watchers` prints for a code. */
+    fun registryNameOf(code: Int): String? =
+        registryNameOverrides[code] ?: codeToName[code]?.let(AppOpNames::shellName)
 
     /**
      * Operations watched by the experimental monitor. Long-running sensor access
@@ -198,6 +215,4 @@ internal object AppOpCodes {
     val MONITORED_CODES: IntArray =
         MONITORED_NAMES.mapNotNull(::codeOf).toIntArray()
 
-    /** The operation the self-check triggers on purpose. */
-    const val SELF_CHECK_OP: String = "android:read_clipboard"
 }

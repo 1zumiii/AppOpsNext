@@ -8,7 +8,11 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Typeface
 import android.graphics.drawable.Icon
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.StyleSpan
 import dev.izumi.appopsnext.MainActivity
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
@@ -38,6 +42,8 @@ class MonitorNotifier(
         checking: Boolean = false,
         useAlertChannel: Boolean = false,
         alert: Boolean = false,
+        /** Package and operation pairs being watched, shown while nothing is reported. */
+        watchedPoints: Int = 0,
     ): Notification {
         createChannels()
         // A channel's importance is fixed when it is created, so the way to let
@@ -62,7 +68,7 @@ class MonitorNotifier(
             accesses.isEmpty() -> builder
                 .setSmallIcon(R.drawable.ic_notification_monitor)
                 .setContentTitle(context.getString(R.string.monitor_ongoing_title))
-                .setContentText(context.getString(R.string.monitor_ongoing_text))
+                .setContentText(context.getString(R.string.monitor_ongoing_text, watchedPoints))
                 .build()
 
             else -> {
@@ -76,9 +82,11 @@ class MonitorNotifier(
                 builder
                     .setSmallIcon(MonitorStatusIcon.create(context, total))
                     .setSubText(context.getString(R.string.monitor_ongoing_title))
-                    .setContentTitle(latest.appLabel)
-                    .setContentText(describe(latest))
-                    .setStyle(inboxStyle(accesses))
+                    // A collapsed notification has one line of text, so the count
+                    // rides on the title and the header already shows the time.
+                    .setContentTitle(withCount(shortLabel(latest.appLabel), latest.count))
+                    .setContentText(action(latest))
+                    .setStyle(bigTextStyle(accesses, total))
                     .setNumber(total)
                     .setWhen(latest.observedAtMillis)
                     .setShowWhen(true)
@@ -118,32 +126,64 @@ class MonitorNotifier(
     }
 
     /** Re-posts the ongoing notification in its no-accesses form. */
-    fun postOngoing(useAlertChannel: Boolean) {
+    fun postOngoing(useAlertChannel: Boolean, watchedPoints: Int) {
         notificationManager.notify(ONGOING_NOTIFICATION_ID,
-            ongoingNotification(useAlertChannel = useAlertChannel))
+            ongoingNotification(useAlertChannel = useAlertChannel, watchedPoints = watchedPoints))
     }
 
     fun cancel() { notificationManager.cancel(ONGOING_NOTIFICATION_ID) }
 
-    private fun inboxStyle(accesses: List<MonitoredAccess>): Notification.InboxStyle =
-        Notification.InboxStyle().apply {
-            accesses.take(MAX_LINES).map(::describe).forEach(::addLine)
-            if (accesses.size > MAX_LINES) {
+    /**
+     * Two lines per access: when, who and how often in bold, then what happened.
+     *
+     * An inbox line cannot wrap, so a long entry lost its trailing count to an
+     * ellipsis. Big text wraps, at the cost of fewer entries in the same height.
+     *
+     * The first entry would repeat the collapsed title, so the expanded title is
+     * the total instead, with the refusals in it named because the status-bar
+     * count includes them too.
+     */
+    private fun bigTextStyle(accesses: List<MonitoredAccess>, total: Int): Notification.BigTextStyle =
+        Notification.BigTextStyle().apply {
+            val denied = accesses.filterNot(MonitoredAccess::allowed).sumOf(MonitoredAccess::count)
+            setBigContentTitle(
+                if (denied > 0) {
+                    context.getString(R.string.monitor_reported_total_denied, total, denied)
+                } else {
+                    context.getString(R.string.monitor_reported_total, total)
+                },
+            )
+            val text = SpannableStringBuilder()
+            accesses.take(MAX_ENTRIES).forEachIndexed { index, access ->
+                if (index > 0) text.append('\n')
+                val heading = context.getString(
+                    R.string.monitor_access_heading,
+                    timeFormatter.format(Instant.ofEpochMilli(access.observedAtMillis)),
+                    shortLabel(access.appLabel),
+                )
+                text.append(
+                    withCount(heading, access.count),
+                    StyleSpan(Typeface.BOLD),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+                )
+                text.append('\n').append(action(access))
+            }
+            bigText(text)
+            if (accesses.size > MAX_ENTRIES) {
                 setSummaryText(
                     context.getString(
                         R.string.monitor_more_accesses,
-                        accesses.size - MAX_LINES,
+                        accesses.size - MAX_ENTRIES,
                     ),
                 )
             }
         }
 
     /**
-     * Caps the application label so the rest of the line survives.
+     * Caps the application label so the count after it survives.
      *
-     * An inbox line is a single line: a long label pushes the operation and the
-     * count off the end into an ellipsis, which loses exactly the part the line
-     * exists to show.
+     * The collapsed title is a single line, and in the expanded list a long label
+     * would wrap an entry onto a third line.
      */
     private fun shortLabel(label: String): String =
         if (label.length <= MAX_LABEL_CHARS) {
@@ -152,30 +192,24 @@ class MonitorNotifier(
             label.take(MAX_LABEL_CHARS - 1).trimEnd() + "\u2026"
         }
 
-    /** `14:32 · WeChat used the clipboard · x3` */
-    private fun describe(access: MonitoredAccess): String {
+    /** `使用了读取剪贴板`, the line that says what happened. */
+    private fun action(access: MonitoredAccess): String {
         val operationLabel = AppOpDisplayCatalog.labelResOf(access.operationName)
             ?.let(context::getString)
             ?: access.operationName
-        val time = timeFormatter.format(
-            Instant.ofEpochMilli(access.observedAtMillis),
-        )
-        val line = context.getString(
+        return context.getString(
             if (access.allowed) {
                 R.string.monitor_access_allowed
             } else {
                 R.string.monitor_access_refused
             },
-            time,
-            shortLabel(access.appLabel),
             operationLabel,
         )
-        return if (access.count > 1) {
-            context.getString(R.string.monitor_access_count, line, access.count)
-        } else {
-            line
-        }
     }
+
+    /** `微信 · x3`; a single access carries no count. */
+    private fun withCount(text: String, count: Int): String =
+        if (count > 1) context.getString(R.string.monitor_access_count, text, count) else text
 
     private val timeFormatter: DateTimeFormatter
         get() = DateTimeFormatter
@@ -229,7 +263,7 @@ class MonitorNotifier(
         const val ONGOING_NOTIFICATION_ID = 4011
         private const val OPEN_REQUEST_CODE = 4012
         private const val CLEAR_REQUEST_CODE = 4014
-        private const val MAX_LINES = 6
+        private const val MAX_ENTRIES = 4
         private const val MAX_LABEL_CHARS = 16
         private const val CHANNEL_STATUS = "monitor_status"
         private const val CHANNEL_ALERT = "monitor_access_alert"

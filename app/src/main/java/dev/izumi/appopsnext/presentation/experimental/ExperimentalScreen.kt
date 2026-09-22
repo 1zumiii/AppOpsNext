@@ -1,5 +1,9 @@
 package dev.izumi.appopsnext.presentation.experimental
 
+import android.app.NotificationManager
+import android.content.Intent
+import android.provider.Settings
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,10 +18,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -26,6 +36,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.monitor.MonitorSelfCheckResult
 import dev.izumi.appopsnext.monitor.MonitorStatus
+import dev.izumi.appopsnext.appops.parser.WatchRegistration
 
 /**
  * A page of its own rather than a settings section, so later experiments have
@@ -37,16 +48,21 @@ fun ExperimentalScreen(
     uiState: ExperimentalUiState,
     onBack: () -> Unit,
     onMonitorChange: (Boolean) -> Unit,
+    onEnableUnconfirmedMonitor: () -> Unit,
+    onOpenWatchers: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenBatterySettings: () -> Unit,
     onDismissBatteryNotice: () -> Unit,
     onRefreshBatteryExemption: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    var notificationsEnabled by remember { mutableStateOf(true) }
     // The exemption is granted in system settings, so it is re-read on every
     // return to this screen rather than once when it is first shown.
     LifecycleResumeEffect(Unit) {
         onRefreshBatteryExemption()
+        notificationsEnabled = context.getSystemService(NotificationManager::class.java).areNotificationsEnabled()
         onPauseOrDispose { }
     }
     Scaffold(
@@ -88,9 +104,23 @@ fun ExperimentalScreen(
                 MonitorFeature(
                     uiState = uiState,
                     onMonitorChange = onMonitorChange,
+                    onEnableUnconfirmedMonitor = onEnableUnconfirmedMonitor,
+                    notificationsEnabled = notificationsEnabled,
+                    onOpenNotificationSettings = {
+                        context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
+                    },
                     onOpenSettings = onOpenSettings,
                     onOpenBatterySettings = onOpenBatterySettings,
                     onDismissBatteryNotice = onDismissBatteryNotice,
+                )
+            }
+            item { HorizontalDivider() }
+            item {
+                ListItem(
+                    modifier = Modifier.clickable(onClick = onOpenWatchers),
+                    headlineContent = { Text(stringResource(R.string.watchers_title)) },
+                    supportingContent = { Text(stringResource(R.string.watchers_summary)) },
                 )
             }
         }
@@ -101,6 +131,9 @@ fun ExperimentalScreen(
 private fun MonitorFeature(
     uiState: ExperimentalUiState,
     onMonitorChange: (Boolean) -> Unit,
+    onEnableUnconfirmedMonitor: () -> Unit,
+    notificationsEnabled: Boolean,
+    onOpenNotificationSettings: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenBatterySettings: () -> Unit,
     onDismissBatteryNotice: () -> Unit,
@@ -117,6 +150,18 @@ private fun MonitorFeature(
                 )
             },
         )
+        Text(
+            text = stringResource(R.string.monitor_notification_required),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (notificationsEnabled) MaterialTheme.colorScheme.onSurfaceVariant
+                else MaterialTheme.colorScheme.error,
+        )
+        if (!notificationsEnabled) {
+            TextButton(onClick = onOpenNotificationSettings, modifier = Modifier.padding(horizontal = 8.dp)) {
+                Text(stringResource(R.string.monitor_open_notification_settings))
+            }
+        }
         // One entry is closed while the monitor runs instead of every setting
         // inside it, so the reason has to be stated once.
         val locked = uiState.monitorEnabled || uiState.monitorBusy
@@ -173,6 +218,14 @@ private fun MonitorFeature(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         MonitorStatusText(uiState)
+        if (!uiState.monitorEnabled && !uiState.monitorBusy &&
+            uiState.selfCheckResult is MonitorSelfCheckResult.Unconfirmed
+        ) {
+            TextButton(
+                onClick = onEnableUnconfirmedMonitor,
+                modifier = Modifier.padding(horizontal = 8.dp),
+            ) { Text(stringResource(R.string.monitor_enable_unconfirmed)) }
+        }
         // Vendors remap the exemption intent to their own per-app battery page,
         // where granting it does not put the app on the platform whitelist this
         // reads. The notice can therefore be true forever on such a device, so
@@ -228,14 +281,24 @@ private fun MonitorStatusText(uiState: ExperimentalUiState) {
             isError = true
         }
 
-        uiState.selfCheckResult is MonitorSelfCheckResult.Passed -> {
+        uiState.status?.callbackFailure != null -> {
+            message = stringResource(R.string.monitor_callback_failed, uiState.status.callbackFailure)
+            isError = true
+        }
+
+        uiState.monitorEnabled && uiState.status?.registry != WatchRegistration.CONFIRMED -> {
+            message = stringResource(R.string.monitor_registry_unconfirmed_running)
+            isError = true
+        }
+
+        uiState.monitorEnabled && uiState.status != null -> {
             message = partialWatchMessage(uiState.status)
                 ?: stringResource(R.string.monitor_check_passed)
             isError = uiState.status?.partial == true
         }
 
-        uiState.selfCheckResult is MonitorSelfCheckResult.NoEvent -> {
-            message = stringResource(R.string.monitor_check_no_event)
+        uiState.selfCheckResult is MonitorSelfCheckResult.Unconfirmed -> {
+            message = stringResource(R.string.monitor_check_unconfirmed)
             isError = true
         }
 

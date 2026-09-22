@@ -106,6 +106,12 @@ func parseCommand(request string) (appOpsCommand, error) {
 	}
 
 	switch fields[0] {
+	case "GET_WATCHERS":
+		if len(fields) != 1 {
+			return appOpsCommand{}, errors.New("invalid watcher query")
+		}
+		return command("/system/bin/dumpsys", "appops", "--watchers"), nil
+
 	case "GET_PACKAGE_OPS":
 		if len(fields) != 2 || !validPackageName(fields[1]) {
 			return appOpsCommand{}, errors.New("invalid package query")

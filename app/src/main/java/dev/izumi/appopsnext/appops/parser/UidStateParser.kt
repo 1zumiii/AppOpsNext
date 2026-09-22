@@ -50,12 +50,14 @@ object UidStateParser {
      * form, such as an isolated process, is not something a monitoring point
      * can name, so it is skipped rather than guessed at.
      */
-    private fun uidOf(text: String): Int? {
+    fun uidOf(text: String): Int? {
         text.toIntOrNull()?.let { return it.takeIf { value -> value >= 0 } }
         val match = APP_UID.find(text) ?: return null
         val userId = match.groupValues[1].toIntOrNull() ?: return null
         val appId = match.groupValues[2].toIntOrNull() ?: return null
-        return userId * PER_USER_RANGE + FIRST_APPLICATION_UID + appId
+        if (appId >= PER_USER_RANGE - FIRST_APPLICATION_UID) return null
+        return (userId.toLong() * PER_USER_RANGE + FIRST_APPLICATION_UID + appId)
+            .takeIf { it <= Int.MAX_VALUE }?.toInt()
     }
 
     private val APP_UID = Regex("""^u(\d+)a(\d+)$""")

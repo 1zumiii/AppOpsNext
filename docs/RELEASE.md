@@ -19,6 +19,7 @@ of the keystore and the Keychain password.
 Load the signing password without printing it:
 
 ```shell
+set +x
 release_password="$(
   security find-generic-password \
     -a AppOpsNext \
@@ -36,9 +37,11 @@ unset release_password
 2. Run the complete local checks:
 
    ```shell
-   (cd daemon && go test ./...)
+   export GO_EXECUTABLE=/Users/izumi/Library/Android/sdk/go/1.26.5/bin/go
+   export JAVA_HOME=/opt/homebrew/opt/openjdk@17
+   (cd daemon && "$GO_EXECUTABLE" test ./...)
    ./gradlew :app:testDebugUnitTest :app:lintDebug \
-     :app:assembleDebug :app:assembleRelease
+     :app:assembleDebug :app:assembleRelease --no-daemon
    ```
 
 3. Verify the release APK signature:
@@ -50,8 +53,21 @@ unset release_password
      app/build/outputs/apk/release/app-release.apk
    ```
 
-4. Install the exact verified APK on the reference device and repeat the
-   manual smoke test.
+   Expected certificate SHA-256:
+   `7816703c5a94356af9124d96e581db4d9e2c007bffd5e5fe259f27e16757a178`.
+
+4. Install the exact verified APK on the reference device with
+   `adb install -r --user 0 app/build/outputs/apk/release/app-release.apk`.
+   Verify `adb shell pm list packages --user 10 dev.izumi.appopsnext` stays empty.
+   After changing the daemon, cold-launch the app and check
+   `adb shell ps -A | grep appopsnextd`, plus AppOps reads, a reversible probe
+   write, history and monitor registration. Use the separate AppOpsProbe project
+   for allowed/denied events; do not uninstall the app or reset its settings.
 5. Commit and push the release source, create an annotated `v<version>` tag,
    and attach the same APK to the GitHub Release.
 6. Record a SHA-256 checksum in the release notes.
+
+`v1.4.1-beta2` is already a published prerelease (version code 34). Subsequent
+development must not overwrite its tag or assets. The next release version is
+chosen separately; these development changes do not bump the version. Commit,
+push and tagging are performed by the maintainer for the current work.

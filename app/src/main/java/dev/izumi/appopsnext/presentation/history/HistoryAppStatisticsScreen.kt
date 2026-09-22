@@ -152,8 +152,9 @@ private fun HistoryAppStatisticsItem(
             }
             Text(
                 text = stringResource(
-                    R.string.history_app_access_count,
+                    R.string.history_access_reject_counts,
                     summary.accessCount,
+                    summary.rejectCount,
                 ),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,

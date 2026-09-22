@@ -25,6 +25,9 @@ data class PermissionHistory(
     val recordCount: Int
         get() = events.sumOf { it.event.accessCount }
 
+    val rejectCount: Int
+        get() = events.sumOf { it.event.rejectCount }
+
     val appCount: Int
         get() = events.distinctBy { it.app.packageName }.size
 

@@ -1,5 +1,7 @@
 package dev.izumi.appopsnext.monitor
 
+import dev.izumi.appopsnext.appops.parser.WatchRegistration
+
 enum class AppOpAccessKind {
     /** A long-running access started, such as the camera being opened. */
     ACTIVE,
@@ -41,6 +43,8 @@ data class MonitorStatus(
     val transactionCodesFromPlatform: Boolean,
     val watchedPackages: Int,
     val watchedOperations: Int,
+    val registry: WatchRegistration = WatchRegistration.UNKNOWN,
+    val callbackFailure: String? = null,
 ) {
     val partial: Boolean
         get() = !(activeWatch && notedWatch && startedWatch)
@@ -49,12 +53,8 @@ data class MonitorStatus(
 sealed interface MonitorSelfCheckResult {
     data object Passed : MonitorSelfCheckResult
 
-    /**
-     * Registration succeeded but no event arrived. Without WATCH_APPOPS the
-     * system narrows a watch to the caller's own UID instead of refusing it, so
-     * a silent result cannot be reported as success.
-     */
-    data object NoEvent : MonitorSelfCheckResult
+    /** The registry could not establish coverage; the user may explicitly proceed. */
+    data object Unconfirmed : MonitorSelfCheckResult
 
     data class Failed(val reason: String) : MonitorSelfCheckResult
 }
