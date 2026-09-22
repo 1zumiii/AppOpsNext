@@ -41,6 +41,10 @@ import dev.izumi.appopsnext.presentation.experimental.MonitorPointRow
 import dev.izumi.appopsnext.presentation.experimental.MonitorPointsScreen
 import dev.izumi.appopsnext.presentation.history.HistoryOverviewScreen
 import dev.izumi.appopsnext.presentation.history.HistoryAppStatisticsScreen
+import dev.izumi.appopsnext.presentation.history.HistoryFilter
+import dev.izumi.appopsnext.presentation.settings.SavedHistoryDateRange
+import dev.izumi.appopsnext.presentation.settings.SavedHistoryScreen
+import dev.izumi.appopsnext.presentation.history.HistoryTimeRange
 import dev.izumi.appopsnext.presentation.history.HistoryUiState
 import dev.izumi.appopsnext.presentation.history.PermissionHistoryDetailScreen
 import dev.izumi.appopsnext.history.model.HistoryPermission
@@ -50,6 +54,7 @@ import dev.izumi.appopsnext.settings.AppLanguage
 import dev.izumi.appopsnext.presentation.templates.TemplatesScreen
 import dev.izumi.appopsnext.presentation.templates.TemplatesUiState
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
+import java.time.ZoneId
 
 @Composable
 fun AppOpsRootScreen(
@@ -85,6 +90,9 @@ fun AppOpsRootScreen(
     onDenyFallbackNoticeDismissed: (Boolean) -> Unit,
     onForegroundAlternativeRequested: () -> Unit,
     onHideSystemAppsChange: (Boolean) -> Unit,
+    onSaveIndividualHistoryChange: (Boolean) -> Unit,
+    countSavedHistory: (SavedHistoryDateRange?) -> Int,
+    onDeleteSavedHistory: (SavedHistoryDateRange?) -> Unit,
     experimentalUiState: ExperimentalUiState,
     watchersUiState: WatchersUiState,
     onRefreshWatchers: () -> Unit,
@@ -133,6 +141,14 @@ fun AppOpsRootScreen(
     var showHistoryAppStatistics by rememberSaveable {
         mutableStateOf(false)
     }
+    // The range is shared across permissions; the app filter belongs to one.
+    var historyTimeRange by rememberSaveable {
+        mutableStateOf(HistoryTimeRange.WEEK)
+    }
+    var historyAppFilter by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+    var showSavedHistory by rememberSaveable { mutableStateOf(false) }
     var experimentalRoute by rememberSaveable {
         mutableStateOf<String?>(null)
     }
@@ -143,6 +159,10 @@ fun AppOpsRootScreen(
     val selectedHistoryPermission = selectedHistoryPermissionName?.let {
         HistoryPermission(it)
     }
+    // "All" disappears when saving is switched off, leaving the longest real range.
+    val effectiveHistoryRange = historyTimeRange.takeIf {
+        it in HistoryTimeRange.available(historyUiState.saveIndividualHistory)
+    } ?: HistoryTimeRange.MONTH
     // The detail view model starts empty after the process is recreated, so a
     // restored selection is re-applied once. Later selections notify it directly.
     LaunchedEffect(Unit) {
@@ -239,6 +259,19 @@ fun AppOpsRootScreen(
     )
     val monitorPoint = monitorPointKey?.let { key ->
         monitorPointRows.firstOrNull { "${it.packageName}\n${it.operationName}" == key }
+    }
+    BackHandler(enabled = selectedApp == null && showSavedHistory) {
+        showSavedHistory = false
+    }
+    if (selectedApp == null && showSavedHistory) {
+        SavedHistoryScreen(
+            uiState = settingsUiState,
+            onBack = { showSavedHistory = false },
+            onSaveIndividualHistoryChange = onSaveIndividualHistoryChange,
+            countSavedHistory = countSavedHistory,
+            onDeleteSavedHistory = onDeleteSavedHistory,
+        )
+        return
     }
     if (selectedApp == null && experimentalRoute != null) {
         when {
@@ -398,11 +431,14 @@ fun AppOpsRootScreen(
                 if (selectedHistoryPermission == null) {
                     HistoryOverviewScreen(
                         uiState = historyUiState,
+                        timeRange = effectiveHistoryRange,
+                        onTimeRangeChange = { historyTimeRange = it },
                         onRefresh = onRefreshHistory,
                         onPermissionSelected = { permission ->
                             selectedHistoryPermissionName =
                                 permission.shellOperationName
                             showHistoryAppStatistics = false
+                            historyAppFilter = null
                         },
                         onPermissionsChanged = onHistoryPermissionsChanged,
                         onPermissionOrderChanged =
@@ -413,6 +449,11 @@ fun AppOpsRootScreen(
                     HistoryAppStatisticsScreen(
                         history = historyUiState.permissions.firstOrNull {
                             it.permission == selectedHistoryPermission
+                        }?.let {
+                            HistoryFilter.apply(
+                                it, effectiveHistoryRange, null,
+                                System.currentTimeMillis(), ZoneId.systemDefault(),
+                            )
                         },
                         onBack = {
                             showHistoryAppStatistics = false
@@ -429,6 +470,11 @@ fun AppOpsRootScreen(
                             it.permission == selectedHistoryPermission
                         },
                         isLoading = historyUiState.isLoading,
+                        savingIndividualRecords = historyUiState.saveIndividualHistory,
+                        timeRange = effectiveHistoryRange,
+                        onTimeRangeChange = { historyTimeRange = it },
+                        appFilter = historyAppFilter,
+                        onAppFilterChange = { historyAppFilter = it },
                         onBack = {
                             selectedHistoryPermissionName = null
                         },
@@ -447,6 +493,7 @@ fun AppOpsRootScreen(
                 uiState = settingsUiState,
                 diagnosticsUiState = diagnosticsUiState,
                 onHideSystemAppsChange = onHideSystemAppsChange,
+                onOpenSavedHistory = { showSavedHistory = true },
                 onOpenExperimental = { experimentalRoute = ROUTE_EXPERIMENTAL },
                 onCheckForUpdate = onCheckForUpdate,
                 onAppLanguageChange = onAppLanguageChange,

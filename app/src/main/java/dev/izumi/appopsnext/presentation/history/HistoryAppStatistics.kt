@@ -8,11 +8,14 @@ data class AppHistorySummary(
     val accessCount: Int,
     val latestAccessTimeMillis: Long,
     val rejectCount: Int = 0,
+    /** Interval accesses kept apart from individual records; see [PermissionHistory.recordCount]. */
+    val intervalAccessCount: Int = 0,
 )
 
 object HistoryAppStatistics {
     fun summarize(
         events: List<ResolvedHistoryEvent>,
+        individualRecordsAvailable: Boolean = false,
     ): List<AppHistorySummary> =
         events
             .groupBy { it.app.packageName }
@@ -21,8 +24,13 @@ object HistoryAppStatistics {
                     ?: return@mapNotNull null
                 AppHistorySummary(
                     app = first.app,
-                    accessCount = appEvents.sumOf {
-                        it.event.accessCount
+                    accessCount = appEvents
+                        .filter { !individualRecordsAvailable || !it.event.isAggregated }
+                        .sumOf { it.event.accessCount },
+                    intervalAccessCount = if (individualRecordsAvailable) {
+                        appEvents.filter { it.event.isAggregated }.sumOf { it.event.accessCount }
+                    } else {
+                        0
                     },
                     latestAccessTimeMillis = appEvents.maxOf {
                         it.event.accessTimeMillis

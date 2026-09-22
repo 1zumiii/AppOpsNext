@@ -9,6 +9,7 @@ object UserSettingsDefaults {
     const val SUPPRESS_BATTERY_NOTICE = false
     const val SHOW_ALL_MONITOR_OPERATIONS = false
     const val SUPPRESS_ALL_OPERATIONS_WARNING = false
+    const val SAVE_INDIVIDUAL_HISTORY = false
 }
 
 data class UserSettings(
@@ -27,4 +28,7 @@ data class UserSettings(
         UserSettingsDefaults.SHOW_ALL_MONITOR_OPERATIONS,
     val suppressAllOperationsWarning: Boolean =
         UserSettingsDefaults.SUPPRESS_ALL_OPERATIONS_WARNING,
+    /** Keeps individual history records past the system's seven days. */
+    val saveIndividualHistory: Boolean =
+        UserSettingsDefaults.SAVE_INDIVIDUAL_HISTORY,
 )

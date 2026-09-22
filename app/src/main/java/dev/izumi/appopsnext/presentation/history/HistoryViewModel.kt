@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.history.AppOpsHistoryRepository
+import dev.izumi.appopsnext.history.ArchivedHistory
 import dev.izumi.appopsnext.history.HistoryPermissionOrdering
 import dev.izumi.appopsnext.history.model.AppOpHistoryFailureReason
 import dev.izumi.appopsnext.history.model.AppOpHistoryLoadResult
@@ -17,6 +18,7 @@ import dev.izumi.appopsnext.history.HistoryRefreshController
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -24,6 +26,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class HistoryViewModel(
     application: Application,
@@ -48,6 +52,14 @@ class HistoryViewModel(
         ),
     )
     private val snapshotStore = app.historySnapshotStore
+    private val archiveStore = app.historyArchiveStore
+    private var archive: Map<String, ArchivedHistory>? = null
+    private var saveIndividualHistory = UserSettingsDefaults.SAVE_INDIVIDUAL_HISTORY
+    private var settingsSeen = false
+    private var connected = false
+    // A save started from the switch and a page refresh must not read at once.
+    private val loadMutex = Mutex()
+    private val publishRequests = Channel<Unit>(Channel.CONFLATED)
     private var snapshots = emptyMap<String, HistorySnapshot>()
     private var failures = emptyMap<String, AppOpHistoryFailureReason>()
     private var forceRefreshRequested = false
@@ -70,6 +82,7 @@ class HistoryViewModel(
     val uiState: StateFlow<HistoryUiState> = mutableUiState.asStateFlow()
 
     init {
+        viewModelScope.launch { publishRequested() }
         viewModelScope.launch {
             snapshots = snapshotStore.read()
             permissionSettingsRepository.selectedPermissions.collect {
@@ -80,16 +93,32 @@ class HistoryViewModel(
         }
         viewModelScope.launch {
             userSettingsRepository.settings.collect { settings ->
+                // The first value is the stored one, not the user turning it on.
+                val turnedOn = settingsSeen && !saveIndividualHistory && settings.saveIndividualHistory
+                settingsSeen = true
                 if (hideSystemApps != settings.hideSystemApps) {
                     hideSystemApps = settings.hideSystemApps
                     publishSnapshots()
                     refreshController.requestRefresh()
                 }
+                if (saveIndividualHistory != settings.saveIndividualHistory) {
+                    saveIndividualHistory = settings.saveIndividualHistory
+                    publishSnapshots()
+                }
+                if (turnedOn) saveNow()
+            }
+        }
+        viewModelScope.launch {
+            archiveStore.load()
+            archiveStore.contents.collect {
+                archive = it
+                publishSnapshots()
             }
         }
         viewModelScope.launch {
             privilegedServiceClient.state.collect { state ->
-                refreshController.setConnected(state is PrivilegedServiceState.Connected)
+                connected = state is PrivilegedServiceState.Connected
+                refreshController.setConnected(connected)
                 if (state !is PrivilegedServiceState.Connected) {
                     mutableUiState.value = mutableUiState.value.copy(
                         isLoading = false,
@@ -134,19 +163,81 @@ class HistoryViewModel(
     }
 
     private fun publishSnapshots() {
-        val histories = HistorySnapshotPresentation.resolve(
-            selectedPermissions, snapshots, failures, hideSystemApps,
-        )
-        val failed = histories.mapNotNull(PermissionHistory::failureReason)
-        mutableUiState.value = mutableUiState.value.copy(
-            permissions = histories,
-            failureReason = failed.firstOrNull().takeIf { failed.size == histories.size },
-            partialFailureCount = failed.size.takeIf { it < histories.size } ?: 0,
-            lastUpdatedAtMillis = histories.mapNotNull { it.lastUpdatedAtMillis }.minOrNull(),
+        publishRequests.trySend(Unit)
+    }
+
+    /**
+     * Merging a large archive takes too long for the main thread, and a refresh
+     * asks for a publication after every operation. One merge runs at a time from
+     * the inputs current when it starts; requests arriving meanwhile become one more.
+     */
+    private suspend fun publishRequested() {
+        while (true) {
+            publishRequests.receive()
+            val permissions = selectedPermissions
+            val current = snapshots
+            val failed = failures
+            val hideSystem = hideSystemApps
+            val saving = saveIndividualHistory
+            val saved = if (saving) archive.orEmpty() else null
+            val histories = withContext(Dispatchers.Default) {
+                HistorySnapshotPresentation.resolve(permissions, current, failed, hideSystem, archive = saved)
+            }
+            val failedHistories = histories.mapNotNull(PermissionHistory::failureReason)
+            mutableUiState.value = mutableUiState.value.copy(
+                permissions = histories,
+                failureReason = failedHistories.firstOrNull().takeIf { failedHistories.size == histories.size },
+                partialFailureCount = failedHistories.size.takeIf { it < histories.size } ?: 0,
+                lastUpdatedAtMillis = histories.mapNotNull { it.lastUpdatedAtMillis }.minOrNull(),
+                saveIndividualHistory = saving,
+            )
+        }
+    }
+
+    /**
+     * Saves what has already been read at once, then reads afresh, so turning the
+     * switch on does not wait for the history page to be opened.
+     */
+    private fun saveNow() {
+        viewModelScope.launch {
+            loadMutex.withLock {
+                selectedPermissions.forEach { permission ->
+                    val operation = permission.shellOperationName
+                    snapshots[operation]?.let { recordIndividual(operation, it) }
+                }
+                withContext(NonCancellable) { archiveStore.flush() }
+            }
+            if (connected && selectedPermissions.isNotEmpty()) {
+                forceRefreshRequested = true
+                try {
+                    loadSelectedPermissions(selectedPermissions)
+                } finally {
+                    mutableUiState.value = mutableUiState.value.copy(isLoading = false)
+                }
+            }
+        }
+    }
+
+    /**
+     * Coverage is only claimed for an operation the system keeps individual
+     * records for; claiming it for one that has none would hide the interval
+     * counts that are its only history.
+     */
+    private suspend fun recordIndividual(operation: String, snapshot: HistorySnapshot) {
+        if (!saveIndividualHistory || snapshot.events.none { !it.event.isAggregated }) return
+        archiveStore.record(
+            operation,
+            snapshot.events,
+            coveredFrom = snapshot.fetchedAtMillis - INDIVIDUAL_RECORD_RETENTION_MILLIS,
+            coveredTo = snapshot.fetchedAtMillis,
         )
     }
 
     private suspend fun loadSelectedPermissions(
+        permissions: List<HistoryPermission>,
+    ) = loadMutex.withLock { loadSelectedPermissionsLocked(permissions) }
+
+    private suspend fun loadSelectedPermissionsLocked(
         permissions: List<HistoryPermission>,
     ) {
         val force = forceRefreshRequested
@@ -189,6 +280,7 @@ class HistoryViewModel(
                         }
                         val snapshot = HistorySnapshot(resolved, System.currentTimeMillis())
                         snapshotStore.stage(operation, snapshot)
+                        recordIndividual(operation, snapshot)
                         snapshots = snapshots + (operation to snapshot)
                         failures = failures - operation
                     }
@@ -200,11 +292,16 @@ class HistoryViewModel(
                 publishSnapshots()
             }
         } finally {
-            withContext(NonCancellable) { snapshotStore.flush() }
+            withContext(NonCancellable) {
+                snapshotStore.flush()
+                archiveStore.flush()
+            }
         }
     }
 
     private companion object {
         const val AUTO_REFRESH_INTERVAL_MINUTES = 5
+        const val INDIVIDUAL_RECORD_RETENTION_MILLIS =
+            AppOpsHistoryRepository.INDIVIDUAL_RECORD_RETENTION_DAYS * 24L * 60 * 60 * 1000
     }
 }
