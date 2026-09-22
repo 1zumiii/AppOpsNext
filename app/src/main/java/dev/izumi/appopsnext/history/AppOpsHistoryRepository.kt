@@ -15,6 +15,7 @@ class AppOpsHistoryRepository(
         DiscreteAppOpsHistoryParser(),
     private val aggregatedParser: AggregatedAppOpsHistoryParser =
         AggregatedAppOpsHistoryParser(),
+    private val clock: () -> Long = System::currentTimeMillis,
 ) {
     suspend fun loadOperationHistory(
         operationName: String,
@@ -39,22 +40,44 @@ class AppOpsHistoryRepository(
         }
 
         return withContext(Dispatchers.Default) {
+            val now = clock()
+            val windowStart = now - HISTORY_WINDOW_MILLIS
             val discreteEvents = discreteParser.parse(
                 operationName,
                 result.stdout,
-            )
+            ).filter { it.accessTimeMillis >= windowStart }
+            // Older intervals are never deleted, only widened, and their printed
+            // bounds stop being real: the reference device reports some as far
+            // back as 1946. Only the window the history page offers is kept.
             val aggregated = aggregatedParser.parse(operationName, result.stdout)
-            // Android's discrete section records accesses, not denied attempts.
-            // Keep the aggregate rejections even when discrete accesses exist,
-            // without counting the aggregate accesses or durations a second time.
+                .filter { it.accessTimeMillis >= windowStart }
+            // Individual records cover the last seven days and never contain
+            // denied attempts. An interval ending inside them keeps only its
+            // rejections; an older one also keeps the accesses they do not cover.
             val events = if (discreteEvents.isEmpty()) aggregated else {
-                discreteEvents + aggregated.filter { it.rejectCount > 0 }.map {
-                    it.copy(accessCount = 0, durationMillis = null)
+                val individualRecordsStart = now - INDIVIDUAL_RECORD_RETENTION_MILLIS
+                discreteEvents + aggregated.mapNotNull {
+                    when {
+                        it.accessTimeMillis <= individualRecordsStart -> it
+                        it.rejectCount > 0 -> it.copy(accessCount = 0, durationMillis = null)
+                        else -> null
+                    }
                 }
             }
             AppOpHistoryLoadResult.Success(
                 events = events.sortedByDescending { it.accessTimeMillis },
             )
         }
+    }
+
+    companion object {
+        /** The longest range the history page offers. */
+        const val HISTORY_WINDOW_DAYS = 30
+        private const val HISTORY_WINDOW_MILLIS = HISTORY_WINDOW_DAYS * 24L * 60 * 60 * 1000
+
+        /** Android's default retention for individual records. */
+        const val INDIVIDUAL_RECORD_RETENTION_DAYS = 7
+        private const val INDIVIDUAL_RECORD_RETENTION_MILLIS =
+            INDIVIDUAL_RECORD_RETENTION_DAYS * 24L * 60 * 60 * 1000
     }
 }
