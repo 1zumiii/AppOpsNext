@@ -1,13 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
+    <!-- The diagnostic log names installed and newly detected apps, which is a
+         record of this device rather than a setting worth restoring elsewhere. -->
     <cloud-backup>
         <exclude
             domain="file"
             path="datastore/new_app_policy.preferences_pb" />
+        <exclude
+            domain="file"
+            path="appopsnext-diagnostic.log" />
     </cloud-backup>
     <device-transfer>
         <exclude
             domain="file"
             path="datastore/new_app_policy.preferences_pb" />
+        <exclude
+            domain="file"
+            path="appopsnext-diagnostic.log" />
     </device-transfer>
 </data-extraction-rules>
