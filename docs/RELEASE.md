@@ -67,7 +67,8 @@ unset release_password
    and attach the same APK to the GitHub Release.
 6. Record a SHA-256 checksum in the release notes.
 
-`v1.4.1-beta2` is already a published prerelease (version code 34). Subsequent
-development must not overwrite its tag or assets. The next release version is
-chosen separately; these development changes do not bump the version. Commit,
-push and tagging are performed by the maintainer for the current work.
+`v1.4.1-beta1` to `v1.4.1-beta3` are published prereleases (version codes 33 to
+35), and their tags and assets must not be overwritten. No final 1.4.1 follows
+them: `1.5.0` (version code 36) is the next release and includes all of their
+changes. The in-app update check treats 1.5.0 as newer than every 1.4.1 beta.
+Commit, push and tagging are performed by the maintainer.

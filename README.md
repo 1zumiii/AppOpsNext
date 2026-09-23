@@ -2,9 +2,24 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-Manage Android AppOps, reuse permission templates, and review system permission
-history — with a native Kotlin and Jetpack Compose interface powered by
-[Shizuku](https://shizuku.rikka.app/).
+AppOpsNext controls what apps may do beyond Android's permission switches, and
+shows what they actually did. It is a native Kotlin and Jetpack Compose app that
+runs its privileged commands through [Shizuku](https://shizuku.rikka.app/).
+
+- **Finer control than the permission screen.** Set camera, location, clipboard
+  and other AppOps to allow, ignore, deny or foreground only. Every change is read
+  back, and restored if it did not take.
+- **New apps restricted from the start.** Reuse permission templates across apps,
+  and optionally apply one to each newly installed app automatically.
+- **See who used what, and when.** Permission history with a daily chart,
+  timelines and per-app statistics, filtered by day range and app. History
+  persistence keeps individual records past the seven days Android retains.
+- **Hear about it as it happens (experimental).** Watch chosen permissions of
+  chosen apps, get notified, and keep a log of every access, including refused
+  ones, which Android does not record one by one.
+- **Small privileged surface, no root.** Only Shizuku is needed. The privileged
+  side runs a fixed set of AppOps commands, never an arbitrary shell. Records
+  stay on the device, and the only network request is the update check.
 
 [Download APK](https://github.com/1zumiii/AppOpsNext/releases/latest) ·
 [Report an issue](https://github.com/1zumiii/AppOpsNext/issues) ·
@@ -18,9 +33,9 @@ history — with a native Kotlin and Jetpack Compose interface powered by
 | AppOps | Inspect package and UID modes, search operations by localized or system name, and verify changes by reading them back. |
 | Templates and batches | Create reusable rules, reorder them, apply a template to multiple apps, or change several operations in one app. |
 | Newly installed apps | Opt in to automatic template application, catch up on pending installations, and inspect saved per-rule results. |
-| History | Explore permission distribution, app statistics, and timelines; choose and reorder the operations you follow. |
+| History | Explore permission distribution, app statistics, and timelines by day range and app; choose and reorder the operations you follow. Optionally keep individual records past the seven days Android retains. |
 | Settings and diagnostics | Switch between English, Simplified Chinese, or the system language, inspect connection status and diagnostic reports, and see quietly whether a newer release exists. |
-| Experimental | Watch chosen operations for chosen apps, with per-point reporting intervals, outcome filters and off-screen-only reporting. Notification permission is required for alerts. A registry check reports confirmed or unconfirmed coverage. Also inspect a snapshot of processes registered for permission mode changes. |
+| Experimental | Watch chosen operations for chosen apps, with per-point reporting intervals, outcome filters and off-screen-only reporting. Notification permission is required for alerts. A registry check reports confirmed or unconfirmed coverage. A monitor log keeps every reported access, allowed or refused, whatever the notification settings. Also inspect a snapshot of processes registered for permission mode changes. |
 
 ## Install and get started
 
@@ -82,9 +97,34 @@ available. The seven-day chart continues to count accesses only.
 - Before the first successful read, the page distinguishes unloaded history
   from a genuine zero count.
 
-The saved result is a cache of the latest successful read, not a permanent
-archive. It is stored in the app's private storage and excluded from Android
-backup; clearing app data or uninstalling removes it.
+The saved result is a cache of the latest successful read. It is stored in the
+app's private storage and excluded from Android backup; clearing app data or
+uninstalling removes it.
+
+### History persistence
+
+Android keeps individual records for seven days; older accesses survive only as
+interval counts without their times. With **Settings → History persistence**
+turned on, AppOpsNext keeps the individual records of the permissions chosen
+there (camera, microphone, and precise and approximate location, the ones with
+individual records):
+
+- The choice starts from the history page's selection and is independent of it
+  afterwards.
+- Permissions the history page shows are saved as it refreshes. The rest are
+  saved when the app is opened, at most every six hours. Opening the app at
+  least once a week therefore leaves no gap.
+- Periods that were not saved are filled from interval counts within 30 days.
+  An interval that partly overlaps saved records counts only the accesses
+  beyond them, which can be slightly high because Android may merge accesses
+  into one record.
+- Up to 100,000 records are kept, oldest removed first. They stay on the device,
+  are excluded from backup, and can be deleted by date range or all at once.
+- A saved file that cannot be read, for example after a downgrade, is left as
+  it is and saving pauses until it is deleted, rather than being overwritten.
+
+Denied attempts are never saved as individual records by Android. To record
+them one by one, use the experimental access monitor and its log.
 
 ## What an AppOps change means
 
@@ -119,7 +159,7 @@ target separately.
 | `QUERY_ALL_PACKAGES` | An AppOps manager has to discover packages that are not known at build time. |
 | `INTERNET` | Only to check quietly whether a newer release exists. |
 | `POST_NOTIFICATIONS` | Results of automatic template application, and access reports from the experimental monitor. |
-| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE` | Keeps the experimental background monitor's callbacks reachable while it is switched on. |
+| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE` | Keeps the experimental access monitor's callbacks reachable while it is switched on. |
 
 The update check reads one public GitHub endpoint and nothing else. It never
 forces an update, never downloads or installs anything, and never shows a popup
@@ -140,7 +180,7 @@ entirely your decision.
   through AppOps.
 - **History looks old or incomplete:** check the saved update time, refresh
   manually, and verify the connection. Android controls which records exist.
-- **The background monitor reports nothing:** it is experimental and depends
+- **The access monitor reports nothing:** it is experimental and depends
   on a privileged interface that not every ROM provides. Turn it on again and
   read the registry check result; it can be confirmed, unconfirmed or failed,
   and partial registration and callback parsing errors stay visible. Matching
@@ -225,9 +265,9 @@ Android packages live under `app/src/main/java/dev/izumi/appopsnext/`.
 | `nativebackend/`, `shizuku/` | Privileged connections, native pipes, and UserService fallback. |
 | `apps/`, `settings/` | App discovery, metadata caching, and preferences. |
 | `templates/`, `newapps/`, `batch/` | Template persistence, installation detection, resumable rule execution, and batch targets. |
-| `history/` | System-history parsing, refresh scheduling, and local snapshots. |
+| `history/` | System-history parsing, refresh scheduling, local snapshots, and the saved individual-record archive. |
 | `diagnostics/` | Environment and connection reports. |
-| `monitor/` | Experimental access monitor: watch registration over a forwarded binder call, per-point reporting settings, event filtering, and notifications. |
+| `monitor/` | Experimental access monitor: watch registration over a forwarded binder call, per-point reporting settings, event filtering, notifications, and the event log. |
 | `update/` | Release check against the GitHub API and version comparison. |
 | [`daemon/`](daemon/) at the repository root | Go daemon with an allowlisted command protocol. |
 

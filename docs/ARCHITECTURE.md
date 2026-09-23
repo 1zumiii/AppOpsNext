@@ -17,7 +17,8 @@ Android code lives under `app/src/main/java/dev/izumi/appopsnext/`.
 - `templates`: permission template persistence and rule ordering.
 - `batch`: batch targets and the executor shared by templates and new-app work.
 - `newapps`: installation detection and resumable per-rule policy execution.
-- `history`: system-history parsing, refresh scheduling, and local snapshots.
+- `history`: system-history parsing, refresh scheduling, local snapshots, and
+  the saved individual-record archive.
 - `monitor`: the experimental access monitor — watch registration over a
   forwarded binder call, per-point reporting settings, event filtering, and
   notifications.
@@ -76,6 +77,13 @@ their point: unpicking an operation is not a decision about how it should be
 reported. The only suppression nobody configures is a 200 ms window that folds
 the platform reporting a single read twice.
 
+`MonitorEventLog` writes down every access that reaches a monitoring point
+before any of these settings apply, so what interrupts and what is recorded are
+independent. Only a duplicate callback within 200 ms is folded, as for the
+notification. Entries are appended in batches every two seconds to a file under
+`noBackupFilesDir`, capped at 50,000, and a record cut short by the process
+ending is dropped on the next read.
+
 Filters run cheapest first. The outcome filter and the interval are decided in
 memory; only an access that would otherwise be reported is worth asking the
 platform where the application was running. That question reads the process
@@ -98,8 +106,9 @@ responses without a Content-Length header.
 
 `AppOpsNextApplication` owns every long-lived instance: the single
 `PrivilegedServiceClient`, `AppOpsRepository`, `DiagnosticLogRepository`,
-`InstalledAppsRepository`, `HistorySnapshotStore`, `NewAppPolicyCoordinator`,
-`AppOpsMonitorController`, and the repositories behind the five Preferences
+`InstalledAppsRepository`, `HistorySnapshotStore`, `HistoryArchiveStore`,
+`HistoryArchiveRecorder`, `NewAppPolicyCoordinator`, `AppOpsMonitorController`,
+`MonitorEventLog`, and the repositories behind the five Preferences
 DataStores (`user_settings`, `permission_templates`,
 `history_permission_settings`, `new_app_policy`, `monitor_targets`). The
 privileged client is shared by diagnostics and per-app detail ViewModels;
@@ -336,6 +345,20 @@ Failed reads retain the previous snapshot and timestamp alongside an error;
 a successful empty result replaces the old snapshot. A missing timestamp marks
 an operation that has never loaded, rather than a verified zero count. This is
 a cache of the last successful read, not an append-only archive of system history.
+
+The archive is. `HistoryArchiveStore` keeps individual records past the seven
+days Android retains, with the periods they cover, in a versioned file under
+`noBackupFilesDir` that records its event layout. A file that exists but cannot
+be read is never overwritten: saving pauses until the user deletes it. A write
+that would pass the file limit drops the oldest records until it fits.
+`HistoryArchiveRecorder` decides what is saved: the operations chosen in
+settings, first copied from the history page's selection. The history page saves
+what it reads; the recorder reads the rest when the app comes to the foreground,
+at most every six hours. `HistoryArchiveMerger` puts saved records beside the
+system's history. An interval fully covered by saved records keeps only its
+rejections, and one partly covered keeps the accesses beyond the records inside
+it, as `IntervalRecordSubtraction` computes; the repository applies the same
+rule at the start of the system's own seven days.
 
 App-list and history ViewModels share a locale-aware, 60-second application
 metadata cache; explicit app-list refresh bypasses it.
