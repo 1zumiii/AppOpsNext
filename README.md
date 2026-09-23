@@ -2,24 +2,34 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-AppOpsNext controls what apps may do beyond Android's permission switches, and
-shows what they actually did. It is a native Kotlin and Jetpack Compose app that
-runs its privileged commands through [Shizuku](https://shizuku.rikka.app/).
+AppOpsNext helps protect your privacy with finer control over app permissions,
+access history, and live monitoring. It runs through
+[Shizuku](https://shizuku.rikka.app/) without root and helps answer four questions:
 
-- **Finer control than the permission screen.** Set camera, location, clipboard
-  and other AppOps to allow, ignore, deny or foreground only. Every change is read
-  back, and restored if it did not take.
-- **New apps restricted from the start.** Reuse permission templates across apps,
-  and optionally apply one to each newly installed app automatically.
-- **See who used what, and when.** Permission history with a daily chart,
-  timelines and per-app statistics, filtered by day range and app. History
-  persistence keeps individual records past the seven days Android retains.
-- **Hear about it as it happens (experimental).** Watch chosen permissions of
-  chosen apps, get notified, and keep a log of every access, including refused
-  ones, which Android does not record one by one.
-- **Small privileged surface, no root.** Only Shizuku is needed. The privileged
-  side runs a fixed set of AppOps commands, never an arbitrary shell. Records
-  stay on the device, and the only network request is the update check.
+- **Settings:** What have I allowed?
+- **Activity:** Which apps are accessing what?
+- **Outcomes:** Did the system allow or deny the access?
+- **Listeners:** Which other processes are watching for permission changes?
+
+---
+
+- **Finer permission controls.** Control camera, location, clipboard and other
+  AppOps for each app. Every change is read back to check that it took effect.
+- **Templates for existing and new apps.** Save common restrictions as a template,
+  apply it to several apps at once, or have it applied automatically to new installs.
+- **See who used what, and when.** Explore daily charts, timelines and per-app
+  statistics, with filters for time range and app and counts of denied attempts.
+  Enable history persistence to keep individual records beyond Android's seven-day
+  retention period.
+- **Access monitoring (experimental).** Monitor specific permissions for specific
+  apps, get live reports of accesses and whether the system allowed or denied them,
+  and review them later in the log. Android itself does not keep individual records
+  of denied attempts.
+- **Permission change listeners (experimental).** See which processes are
+  registered to watch for changes to permission settings.
+- **Strict limits on privileged access.** Privileged operations use only a fixed
+  set of AppOps commands and interfaces, with no arbitrary shell execution. All
+  records stay on the device. The only network request is the update check.
 
 [Download APK](https://github.com/1zumiii/AppOpsNext/releases/latest) ·
 [Report an issue](https://github.com/1zumiii/AppOpsNext/issues) ·
