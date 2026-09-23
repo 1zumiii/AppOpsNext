@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,6 +42,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -47,6 +50,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.history.HistoryArchiveProblem
+import dev.izumi.appopsnext.history.HistoryArchiveRecorder
+import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 import java.text.DateFormat
 import java.text.NumberFormat
 import java.time.Instant
@@ -83,6 +88,7 @@ fun SavedHistoryScreen(
     uiState: SettingsUiState,
     onBack: () -> Unit,
     onSaveIndividualHistoryChange: (Boolean) -> Unit,
+    onSavedHistoryOperationChange: (String, Boolean) -> Unit,
     countSavedHistory: (SavedHistoryDateRange?) -> Int,
     onDeleteSavedHistory: (SavedHistoryDateRange?) -> Unit,
 ) {
@@ -101,6 +107,7 @@ fun SavedHistoryScreen(
     }
     var picking by remember { mutableStateOf<DateEnd?>(null) }
     var showHelp by remember { mutableStateOf(false) }
+    var operationsExpanded by rememberSaveable { mutableStateOf(false) }
     var confirming by remember { mutableStateOf<Deletion?>(null) }
 
     Scaffold(
@@ -141,6 +148,48 @@ fun SavedHistoryScreen(
                         )
                     },
                 )
+            }
+            item {
+                // Collapsed by default: the four choices are set once and rarely revisited.
+                ListItem(
+                    modifier = Modifier.clickable { operationsExpanded = !operationsExpanded },
+                    headlineContent = { Text(text = stringResource(R.string.settings_saved_history_operations)) },
+                    supportingContent = { Text(text = savedOperationsSummary(uiState.savedHistoryOperations)) },
+                    trailingContent = {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_chevron_right),
+                            contentDescription = stringResource(
+                                if (operationsExpanded) R.string.watchers_collapse else R.string.watchers_expand,
+                            ),
+                            modifier = Modifier.rotate(if (operationsExpanded) 90f else 0f),
+                        )
+                    },
+                )
+            }
+            if (operationsExpanded) {
+                item {
+                    Text(
+                        text = stringResource(R.string.settings_saved_history_operations_hint),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                items(HistoryArchiveRecorder.SAVEABLE_OPERATIONS, key = { it }) { operation ->
+                    val saved = operation in uiState.savedHistoryOperations
+                    ListItem(
+                        modifier = Modifier
+                            .clickable { onSavedHistoryOperationChange(operation, !saved) }
+                            .padding(start = 16.dp),
+                        headlineContent = { Text(text = operationLabel(operation)) },
+                        trailingContent = {
+                            Checkbox(
+                                checked = saved,
+                                onCheckedChange = { onSavedHistoryOperationChange(operation, it) },
+                            )
+                        },
+                    )
+                }
             }
             item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
             item {
@@ -419,6 +468,21 @@ private fun savedHistoryText(summary: SavedHistorySummary): String {
         format.format(Date(oldest)),
         format.format(Date(newest)),
     )
+}
+
+@Composable
+private fun operationLabel(operation: String): String =
+    AppOpDisplayCatalog.labelResOf(operation)?.let { stringResource(it) } ?: operation
+
+/** The chosen operations in the order they are offered, or that none are. */
+@Composable
+private fun savedOperationsSummary(saved: Set<String>): String {
+    val labels = HistoryArchiveRecorder.SAVEABLE_OPERATIONS.filter { it in saved }.map { operationLabel(it) }
+    return if (labels.isEmpty()) {
+        stringResource(R.string.settings_saved_history_operations_none)
+    } else {
+        labels.joinToString(stringResource(R.string.list_separator))
+    }
 }
 
 private fun formatDate(date: LocalDate, zoneId: ZoneId): String =

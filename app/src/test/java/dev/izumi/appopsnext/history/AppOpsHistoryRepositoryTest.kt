@@ -160,6 +160,33 @@ class AppOpsHistoryRepositoryTest {
         assertEquals(1, older.rejectCount)
     }
 
+    @Test fun `an interval reaching across the start of individual records keeps the accesses they do not hold`() = runBlocking {
+        val repository = repository(at("2026-09-22 12:00:00.000"), """
+            Aggregated accesses:
+              snapshot:
+                begin = 2026-09-14 00:00:00.000
+                end = 2026-09-16 00:00:00.000
+                Uid u0a166:
+                  Package com.example.camera:
+                    Attribution null:
+                      CAMERA:
+                        [top-s] = access=5, reject=1, duration=+9s
+            Discrete accesses:
+              Uid: 10166
+                Package: com.example.camera
+                  CAMERA
+                    Attribution: null
+                      Access [top-s] at 2026-09-15 13:00:00.000
+                      Access [bg-s] at 2026-09-15 14:00:00.000
+                      Access [top-s] at 2026-09-15 20:00:00.000
+        """)
+        val result = repository.loadOperationHistory("CAMERA") as AppOpHistoryLoadResult.Success
+        val interval = result.events.single { it.isAggregated }
+        assertEquals(3, interval.accessCount)
+        assertEquals(1, interval.rejectCount)
+        assertEquals(null, interval.durationMillis)
+    }
+
     private fun repository(now: Long, output: String) = AppOpsHistoryRepository(
         FakeGateway(output.trimIndent()),
         clock = { now },

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import java.io.IOException
 import kotlinx.coroutines.flow.Flow
@@ -59,6 +60,7 @@ class UserSettingsRepository(
                 saveIndividualHistory =
                     preferences[Keys.SAVE_INDIVIDUAL_HISTORY]
                         ?: UserSettingsDefaults.SAVE_INDIVIDUAL_HISTORY,
+                savedHistoryOperations = preferences[Keys.SAVED_HISTORY_OPERATIONS],
             )
         }
 
@@ -110,6 +112,23 @@ class UserSettingsRepository(
         }
     }
 
+    /** Only takes effect while nothing has been chosen, so a choice is never overwritten. */
+    suspend fun initializeSavedHistoryOperations(operations: Set<String>) {
+        dataStore.edit { preferences ->
+            if (preferences[Keys.SAVED_HISTORY_OPERATIONS] == null) {
+                preferences[Keys.SAVED_HISTORY_OPERATIONS] = operations
+            }
+        }
+    }
+
+    suspend fun setHistoryOperationSaved(operation: String, saved: Boolean) {
+        dataStore.edit { preferences ->
+            val current = preferences[Keys.SAVED_HISTORY_OPERATIONS].orEmpty()
+            preferences[Keys.SAVED_HISTORY_OPERATIONS] =
+                if (saved) current + operation else current - operation
+        }
+    }
+
     suspend fun setBatteryNoticeSuppressed(suppressed: Boolean) {
         dataStore.edit { preferences ->
             preferences[Keys.SUPPRESS_BATTERY_NOTICE] = suppressed
@@ -118,6 +137,7 @@ class UserSettingsRepository(
 
     private object Keys {
         val SAVE_INDIVIDUAL_HISTORY = booleanPreferencesKey("save_individual_history")
+        val SAVED_HISTORY_OPERATIONS = stringSetPreferencesKey("saved_history_operations")
         val HIDE_SYSTEM_APPS = booleanPreferencesKey("hide_system_apps")
         val SUPPRESS_DENY_FALLBACK_NOTICE =
             booleanPreferencesKey("suppress_deny_fallback_notice")

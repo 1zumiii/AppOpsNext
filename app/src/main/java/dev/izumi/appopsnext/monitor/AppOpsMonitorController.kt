@@ -36,6 +36,7 @@ class AppOpsMonitorController(
     private val targetsRepository: MonitorTargetsRepository,
     private val settingsRepository: UserSettingsRepository,
     private val diagnosticLog: DiagnosticLogRepository,
+    private val eventLog: MonitorEventLog,
     private val notifier: MonitorNotifier = MonitorNotifier(context),
 ) {
     private val foregroundStates = ForegroundStateProbe(gateway)
@@ -192,6 +193,11 @@ class AppOpsMonitorController(
                         for (queued in events) {
                             val event = queued.event
                             val name = AppOpCodes.nameOf(event.opCode) ?: continue
+                            // Written down before any setting decides whether it interrupts.
+                            eventLog.record(
+                                MonitorLogEntry(queued.wallTime, event.uid, event.packageName, name, event.allowed),
+                                queued.elapsedTime,
+                            )
                             val settings = data.points[event.packageName to name]
                             // Someone watching a permission they have just denied
                             // wants the refusals, not everything.

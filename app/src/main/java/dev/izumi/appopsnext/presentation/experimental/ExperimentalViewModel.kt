@@ -9,11 +9,14 @@ import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.monitor.AppOpsMonitorService
 import dev.izumi.appopsnext.monitor.MonitorSelfCheckResult
 import dev.izumi.appopsnext.monitor.MonitorStatus
+import dev.izumi.appopsnext.monitor.MonitorLogEntry
 import dev.izumi.appopsnext.monitor.MonitorTarget
 import dev.izumi.appopsnext.monitor.MonitorOutcomes
 import dev.izumi.appopsnext.monitor.MonitorPointSettings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -83,6 +86,20 @@ class ExperimentalViewModel(
     private val busy = MutableStateFlow(false)
     private val selfCheckResult = MutableStateFlow<MonitorSelfCheckResult?>(null)
     private val batteryExempt = MutableStateFlow(true)
+    private val eventLog = app.monitorEventLog
+
+    /** Kept apart from [uiState]: it can hold fifty thousand entries and changes in bursts. */
+    val logEntries: StateFlow<List<MonitorLogEntry>> = eventLog.entries
+        .map { it.orEmpty() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    init {
+        viewModelScope.launch { eventLog.load() }
+    }
+
+    fun clearLog() {
+        viewModelScope.launch { eventLog.clear() }
+    }
 
     val uiState = combine(
         settingsRepository.settings,

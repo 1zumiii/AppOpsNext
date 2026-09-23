@@ -9,9 +9,12 @@ import dev.izumi.appopsnext.settings.UserSettingsRepository
 import dev.izumi.appopsnext.shizuku.PrivilegedServiceClient
 import dev.izumi.appopsnext.templates.PermissionTemplateRepository
 import dev.izumi.appopsnext.history.HistoryPermissionSettingsRepository
+import dev.izumi.appopsnext.history.AppOpsHistoryRepository
+import dev.izumi.appopsnext.history.HistoryArchiveRecorder
 import dev.izumi.appopsnext.history.HistoryArchiveStore
 import dev.izumi.appopsnext.history.HistorySnapshotStore
 import dev.izumi.appopsnext.monitor.AppOpsMonitorController
+import dev.izumi.appopsnext.monitor.MonitorEventLog
 import dev.izumi.appopsnext.monitor.MonitorTargetsRepository
 import dev.izumi.appopsnext.newapps.NewAppPolicyCoordinator
 import dev.izumi.appopsnext.newapps.NewAppPolicyStateRepository
@@ -92,8 +95,26 @@ class AppOpsNextApplication : Application() {
         )
     }
 
+    val historyArchiveRecorder: HistoryArchiveRecorder by lazy {
+        HistoryArchiveRecorder(
+            scope = applicationScope,
+            settingsRepository = userSettingsRepository,
+            panelRepository = historyPermissionSettingsRepository,
+            historyRepository = AppOpsHistoryRepository(privilegedServiceClient),
+            loadInstalledApps = { installedAppsRepository.loadInstalledApps() },
+            snapshotStore = historySnapshotStore,
+            archiveStore = historyArchiveStore,
+            privilegedState = privilegedServiceClient.state,
+        )
+    }
+
     val monitorTargetsRepository: MonitorTargetsRepository by lazy {
         MonitorTargetsRepository(this)
+    }
+
+    /** Kept out of backups like the history: it is a record of other apps' accesses. */
+    val monitorEventLog: MonitorEventLog by lazy {
+        MonitorEventLog(File(noBackupFilesDir, "monitor-events-v1.bin"), applicationScope)
     }
 
     val appOpsMonitorController: AppOpsMonitorController by lazy {
@@ -105,6 +126,7 @@ class AppOpsNextApplication : Application() {
             targetsRepository = monitorTargetsRepository,
             settingsRepository = userSettingsRepository,
             diagnosticLog = diagnosticLogRepository,
+            eventLog = monitorEventLog,
         )
     }
 
@@ -125,5 +147,6 @@ class AppOpsNextApplication : Application() {
                     "shizukuManager=${environment.shizukuManagerVersion}",
         )
         newAppPolicyCoordinator.start()
+        historyArchiveRecorder.start()
     }
 }

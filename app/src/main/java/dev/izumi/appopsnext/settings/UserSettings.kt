@@ -31,4 +31,9 @@ data class UserSettings(
     /** Keeps individual history records past the system's seven days. */
     val saveIndividualHistory: Boolean =
         UserSettingsDefaults.SAVE_INDIVIDUAL_HISTORY,
+    /**
+     * Operations whose individual records are saved. Null until first chosen,
+     * which copies the history page's selection once.
+     */
+    val savedHistoryOperations: Set<String>? = null,
 )

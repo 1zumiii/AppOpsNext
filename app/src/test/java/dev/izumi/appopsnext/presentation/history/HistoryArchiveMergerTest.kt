@@ -4,6 +4,7 @@ import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.history.ArchivedHistory
 import dev.izumi.appopsnext.history.model.AppOpHistoryEvent
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HistoryArchiveMergerTest {
@@ -46,17 +47,71 @@ class HistoryArchiveMergerTest {
         assertEquals(listOf(2_000L, 900L, 500L, 500L, 100L, 100L), merged.map { it.event.accessTimeMillis })
     }
 
+    @Test fun `an interval reaching before the saved period keeps the accesses the records do not hold`() {
+        val merged = HistoryArchiveMerger.merge(
+            system = listOf(interval(start = 0, end = 2_000, accesses = 10, rejections = 0)),
+            archived = ArchivedHistory(
+                listOf(single(1_500), single(1_800), single(1_600, uidState = "bg")),
+                coverage = listOf(1_000L..5_000L),
+            ),
+        )
+        // Only the two records the interval counts are taken out, not the background one.
+        assertEquals(8, merged.single { it.event.isAggregated }.event.accessCount)
+        assertEquals(3, merged.count { !it.event.isAggregated })
+    }
+
+    @Test fun `intervals around a deleted range keep the accesses beyond the remaining records`() {
+        // Deleting 1_000 until 2_000 split the coverage around it.
+        val archived = ArchivedHistory(
+            listOf(single(600), single(2_200)),
+            coverage = listOf(0L..999L, 2_000L..3_000L),
+        )
+        val merged = HistoryArchiveMerger.merge(
+            system = listOf(interval(start = 500, end = 2_500, accesses = 6, rejections = 0)),
+            archived = archived,
+        )
+        assertEquals(4, merged.single { it.event.isAggregated }.event.accessCount)
+    }
+
+    @Test fun `a partly covered interval the records account for keeps only its rejections`() {
+        val archived = ArchivedHistory(listOf(single(1_500), single(1_600)), coverage = listOf(1_000L..5_000L))
+        val withRejections = HistoryArchiveMerger.merge(
+            listOf(interval(start = 0, end = 2_000, accesses = 2, rejections = 3)), archived,
+        ).single { it.event.isAggregated }.event
+        assertEquals(0, withRejections.accessCount)
+        assertEquals(3, withRejections.rejectCount)
+        val withoutRejections = HistoryArchiveMerger.merge(
+            listOf(interval(start = 0, end = 2_000, accesses = 1, rejections = 0)), archived,
+        )
+        assertTrue(withoutRejections.none { it.event.isAggregated })
+    }
+
+    @Test fun `the system's own records are not taken out of its intervals a second time`() {
+        val merged = HistoryArchiveMerger.merge(
+            system = listOf(single(1_500), interval(start = 0, end = 2_000, accesses = 10, rejections = 0)),
+            archived = ArchivedHistory(listOf(single(1_500), single(1_800)), coverage = listOf(1_000L..5_000L)),
+        )
+        assertEquals(9, merged.single { it.event.isAggregated }.event.accessCount)
+    }
+
     @Test fun `without saved records the system history is unchanged`() {
         val system = listOf(single(900), interval(0, 100, accesses = 1, rejections = 0))
         assertEquals(system, HistoryArchiveMerger.merge(system, null))
     }
 
-    private fun single(time: Long) = resolved(time, start = null, accesses = 1, rejections = 0)
+    private fun single(time: Long, uidState: String = "top") =
+        resolved(time, start = null, accesses = 1, rejections = 0, uidState = uidState)
 
     private fun interval(start: Long, end: Long, accesses: Int, rejections: Int) =
         resolved(end, start, accesses, rejections)
 
-    private fun resolved(time: Long, start: Long?, accesses: Int, rejections: Int) = ResolvedHistoryEvent(
+    private fun resolved(
+        time: Long,
+        start: Long?,
+        accesses: Int,
+        rejections: Int,
+        uidState: String = "top",
+    ) = ResolvedHistoryEvent(
         event = AppOpHistoryEvent(
             uid = app.uid,
             packageName = app.packageName,
@@ -64,7 +119,7 @@ class HistoryArchiveMergerTest {
             attributionTag = null,
             accessTimeMillis = time,
             durationMillis = null,
-            uidState = "top",
+            uidState = uidState,
             flags = "s",
             accessCount = accesses,
             isAggregated = start != null,

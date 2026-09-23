@@ -119,6 +119,21 @@ fun SettingsScreen(
                     },
                 )
             }
+            // Authorizing Shizuku is the first thing a new installation needs, so the
+            // connection sits right after the general settings rather than near the end.
+            item {
+                SettingsSectionTitle(
+                    text = stringResource(R.string.settings_diagnostics),
+                )
+            }
+            item {
+                DiagnosticsSection(
+                    uiState = diagnosticsUiState,
+                    onShizukuAction = onShizukuAction,
+                    onPrivilegedServiceRetry =
+                        onPrivilegedServiceRetry,
+                )
+            }
             item {
                 SettingsSectionTitle(
                     text = stringResource(R.string.settings_history_section),
@@ -141,19 +156,6 @@ fun SettingsScreen(
                     supportingContent = {
                         Text(text = stringResource(R.string.experimental_caption))
                     },
-                )
-            }
-            item {
-                SettingsSectionTitle(
-                    text = stringResource(R.string.settings_diagnostics),
-                )
-            }
-            item {
-                DiagnosticsSection(
-                    uiState = diagnosticsUiState,
-                    onShizukuAction = onShizukuAction,
-                    onPrivilegedServiceRetry =
-                        onPrivilegedServiceRetry,
                 )
             }
             item {
