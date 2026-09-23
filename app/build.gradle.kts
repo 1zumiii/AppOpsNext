@@ -25,8 +25,8 @@ android {
         applicationId = "dev.izumi.appopsnext"
         minSdk = 35
         targetSdk = 35
-        versionCode = 35
-        versionName = "1.4.1-beta3"
+        versionCode = 36
+        versionName = "1.5.0"
         buildConfigField(
             "String",
             "SHIZUKU_API_VERSION",
