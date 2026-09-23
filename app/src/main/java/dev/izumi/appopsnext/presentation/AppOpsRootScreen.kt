@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import dev.izumi.appopsnext.apps.model.InstalledApp
+import dev.izumi.appopsnext.monitor.MonitorLogEntry
 import dev.izumi.appopsnext.monitor.MonitorOutcomes
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 import dev.izumi.appopsnext.appops.command.AppOpMode
@@ -36,6 +37,7 @@ import dev.izumi.appopsnext.presentation.experimental.MonitorOperationsScreen
 import dev.izumi.appopsnext.presentation.experimental.MonitorSettingsScreen
 import dev.izumi.appopsnext.presentation.experimental.MonitorTargetsScreen
 import dev.izumi.appopsnext.presentation.experimental.MonitorExamplesScreen
+import dev.izumi.appopsnext.presentation.experimental.MonitorLogScreen
 import dev.izumi.appopsnext.presentation.experimental.MonitorPointDetailScreen
 import dev.izumi.appopsnext.presentation.experimental.MonitorPointRow
 import dev.izumi.appopsnext.presentation.experimental.MonitorPointsScreen
@@ -91,9 +93,12 @@ fun AppOpsRootScreen(
     onForegroundAlternativeRequested: () -> Unit,
     onHideSystemAppsChange: (Boolean) -> Unit,
     onSaveIndividualHistoryChange: (Boolean) -> Unit,
+    onSavedHistoryOperationChange: (String, Boolean) -> Unit,
     countSavedHistory: (SavedHistoryDateRange?) -> Int,
     onDeleteSavedHistory: (SavedHistoryDateRange?) -> Unit,
     experimentalUiState: ExperimentalUiState,
+    monitorLogEntries: () -> List<MonitorLogEntry>,
+    onClearMonitorLog: () -> Unit,
     watchersUiState: WatchersUiState,
     onRefreshWatchers: () -> Unit,
     onMonitorEnabledChange: (Boolean) -> Unit,
@@ -219,7 +224,11 @@ fun AppOpsRootScreen(
         enabled = selectedApp == null &&
             monitorPointKey == null &&
             monitorAppPackage == null &&
-            (experimentalRoute == ROUTE_MONITOR_SETTINGS || experimentalRoute == ROUTE_WATCHERS),
+            (
+                experimentalRoute == ROUTE_MONITOR_SETTINGS ||
+                    experimentalRoute == ROUTE_WATCHERS ||
+                    experimentalRoute == ROUTE_MONITOR_LOG
+                ),
     ) {
         experimentalRoute = ROUTE_EXPERIMENTAL
     }
@@ -268,6 +277,7 @@ fun AppOpsRootScreen(
             uiState = settingsUiState,
             onBack = { showSavedHistory = false },
             onSaveIndividualHistoryChange = onSaveIndividualHistoryChange,
+            onSavedHistoryOperationChange = onSavedHistoryOperationChange,
             countSavedHistory = countSavedHistory,
             onDeleteSavedHistory = onDeleteSavedHistory,
         )
@@ -354,6 +364,18 @@ fun AppOpsRootScreen(
                 onHeadsUpChange = onMonitorHeadsUpChange,
             )
 
+            experimentalRoute == ROUTE_MONITOR_LOG -> MonitorLogScreen(
+                entries = monitorLogEntries(),
+                apps = appListUiState.allApps,
+                onBack = { experimentalRoute = ROUTE_EXPERIMENTAL },
+                // The detail page opens over the log, and back returns to it.
+                onOpenApp = { app ->
+                    selectedApp = app
+                    onAppSelected(app)
+                },
+                onClear = onClearMonitorLog,
+            )
+
             experimentalRoute == ROUTE_WATCHERS -> WatchersScreen(
                 uiState = watchersUiState,
                 onRefresh = onRefreshWatchers,
@@ -367,6 +389,8 @@ fun AppOpsRootScreen(
                 onEnableUnconfirmedMonitor = onEnableUnconfirmedMonitor,
                 onOpenWatchers = { experimentalRoute = ROUTE_WATCHERS },
                 onOpenSettings = { experimentalRoute = ROUTE_MONITOR_SETTINGS },
+                logCount = monitorLogEntries().size,
+                onOpenLog = { experimentalRoute = ROUTE_MONITOR_LOG },
                 onOpenBatterySettings = onOpenBatterySettings,
                 onDismissBatteryNotice = onDismissBatteryNotice,
                 onRefreshBatteryExemption = onRefreshBatteryExemption,
@@ -450,8 +474,10 @@ fun AppOpsRootScreen(
                         history = historyUiState.permissions.firstOrNull {
                             it.permission == selectedHistoryPermission
                         }?.let {
+                            // The same apps the detail page counted, so its app count
+                            // and this list cannot disagree while a filter is active.
                             HistoryFilter.apply(
-                                it, effectiveHistoryRange, null,
+                                it, effectiveHistoryRange, historyAppFilter,
                                 System.currentTimeMillis(), ZoneId.systemDefault(),
                             )
                         },
@@ -538,6 +564,7 @@ private const val ROUTE_MONITOR_SETTINGS = "monitor_settings"
 private const val ROUTE_MONITOR_TARGETS = "monitor_targets"
 private const val ROUTE_MONITOR_POINTS = "monitor_points"
 private const val ROUTE_MONITOR_EXAMPLES = "monitor_examples"
+private const val ROUTE_MONITOR_LOG = "monitor_log"
 
 /**
  * Orders the points so the ones that can act come first, and names them with

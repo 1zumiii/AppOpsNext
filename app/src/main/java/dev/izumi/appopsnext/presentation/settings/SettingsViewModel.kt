@@ -46,6 +46,7 @@ class SettingsViewModel(
                 appLanguage = language,
                 updateState = update,
                 saveIndividualHistory = settings.saveIndividualHistory,
+                savedHistoryOperations = settings.savedHistoryOperations.orEmpty(),
                 savedHistory = saved,
             )
     }.stateIn(
@@ -80,6 +81,12 @@ class SettingsViewModel(
     fun setSaveIndividualHistory(enabled: Boolean) {
         viewModelScope.launch {
             repository.setSaveIndividualHistory(enabled)
+        }
+    }
+
+    fun setHistoryOperationSaved(operation: String, saved: Boolean) {
+        viewModelScope.launch {
+            repository.setHistoryOperationSaved(operation, saved)
         }
     }
 

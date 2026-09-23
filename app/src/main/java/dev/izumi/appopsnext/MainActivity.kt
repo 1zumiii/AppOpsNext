@@ -63,6 +63,7 @@ class MainActivity : ComponentActivity() {
             val experimentalUiState =
                 experimentalViewModel.uiState.collectAsStateWithLifecycle()
             val watchersUiState = watchersViewModel.uiState.collectAsStateWithLifecycle()
+            val monitorLogEntries = experimentalViewModel.logEntries.collectAsStateWithLifecycle()
 
             AppOpsNextTheme {
                 AppOpsRootScreen(
@@ -76,6 +77,10 @@ class MainActivity : ComponentActivity() {
                     batchOperationUiState = batchOperationUiState.value,
                     appOpSearchQuery = appOpSearchQuery.value,
                     experimentalUiState = experimentalUiState.value,
+                    // Read only where the log is shown: it changes every couple of seconds
+                    // while the monitor is busy, which must not recompose every other page.
+                    monitorLogEntries = { monitorLogEntries.value },
+                    onClearMonitorLog = experimentalViewModel::clearLog,
                     watchersUiState = watchersUiState.value,
                     onRefreshWatchers = watchersViewModel::refresh,
                     onMonitorEnabledChange =
@@ -137,6 +142,8 @@ class MainActivity : ComponentActivity() {
                         settingsViewModel::setHideSystemApps,
                     onSaveIndividualHistoryChange =
                         settingsViewModel::setSaveIndividualHistory,
+                    onSavedHistoryOperationChange =
+                        settingsViewModel::setHistoryOperationSaved,
                     countSavedHistory =
                         settingsViewModel::countSavedHistory,
                     onDeleteSavedHistory =
@@ -231,9 +238,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        (application as AppOpsNextApplication)
-            .newAppPolicyCoordinator
-            .onAppForeground()
+        (application as AppOpsNextApplication).apply {
+            newAppPolicyCoordinator.onAppForeground()
+            historyArchiveRecorder.onAppForeground()
+        }
         appListViewModel.refreshAfterResume()
         appDetailViewModel.refreshIfReady()
         historyViewModel.setForeground(true)

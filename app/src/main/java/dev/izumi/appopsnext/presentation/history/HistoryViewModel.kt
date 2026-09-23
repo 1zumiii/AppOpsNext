@@ -53,11 +53,10 @@ class HistoryViewModel(
     )
     private val snapshotStore = app.historySnapshotStore
     private val archiveStore = app.historyArchiveStore
+    private val archiveRecorder = app.historyArchiveRecorder
     private var archive: Map<String, ArchivedHistory>? = null
     private var saveIndividualHistory = UserSettingsDefaults.SAVE_INDIVIDUAL_HISTORY
-    private var settingsSeen = false
-    private var connected = false
-    // A save started from the switch and a page refresh must not read at once.
+    // Two refreshes must not read at once.
     private val loadMutex = Mutex()
     private val publishRequests = Channel<Unit>(Channel.CONFLATED)
     private var snapshots = emptyMap<String, HistorySnapshot>()
@@ -93,9 +92,6 @@ class HistoryViewModel(
         }
         viewModelScope.launch {
             userSettingsRepository.settings.collect { settings ->
-                // The first value is the stored one, not the user turning it on.
-                val turnedOn = settingsSeen && !saveIndividualHistory && settings.saveIndividualHistory
-                settingsSeen = true
                 if (hideSystemApps != settings.hideSystemApps) {
                     hideSystemApps = settings.hideSystemApps
                     publishSnapshots()
@@ -105,7 +101,6 @@ class HistoryViewModel(
                     saveIndividualHistory = settings.saveIndividualHistory
                     publishSnapshots()
                 }
-                if (turnedOn) saveNow()
             }
         }
         viewModelScope.launch {
@@ -117,8 +112,7 @@ class HistoryViewModel(
         }
         viewModelScope.launch {
             privilegedServiceClient.state.collect { state ->
-                connected = state is PrivilegedServiceState.Connected
-                refreshController.setConnected(connected)
+                refreshController.setConnected(state is PrivilegedServiceState.Connected)
                 if (state !is PrivilegedServiceState.Connected) {
                     mutableUiState.value = mutableUiState.value.copy(
                         isLoading = false,
@@ -194,45 +188,6 @@ class HistoryViewModel(
         }
     }
 
-    /**
-     * Saves what has already been read at once, then reads afresh, so turning the
-     * switch on does not wait for the history page to be opened.
-     */
-    private fun saveNow() {
-        viewModelScope.launch {
-            loadMutex.withLock {
-                selectedPermissions.forEach { permission ->
-                    val operation = permission.shellOperationName
-                    snapshots[operation]?.let { recordIndividual(operation, it) }
-                }
-                withContext(NonCancellable) { archiveStore.flush() }
-            }
-            if (connected && selectedPermissions.isNotEmpty()) {
-                forceRefreshRequested = true
-                try {
-                    loadSelectedPermissions(selectedPermissions)
-                } finally {
-                    mutableUiState.value = mutableUiState.value.copy(isLoading = false)
-                }
-            }
-        }
-    }
-
-    /**
-     * Coverage is only claimed for an operation the system keeps individual
-     * records for; claiming it for one that has none would hide the interval
-     * counts that are its only history.
-     */
-    private suspend fun recordIndividual(operation: String, snapshot: HistorySnapshot) {
-        if (!saveIndividualHistory || snapshot.events.none { !it.event.isAggregated }) return
-        archiveStore.record(
-            operation,
-            snapshot.events,
-            coveredFrom = snapshot.fetchedAtMillis - INDIVIDUAL_RECORD_RETENTION_MILLIS,
-            coveredTo = snapshot.fetchedAtMillis,
-        )
-    }
-
     private suspend fun loadSelectedPermissions(
         permissions: List<HistoryPermission>,
     ) = loadMutex.withLock { loadSelectedPermissionsLocked(permissions) }
@@ -280,7 +235,7 @@ class HistoryViewModel(
                         }
                         val snapshot = HistorySnapshot(resolved, System.currentTimeMillis())
                         snapshotStore.stage(operation, snapshot)
-                        recordIndividual(operation, snapshot)
+                        archiveRecorder.record(operation, snapshot)
                         snapshots = snapshots + (operation to snapshot)
                         failures = failures - operation
                     }
@@ -301,7 +256,5 @@ class HistoryViewModel(
 
     private companion object {
         const val AUTO_REFRESH_INTERVAL_MINUTES = 5
-        const val INDIVIDUAL_RECORD_RETENTION_MILLIS =
-            AppOpsHistoryRepository.INDIVIDUAL_RECORD_RETENTION_DAYS * 24L * 60 * 60 * 1000
     }
 }

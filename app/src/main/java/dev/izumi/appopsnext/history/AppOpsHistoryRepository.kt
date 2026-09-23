@@ -52,15 +52,18 @@ class AppOpsHistoryRepository(
             val aggregated = aggregatedParser.parse(operationName, result.stdout)
                 .filter { it.accessTimeMillis >= windowStart }
             // Individual records cover the last seven days and never contain
-            // denied attempts. An interval ending inside them keeps only its
-            // rejections; an older one also keeps the accesses they do not cover.
+            // denied attempts. An interval inside them keeps only its rejections,
+            // an older one keeps everything, and one reaching across their start
+            // keeps the accesses beyond the records inside it.
             val events = if (discreteEvents.isEmpty()) aggregated else {
                 val individualRecordsStart = now - INDIVIDUAL_RECORD_RETENTION_MILLIS
+                val records = IntervalRecordSubtraction(discreteEvents)
                 discreteEvents + aggregated.mapNotNull {
+                    val start = it.intervalStartTimeMillis ?: it.accessTimeMillis
                     when {
                         it.accessTimeMillis <= individualRecordsStart -> it
-                        it.rejectCount > 0 -> it.copy(accessCount = 0, durationMillis = null)
-                        else -> null
+                        start >= individualRecordsStart -> it.rejectionsOnly()
+                        else -> records.remainder(it)
                     }
                 }
             }

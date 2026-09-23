@@ -1,6 +1,7 @@
 package dev.izumi.appopsnext.presentation.settings
 
 import dev.izumi.appopsnext.history.HistoryArchiveProblem
+import dev.izumi.appopsnext.history.HistoryArchiveRecorder
 import dev.izumi.appopsnext.history.HistoryArchiveStore
 import dev.izumi.appopsnext.settings.AppLanguage
 import dev.izumi.appopsnext.update.UpdateState
@@ -11,6 +12,8 @@ data class SettingsUiState(
     val appLanguage: AppLanguage = AppLanguage.SYSTEM,
     val updateState: UpdateState = UpdateState.Idle,
     val saveIndividualHistory: Boolean = UserSettingsDefaults.SAVE_INDIVIDUAL_HISTORY,
+    /** The operations chosen for saving, among [HistoryArchiveRecorder.SAVEABLE_OPERATIONS]. */
+    val savedHistoryOperations: Set<String> = emptySet(),
     val savedHistory: SavedHistorySummary = SavedHistorySummary(),
 )
 

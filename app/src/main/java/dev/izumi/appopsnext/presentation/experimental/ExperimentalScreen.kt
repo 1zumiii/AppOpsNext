@@ -51,6 +51,8 @@ fun ExperimentalScreen(
     onEnableUnconfirmedMonitor: () -> Unit,
     onOpenWatchers: () -> Unit,
     onOpenSettings: () -> Unit,
+    logCount: Int,
+    onOpenLog: () -> Unit,
     onOpenBatterySettings: () -> Unit,
     onDismissBatteryNotice: () -> Unit,
     onRefreshBatteryExemption: () -> Unit,
@@ -113,6 +115,21 @@ fun ExperimentalScreen(
                     onOpenSettings = onOpenSettings,
                     onOpenBatterySettings = onOpenBatterySettings,
                     onDismissBatteryNotice = onDismissBatteryNotice,
+                )
+            }
+            item {
+                ListItem(
+                    modifier = Modifier.clickable(onClick = onOpenLog),
+                    headlineContent = { Text(stringResource(R.string.monitor_log_title)) },
+                    supportingContent = {
+                        Text(
+                            if (logCount > 0) {
+                                stringResource(R.string.monitor_log_summary, logCount)
+                            } else {
+                                stringResource(R.string.monitor_log_summary_empty)
+                            },
+                        )
+                    },
                 )
             }
             item { HorizontalDivider() }
