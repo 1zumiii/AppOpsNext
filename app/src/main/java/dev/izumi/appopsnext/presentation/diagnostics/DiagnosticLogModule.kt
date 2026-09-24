@@ -15,6 +15,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -25,11 +26,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.presentation.components.MainPageChevron
+import dev.izumi.appopsnext.presentation.components.MainPageEntryIcon
 
 @Composable
 fun DiagnosticLogModule(
@@ -40,6 +44,9 @@ fun DiagnosticLogModule(
     var showReport by remember { mutableStateOf(false) }
     ListItem(
         modifier = modifier.clickable { showReport = true },
+        leadingContent = {
+            MainPageEntryIcon(R.drawable.ic_navigation_templates)
+        },
         headlineContent = {
             Text(text = stringResource(R.string.diagnostic_log_title))
         },
@@ -51,6 +58,8 @@ fun DiagnosticLogModule(
                 ),
             )
         },
+        trailingContent = { MainPageChevron() },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
     )
 
     if (showReport) {

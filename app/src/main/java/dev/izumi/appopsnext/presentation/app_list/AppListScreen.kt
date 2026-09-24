@@ -11,12 +11,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,11 +33,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.presentation.batch.TemplatePickerDialog
@@ -175,22 +179,25 @@ private fun AppListContent(
             onValueChange = onSearchQueryChange,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 12.dp),
             label = {
                 Text(text = stringResource(R.string.app_list_search_label))
             },
             singleLine = true,
+            shape = RoundedCornerShape(16.dp),
         )
-        Text(
-            text = stringResource(
-                R.string.app_list_count,
-                uiState.visibleApps.size,
-                uiState.totalAppCount,
-            ),
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (uiState.searchQuery.isNotBlank() || uiState.visibleApps.size != uiState.totalAppCount) {
+            Text(
+                text = stringResource(
+                    R.string.app_list_count,
+                    uiState.visibleApps.size,
+                    uiState.totalAppCount,
+                ),
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         if (batchSelectionMode) {
             Row(
                 modifier = Modifier
@@ -226,7 +233,7 @@ private fun AppListContent(
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(vertical = 8.dp),
+                contentPadding = PaddingValues(bottom = 12.dp),
             ) {
                 items(
                     items = uiState.visibleApps,
@@ -256,9 +263,7 @@ private fun AppListContent(
                             )
                         },
                     )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 20.dp),
-                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 76.dp, end = 20.dp))
                 }
             }
         }
@@ -292,23 +297,19 @@ private fun InstalledAppListItem(
             Text(
                 text = app.label,
                 fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         },
         supportingContent = {
-            Text(text = app.packageName)
-        },
-        overlineContent = {
             Text(
-                text = stringResource(
-                    if (app.isSystemApp) {
-                        R.string.app_type_system
-                    } else {
-                        R.string.app_type_user
-                    },
-                    app.uid,
-                ),
+                text = app.packageName,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodySmall,
             )
         },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
     )
 }
 

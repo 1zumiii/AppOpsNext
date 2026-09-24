@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,6 +22,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.BuildConfig
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.presentation.components.MainPageEntryIcon
 import dev.izumi.appopsnext.update.UpdateState
 
 /**
@@ -45,6 +47,9 @@ fun AppVersionRow(
     }
     ListItem(
         modifier = clickAction?.let { Modifier.clickable(onClick = it) } ?: Modifier,
+        leadingContent = {
+            MainPageEntryIcon(R.drawable.ic_action_info)
+        },
         headlineContent = {
             Text(text = stringResource(R.string.settings_app_version))
         },
@@ -58,6 +63,7 @@ fun AppVersionRow(
             )
         },
         trailingContent = { UpdateStatus(updateState) },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
     )
 }
 
