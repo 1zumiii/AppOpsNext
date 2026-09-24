@@ -19,8 +19,7 @@ fun AppOpsNextTheme(
 ) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
-    val isEnglish = configuration.locales[0]?.language ==
-        Locale.ENGLISH.language
+    val language = configuration.locales[0]?.language
     val colorScheme = when {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && darkTheme ->
             dynamicDarkColorScheme(context)
@@ -34,10 +33,10 @@ fun AppOpsNextTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = if (isEnglish) {
-            CompactEnglishTypography
-        } else {
-            AppDefaultTypography
+        typography = when (language) {
+            Locale.ENGLISH.language -> CompactEnglishTypography
+            Locale.CHINESE.language -> BalancedChineseTypography
+            else -> AppDefaultTypography
         },
         content = content,
     )

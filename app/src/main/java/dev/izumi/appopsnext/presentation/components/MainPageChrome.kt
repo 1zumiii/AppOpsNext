@@ -11,6 +11,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -34,18 +35,22 @@ fun MainPageSectionTitle(
 }
 
 @Composable
-fun MainPageEntryIcon(@DrawableRes iconRes: Int) {
+fun MainPageEntryIcon(
+    @DrawableRes iconRes: Int,
+    containerColor: Color = MaterialTheme.colorScheme.primaryContainer,
+    contentColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+) {
     Surface(
         modifier = Modifier.size(44.dp),
         shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
+        color = containerColor,
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
                 painter = painterResource(iconRes),
                 contentDescription = null,
                 modifier = Modifier.size(22.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                tint = contentColor,
             )
         }
     }

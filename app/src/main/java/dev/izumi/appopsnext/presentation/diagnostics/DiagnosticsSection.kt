@@ -3,9 +3,10 @@ package dev.izumi.appopsnext.presentation.diagnostics
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -52,16 +53,16 @@ fun DiagnosticsSection(
             ),
             level = DiagnosticStatusLevel.NEUTRAL,
         )
-        HorizontalDivider(modifier = Modifier.padding(start = 72.dp))
+        Spacer(Modifier.height(8.dp))
         ShizukuStatusCard(
             state = uiState.shizukuState,
             onAction = onShizukuAction,
         )
-        HorizontalDivider(modifier = Modifier.padding(start = 72.dp))
+        Spacer(Modifier.height(8.dp))
         RuntimeModeStatusItem(
             serviceState = uiState.privilegedServiceState,
         )
-        HorizontalDivider(modifier = Modifier.padding(start = 72.dp))
+        Spacer(Modifier.height(8.dp))
         PrivilegedServiceStatusCard(
             serviceState = uiState.privilegedServiceState,
             readState = uiState.appOpsReadState,

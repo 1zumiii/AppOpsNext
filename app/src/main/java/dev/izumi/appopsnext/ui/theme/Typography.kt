@@ -24,10 +24,21 @@ val CompactEnglishTypography = DefaultTypography.copy(
     labelSmall = DefaultTypography.labelSmall.smaller(),
 )
 
+val BalancedChineseTypography = DefaultTypography.copy(
+    titleLarge = DefaultTypography.titleLarge.smaller(CHINESE_FONT_SIZE_REDUCTION_SP),
+    titleMedium = DefaultTypography.titleMedium.smaller(CHINESE_FONT_SIZE_REDUCTION_SP),
+    titleSmall = DefaultTypography.titleSmall.smaller(CHINESE_FONT_SIZE_REDUCTION_SP),
+    bodyLarge = DefaultTypography.bodyLarge.smaller(CHINESE_FONT_SIZE_REDUCTION_SP),
+    bodyMedium = DefaultTypography.bodyMedium.smaller(CHINESE_FONT_SIZE_REDUCTION_SP),
+    labelLarge = DefaultTypography.labelLarge.smaller(CHINESE_FONT_SIZE_REDUCTION_SP),
+    labelMedium = DefaultTypography.labelMedium.smaller(CHINESE_FONT_SIZE_REDUCTION_SP),
+)
+
 val AppDefaultTypography: Typography = DefaultTypography
 
-private fun TextStyle.smaller(): TextStyle = copy(
-    fontSize = (fontSize.value - ENGLISH_FONT_SIZE_REDUCTION_SP).sp,
+private fun TextStyle.smaller(reductionSp: Float = ENGLISH_FONT_SIZE_REDUCTION_SP): TextStyle = copy(
+    fontSize = (fontSize.value - reductionSp).sp,
 )
 
 private const val ENGLISH_FONT_SIZE_REDUCTION_SP = 1f
+private const val CHINESE_FONT_SIZE_REDUCTION_SP = 0.5f
