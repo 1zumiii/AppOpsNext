@@ -118,6 +118,7 @@
     <string name="action_got_it">知道了</string>
     <string name="action_remove">移除</string>
     <string name="settings_title">设置</string>
+    <string name="settings_preferences">显示与语言</string>
     <string name="settings_hide_system_apps">隐藏系统应用</string>
     <string name="settings_hide_system_apps_detail">开启后，应用列表和历史记录只显示用户安装的应用。</string>
     <string name="settings_language">应用语言</string>
@@ -125,6 +126,10 @@
     <string name="settings_language_chinese">简体中文</string>
     <string name="settings_language_english">English</string>
     <string name="settings_diagnostics">连接与诊断</string>
+    <string name="settings_connection_summary_title">连接状态</string>
+    <string name="settings_connection_connected">已连接 · %1$s</string>
+    <string name="settings_connection_show_details">详情</string>
+    <string name="settings_connection_hide_details">收起</string>
     <string name="settings_testing">测试与日志</string>
     <string name="diagnostic_log_title">诊断报告</string>
     <string name="diagnostic_log_summary">包含设备环境、连接状态和最近 %1$d 条应用事件</string>
@@ -231,10 +236,14 @@
     <string name="history_attribution">归因标签：%1$s</string>
     <string name="settings_github_url" translatable="false">https://github.com/1zumiii/AppOpsNext</string>
     <string name="templates_title">权限模板</string>
+    <string name="templates_custom_section">我的模板</string>
+    <string name="templates_custom_empty">新建模板后，就能把同一组规则复用到多个应用。</string>
     <string name="template_create">新建</string>
     <string name="template_new_app_policy_title">新装应用默认模板</string>
     <string name="template_new_app_policy_description">自动套用常见的隐私限制。模板不可删除。AppOpsNext 未运行时装的应用，会在下次打开后补处理。获得通知权限后，每次处理完成会发送一条简短的结果通知。</string>
     <string name="template_new_app_auto_apply">自动套用到新装应用</string>
+    <string name="template_preview_more">%1$s +%2$d</string>
+    <string name="template_more_options">更多模板操作</string>
     <string name="template_new_app_policy_information">自动套用说明</string>
     <string name="new_app_policy_notification_channel">新装应用规则</string>
     <string name="new_app_policy_notification_title">已处理新装应用：%1$s</string>

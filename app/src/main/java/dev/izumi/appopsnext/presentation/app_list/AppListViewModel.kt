@@ -42,7 +42,7 @@ class AppListViewModel(
         }
         AppListUiState(
             searchQuery = query,
-            totalAppCount = eligibleApps.size,
+            totalAppCount = apps.size,
             allApps = eligibleApps,
             visibleApps = AppListFilter.apply(
                 apps = eligibleApps,

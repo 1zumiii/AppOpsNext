@@ -33,7 +33,8 @@ fun HistoryOverviewInformationDialog(
     HistoryInformationDialog(
         title = stringResource(R.string.history_information),
         paragraphs = listOf(stringResource(R.string.history_subtitle)) +
-            historyCaveatParagraphs() + listOf(
+            historyCaveatParagraphs(includeChart = false) + listOf(
+            stringResource(R.string.history_reorder_permissions),
             stringResource(
                 R.string.history_auto_refresh_summary,
                 uiState.autoRefreshIntervalMinutes,
@@ -58,13 +59,13 @@ fun PermissionHistoryInformationDialog(
 
 /** One topic per paragraph, so each can be found at a glance. */
 @Composable
-private fun historyCaveatParagraphs(): List<String> = listOf(
-    stringResource(R.string.history_caveat_individual),
-    stringResource(R.string.history_caveat_intervals),
-    stringResource(R.string.history_caveat_denials),
-    stringResource(R.string.history_caveat_range),
-    stringResource(R.string.history_caveat_chart),
-)
+private fun historyCaveatParagraphs(includeChart: Boolean = true): List<String> =
+    listOf(
+        stringResource(R.string.history_caveat_individual),
+        stringResource(R.string.history_caveat_intervals),
+        stringResource(R.string.history_caveat_denials),
+        stringResource(R.string.history_caveat_range),
+    ) + if (includeChart) listOf(stringResource(R.string.history_caveat_chart)) else emptyList()
 
 @Composable
 private fun HistoryInformationDialog(

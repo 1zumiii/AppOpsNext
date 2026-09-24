@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -65,6 +66,7 @@ import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 import dev.izumi.appopsnext.presentation.app_detail.KnownAppOp
+import dev.izumi.appopsnext.presentation.components.MainPageSectionTitle
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
 import dev.izumi.appopsnext.templates.model.PermissionTemplateRule
 import dev.izumi.appopsnext.templates.NewAppPolicyTemplate
@@ -92,6 +94,7 @@ fun TemplatesScreen(
         mutableStateOf<PermissionTemplate?>(null)
     }
     var showNewAppPolicyInfo by remember { mutableStateOf(false) }
+    var showTemplateActions by remember(selectedTemplate?.id) { mutableStateOf(false) }
     val context = LocalContext.current
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -168,6 +171,27 @@ fun TemplatesScreen(
                                 ),
                             )
                         }
+                    } else {
+                        Box {
+                            IconButton(onClick = { showTemplateActions = true }) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_action_more),
+                                    contentDescription = stringResource(R.string.template_more_options),
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showTemplateActions,
+                                onDismissRequest = { showTemplateActions = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(text = stringResource(R.string.action_delete)) },
+                                    onClick = {
+                                        showTemplateActions = false
+                                        deleteCandidate = selectedTemplate
+                                    },
+                                )
+                            }
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -185,7 +209,6 @@ fun TemplatesScreen(
                 onAutoApplyNewAppTemplateChange =
                     onAutoApplyNewAppTemplateChange,
                 onSelectTemplate = onSelectTemplate,
-                onDeleteTemplate = { deleteCandidate = it },
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(contentPadding),
@@ -279,30 +302,35 @@ private fun TemplateList(
     autoApplyNewAppTemplate: Boolean,
     onAutoApplyNewAppTemplateChange: (Boolean) -> Unit,
     onSelectTemplate: (String) -> Unit,
-    onDeleteTemplate: (PermissionTemplate) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (templates.isEmpty()) {
         Column(
-            modifier = modifier.padding(32.dp),
-            verticalArrangement = Arrangement.Center,
+            modifier = modifier,
         ) {
-            Text(
-                text = stringResource(R.string.templates_empty),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = stringResource(R.string.templates_empty_detail),
-                modifier = Modifier.padding(top = 8.dp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(32.dp),
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = stringResource(R.string.templates_empty),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text = stringResource(R.string.templates_empty_detail),
+                    modifier = Modifier.padding(top = 8.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         return
     }
 
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(20.dp),
+        contentPadding = PaddingValues(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         val newAppTemplate = templates.firstOrNull {
@@ -318,19 +346,30 @@ private fun TemplateList(
                     enabled = autoApplyNewAppTemplate,
                     onEnabledChange = onAutoApplyNewAppTemplateChange,
                     onEdit = { onSelectTemplate(template.id) },
+                    modifier = Modifier.padding(horizontal = 20.dp),
                 )
             }
         }
         item(key = CUSTOM_TEMPLATE_DIVIDER_KEY) {
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 4.dp),
+            MainPageSectionTitle(
+                text = stringResource(R.string.templates_custom_section),
             )
+        }
+        if (customTemplates.isEmpty()) {
+            item(key = "templates-custom-empty") {
+                Text(
+                    text = stringResource(R.string.templates_custom_empty),
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         items(customTemplates, key = PermissionTemplate::id) { template ->
             CustomTemplateCard(
                 template = template,
                 onEdit = { onSelectTemplate(template.id) },
-                onDelete = { onDeleteTemplate(template) },
+                modifier = Modifier.padding(horizontal = 20.dp),
             )
         }
     }
@@ -342,14 +381,16 @@ private fun NewAppPolicyCard(
     enabled: Boolean,
     onEnabledChange: (Boolean) -> Unit,
     onEdit: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
         ),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -358,40 +399,44 @@ private fun NewAppPolicyCard(
                     text = templateDisplayName(template),
                     modifier = Modifier.weight(1f),
                     color = if (enabled) {
-                        MaterialTheme.colorScheme.onSurface
+                        MaterialTheme.colorScheme.onPrimaryContainer
                     } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                            alpha = 0.55f,
-                        )
+                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
-                Switch(
-                    checked = enabled,
-                    onCheckedChange = onEnabledChange,
-                )
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_action_edit),
+                        contentDescription = stringResource(R.string.action_edit),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
             }
+            Text(
+                text = stringResource(R.string.template_rule_count, template.rules.size),
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+            TemplateRulePreview(
+                template = template,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 12.dp),
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
+            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringResource(
-                        R.string.template_rule_count,
-                        template.rules.size,
-                    ),
+                    text = stringResource(R.string.template_new_app_auto_apply),
                     modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    style = MaterialTheme.typography.bodyMedium,
                 )
-                IconButton(onClick = onEdit) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_action_edit),
-                        contentDescription = stringResource(
-                            R.string.action_edit,
-                        ),
-                    )
-                }
+                Switch(checked = enabled, onCheckedChange = onEnabledChange)
             }
         }
     }
@@ -401,18 +446,19 @@ private fun NewAppPolicyCard(
 private fun CustomTemplateCard(
     template: PermissionTemplate,
     onEdit: () -> Unit,
-    onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().clickable(onClick = onEdit),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, top = 16.dp, bottom = 16.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -428,22 +474,40 @@ private fun CustomTemplateCard(
                     ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-            IconButton(onClick = onDelete) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_action_delete),
-                    contentDescription = stringResource(R.string.action_delete),
-                    tint = MaterialTheme.colorScheme.error,
-                )
-            }
-            IconButton(onClick = onEdit) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_action_edit),
-                    contentDescription = stringResource(R.string.action_edit),
+                TemplateRulePreview(
+                    template = template,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
     }
+}
+
+@Composable
+private fun TemplateRulePreview(template: PermissionTemplate, color: Color) {
+    if (template.rules.isEmpty()) return
+    val namesByOperation = remember {
+        AppOpDisplayCatalog.knownOperations().associateBy(KnownAppOp::stableName)
+    }
+    val names = template.rules.take(3).map { rule ->
+        namesByOperation[rule.stableOperationName]?.let {
+            stringResource(it.labelRes)
+        } ?: rule.stableOperationName
+    }
+    val preview = names.joinToString(" · ")
+    val remaining = template.rules.size - names.size
+    Text(
+        text = if (remaining > 0) {
+            stringResource(R.string.template_preview_more, preview, remaining)
+        } else {
+            preview
+        },
+        modifier = Modifier.padding(top = 4.dp),
+        color = color,
+        style = MaterialTheme.typography.bodySmall,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 @Composable

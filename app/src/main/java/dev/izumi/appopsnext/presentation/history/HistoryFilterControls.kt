@@ -3,6 +3,7 @@ package dev.izumi.appopsnext.presentation.history
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -12,6 +13,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -38,18 +42,19 @@ fun HistoryFilterBar(
     appFilterActive: Boolean = false,
     onAppFilterClick: (() -> Unit)? = null,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        ranges.forEach { option ->
-            FilterChip(
-                selected = option == range,
-                onClick = { onRangeChange(option) },
-                label = { Text(text = stringResource(option.labelRes())) },
-            )
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            ranges.forEachIndexed { index, option ->
+                SegmentedButton(
+                    selected = option == range,
+                    onClick = { onRangeChange(option) },
+                    shape = SegmentedButtonDefaults.itemShape(index, ranges.size),
+                    label = { Text(text = stringResource(option.labelRes())) },
+                )
+            }
         }
         if (onAppFilterClick != null && appFilterLabel != null) {
             FilterChip(

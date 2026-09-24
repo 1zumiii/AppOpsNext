@@ -1,14 +1,10 @@
 package dev.izumi.appopsnext.presentation.diagnostics
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -17,12 +13,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.presentation.components.StatusGlyph
+import dev.izumi.appopsnext.presentation.components.StatusVisual
 import dev.izumi.appopsnext.appops.model.AppOpsReadFailureReason
 import dev.izumi.appopsnext.appops.model.AppOpsReadState
 import dev.izumi.appopsnext.shizuku.model.PrivilegedBackendType
@@ -376,27 +373,16 @@ private fun DiagnosticStatusItem(
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
-    val statusColor = when (level) {
-        DiagnosticStatusLevel.NEUTRAL ->
-            MaterialTheme.colorScheme.outline
-
-        DiagnosticStatusLevel.SUCCESS ->
-            MaterialTheme.colorScheme.tertiary
-
-        DiagnosticStatusLevel.WARNING ->
-            MaterialTheme.colorScheme.secondary
-
-        DiagnosticStatusLevel.ERROR ->
-            MaterialTheme.colorScheme.error
-    }
     ListItem(
         modifier = modifier.fillMaxWidth(),
         leadingContent = {
-            Box(
-                modifier = Modifier
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(statusColor),
+            StatusGlyph(
+                status = when (level) {
+                    DiagnosticStatusLevel.NEUTRAL -> StatusVisual.NEUTRAL
+                    DiagnosticStatusLevel.SUCCESS -> StatusVisual.SUCCESS
+                    DiagnosticStatusLevel.WARNING -> StatusVisual.WARNING
+                    DiagnosticStatusLevel.ERROR -> StatusVisual.ERROR
+                },
             )
         },
         headlineContent = {

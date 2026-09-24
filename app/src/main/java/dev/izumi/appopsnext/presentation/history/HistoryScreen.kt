@@ -37,6 +37,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -73,6 +74,8 @@ import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.history.model.AppOpHistoryFailureReason
 import dev.izumi.appopsnext.history.model.HistoryPermission
 import dev.izumi.appopsnext.presentation.components.AppIcon
+import dev.izumi.appopsnext.presentation.components.MainPageSectionTitle
+import dev.izumi.appopsnext.presentation.components.MainPageEntryIcon
 import java.text.DateFormat
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -113,7 +116,7 @@ fun HistoryOverviewScreen(
                     ) {
                         Icon(
                             painter = painterResource(
-                                R.drawable.ic_action_manage,
+                                R.drawable.ic_action_edit_list,
                             ),
                             contentDescription = stringResource(
                                 R.string.history_manage_permissions,
@@ -132,31 +135,6 @@ fun HistoryOverviewScreen(
                             ),
                         )
                     }
-                    IconButton(
-                        onClick = onRefresh,
-                        enabled = !uiState.isLoading,
-                    ) {
-                        // Turning while a refresh runs, so the tap visibly did something.
-                        val rotation = if (uiState.isLoading) {
-                            rememberInfiniteTransition(label = "refresh").animateFloat(
-                                initialValue = 0f,
-                                targetValue = 360f,
-                                animationSpec = infiniteRepeatable(
-                                    animation = tween(durationMillis = 900, easing = LinearEasing),
-                                ),
-                                label = "refreshRotation",
-                            ).value
-                        } else {
-                            0f
-                        }
-                        Icon(
-                            painter = painterResource(R.drawable.ic_refresh),
-                            contentDescription = stringResource(
-                                R.string.history_refresh,
-                            ),
-                            modifier = Modifier.rotate(rotation),
-                        )
-                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
@@ -173,16 +151,22 @@ fun HistoryOverviewScreen(
                 },
             )
         }
-        HistoryOverviewContent(
-            uiState = rangedState,
-            timeRange = timeRange,
-            onTimeRangeChange = onTimeRangeChange,
-            onPermissionSelected = onPermissionSelected,
-            onPermissionOrderChanged = onPermissionOrderChanged,
+        PullToRefreshBox(
+            isRefreshing = uiState.isLoading,
+            onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(contentPadding),
-        )
+        ) {
+            HistoryOverviewContent(
+                uiState = rangedState,
+                timeRange = timeRange,
+                onTimeRangeChange = onTimeRangeChange,
+                onPermissionSelected = onPermissionSelected,
+                onPermissionOrderChanged = onPermissionOrderChanged,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
     }
 
     if (showPermissionManagement) {
@@ -226,6 +210,8 @@ private fun HistoryOverviewContent(
     }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val maximumRecordCount = displayedPermissions.maxOfOrNull { it.recordCount }
+        ?.coerceAtLeast(1) ?: 1
     LaunchedEffect(uiState.permissions) {
         if (draggedOperationName == null) {
             displayedPermissions = uiState.permissions
@@ -415,20 +401,12 @@ private fun HistoryOverviewContent(
                         )
                     }
                 }
-                if (uiState.permissions.any { it.lastUpdatedAtMillis != null }) {
-                    item {
-                        PermissionDistributionChart(
-                            permissions = uiState.permissions.filter { it.lastUpdatedAtMillis != null },
-                        )
-                    }
-                }
                 item {
-                    Text(
+                    MainPageSectionTitle(
                         text = stringResource(
                             R.string.history_permission_list_title,
                         ),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        horizontalPadding = 0.dp,
                     )
                 }
                 items(
@@ -444,6 +422,7 @@ private fun HistoryOverviewContent(
                             draggedOperationName
                     PermissionHistoryCard(
                         history = history,
+                        maximumRecordCount = maximumRecordCount,
                         onClick = {
                             if (history.lastUpdatedAtMillis != null) {
                                 onPermissionSelected(history.permission)
@@ -461,13 +440,6 @@ private fun HistoryOverviewContent(
                             },
                     )
                 }
-            }
-        }
-        if (uiState.isLoading) {
-            item {
-                LinearProgressIndicator(
-                    modifier = Modifier.fillMaxWidth(),
-                )
             }
         }
     }
@@ -715,63 +687,9 @@ fun PermissionHistoryDetailScreen(
 }
 
 @Composable
-private fun PermissionDistributionChart(
-    permissions: List<PermissionHistory>,
-    modifier: Modifier = Modifier,
-) {
-    val maximum = permissions.maxOfOrNull(PermissionHistory::recordCount)
-        ?.coerceAtLeast(1)
-        ?: 1
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.history_distribution_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            permissions.forEach { history ->
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text(
-                            text = history.permission.displayName(),
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                        Text(
-                            text = history.recordCount.toString(),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                    LinearProgressIndicator(
-                        progress = {
-                            history.recordCount.toFloat() /
-                                maximum.toFloat()
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(RoundedCornerShape(4.dp)),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun PermissionHistoryCard(
     history: PermissionHistory,
+    maximumRecordCount: Int,
     onClick: () -> Unit,
     isDragging: Boolean,
     modifier: Modifier = Modifier,
@@ -789,6 +707,7 @@ private fun PermissionHistoryCard(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isDragging) {
                 MaterialTheme.colorScheme.surfaceContainerHigh
@@ -811,6 +730,11 @@ private fun PermissionHistoryCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                MainPageEntryIcon(
+                    HistoryPermissionIconCatalog.iconFor(
+                        history.permission.shellOperationName,
+                    ),
+                )
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(3.dp),
@@ -820,19 +744,7 @@ private fun PermissionHistoryCard(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                     )
-                    Text(
-                        text = history.permission.systemOperationName(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
-                Icon(
-                    painter = painterResource(R.drawable.ic_drag_handle),
-                    contentDescription = stringResource(
-                        R.string.history_reorder_permissions,
-                    ),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
             Spacer(Modifier.height(2.dp))
             history.failureReason?.let { failureReason ->
@@ -853,6 +765,20 @@ private fun PermissionHistoryCard(
                 ),
                 style = MaterialTheme.typography.bodyMedium,
             )
+            if (history.lastUpdatedAtMillis != null) {
+                LinearProgressIndicator(
+                    progress = {
+                        history.recordCount.toFloat() / maximumRecordCount.toFloat()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp)),
+                    trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    gapSize = 0.dp,
+                    drawStopIndicator = {},
+                )
+            }
             Text(
                 text = stringResource(
                     R.string.history_latest_record,

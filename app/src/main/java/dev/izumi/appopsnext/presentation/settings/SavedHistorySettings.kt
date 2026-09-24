@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -52,6 +53,8 @@ import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.history.HistoryArchiveProblem
 import dev.izumi.appopsnext.history.HistoryArchiveRecorder
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
+import dev.izumi.appopsnext.presentation.components.MainPageChevron
+import dev.izumi.appopsnext.presentation.components.MainPageEntryIcon
 import java.text.DateFormat
 import java.text.NumberFormat
 import java.time.Instant
@@ -65,6 +68,7 @@ fun SavedHistoryEntry(uiState: SettingsUiState, onOpen: () -> Unit) {
     val count = uiState.savedHistory.recordCount
     ListItem(
         modifier = Modifier.clickable(onClick = onOpen),
+        leadingContent = { MainPageEntryIcon(R.drawable.ic_navigation_history) },
         headlineContent = { Text(text = stringResource(R.string.settings_saved_history_entry)) },
         supportingContent = {
             Text(
@@ -79,6 +83,8 @@ fun SavedHistoryEntry(uiState: SettingsUiState, onOpen: () -> Unit) {
                 },
             )
         },
+        trailingContent = { MainPageChevron() },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
     )
 }
 

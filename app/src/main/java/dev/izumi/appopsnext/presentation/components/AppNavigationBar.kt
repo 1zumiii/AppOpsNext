@@ -5,10 +5,12 @@ import androidx.annotation.StringRes
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
 
 enum class MainDestination(
@@ -29,7 +31,7 @@ enum class MainDestination(
     ),
     SETTINGS(
         labelRes = R.string.navigation_settings,
-        iconRes = R.drawable.ic_navigation_settings,
+        iconRes = R.drawable.ic_navigation_settings_gear,
     ),
 }
 
@@ -38,7 +40,10 @@ fun AppNavigationBar(
     selectedDestination: MainDestination,
     onDestinationSelected: (MainDestination) -> Unit,
 ) {
-    NavigationBar {
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 0.dp,
+    ) {
         MainDestination.entries.forEach { destination ->
             NavigationBarItem(
                 selected = destination == selectedDestination,
