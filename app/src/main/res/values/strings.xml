@@ -125,8 +125,8 @@
     <string name="settings_hide_system_apps_detail">Show only user-installed apps in the app list and in history.</string>
     <string name="settings_language">App language</string>
     <string name="settings_language_system">Follow system</string>
-    <string name="settings_language_chinese">Simplified Chinese</string>
-    <string name="settings_language_english">English</string>
+    <string name="settings_language_chinese" translatable="false">中文</string>
+    <string name="settings_language_english" translatable="false">English</string>
     <string name="settings_diagnostics">Connection and diagnostics</string>
     <string name="settings_connection_summary_title">Connection</string>
     <string name="settings_connection_connected">Connected · %1$s</string>
@@ -237,6 +237,7 @@
     <string name="history_background">Background</string>
     <string name="history_attribution">Attribution: %1$s</string>
     <string name="settings_github_url" translatable="false">https://github.com/1zumiii/AppOpsNext</string>
+    <string name="settings_open_external">Open in browser</string>
     <string name="templates_title">Permission templates</string>
     <string name="templates_custom_section">Your templates</string>
     <string name="templates_custom_empty">Create a template to reuse the same rules across apps.</string>
@@ -255,6 +256,7 @@
     <string name="templates_empty">No permission templates yet</string>
     <string name="templates_empty_detail">New templates include common camera, microphone, location, clipboard, notification, and contacts rules in the system-default mode.</string>
     <string name="template_rule_count">%1$d permission rules</string>
+    <string name="template_rule_count_compact">%1$d rules</string>
     <string name="template_editor_detail">When a template is applied, AppOpsNext writes each rule per app or per UID, whichever the permission accepts.</string>
     <string name="template_reorder_hint">Long-press and drag a permission to change its order.</string>
     <string name="template_reorder_action">Long-press and drag to reorder</string>

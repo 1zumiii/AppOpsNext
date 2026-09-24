@@ -696,6 +696,20 @@ private fun PermissionHistoryCard(
 ) {
     val locale = LocalConfiguration.current.locales[0]
         ?: Locale.getDefault()
+    val visual = HistoryPermissionIconCatalog.visualFor(
+        history.permission.shellOperationName,
+    )
+    val (iconContainerColor, accentColor) = when (visual.tone) {
+        HistoryPermissionTone.PRIMARY ->
+            MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.primary
+        HistoryPermissionTone.SECONDARY ->
+            MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.secondary
+        HistoryPermissionTone.TERTIARY ->
+            MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.tertiary
+        HistoryPermissionTone.NEUTRAL ->
+            MaterialTheme.colorScheme.surfaceContainerHighest to
+                MaterialTheme.colorScheme.onSurfaceVariant
+    }
     val latestText = history.latestAccessTimeMillis?.let { timestamp ->
         DateFormat.getDateTimeInstance(
             DateFormat.MEDIUM,
@@ -731,9 +745,9 @@ private fun PermissionHistoryCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MainPageEntryIcon(
-                    HistoryPermissionIconCatalog.iconFor(
-                        history.permission.shellOperationName,
-                    ),
+                    iconRes = visual.iconRes,
+                    containerColor = iconContainerColor,
+                    contentColor = accentColor,
                 )
                 Column(
                     modifier = Modifier.weight(1f),
@@ -775,6 +789,7 @@ private fun PermissionHistoryCard(
                         .height(6.dp)
                         .clip(RoundedCornerShape(3.dp)),
                     trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    color = accentColor,
                     gapSize = 0.dp,
                     drawStopIndicator = {},
                 )

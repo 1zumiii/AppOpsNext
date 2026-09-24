@@ -14,7 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.BuildConfig
@@ -72,6 +73,9 @@ fun SettingsScreen(
     var showConnectionDetails by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val githubUrl = stringResource(R.string.settings_github_url)
+    val githubRepository = remember(githubUrl) {
+        Uri.parse(githubUrl).path?.trim('/')?.takeIf(String::isNotBlank) ?: githubUrl
+    }
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -275,9 +279,15 @@ fun SettingsScreen(
                             Text(text = stringResource(R.string.settings_github))
                         },
                         supportingContent = {
-                            Text(text = githubUrl)
+                            Text(text = githubRepository)
                         },
-                        trailingContent = { MainPageChevron() },
+                        trailingContent = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_open_in_new),
+                                contentDescription = stringResource(R.string.settings_open_external),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     )
                 }
@@ -384,7 +394,7 @@ private fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
 
 @Composable
 private fun SettingsGroupDivider() {
-    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+    Spacer(Modifier.height(4.dp))
 }
 
 @Composable

@@ -123,8 +123,6 @@
     <string name="settings_hide_system_apps_detail">开启后，应用列表和历史记录只显示用户安装的应用。</string>
     <string name="settings_language">应用语言</string>
     <string name="settings_language_system">跟随系统</string>
-    <string name="settings_language_chinese">简体中文</string>
-    <string name="settings_language_english">English</string>
     <string name="settings_diagnostics">连接与诊断</string>
     <string name="settings_connection_summary_title">连接状态</string>
     <string name="settings_connection_connected">已连接 · %1$s</string>
@@ -235,6 +233,7 @@
     <string name="history_background">后台</string>
     <string name="history_attribution">归因标签：%1$s</string>
     <string name="settings_github_url" translatable="false">https://github.com/1zumiii/AppOpsNext</string>
+    <string name="settings_open_external">在浏览器打开</string>
     <string name="templates_title">权限模板</string>
     <string name="templates_custom_section">我的模板</string>
     <string name="templates_custom_empty">新建模板后，就能把同一组规则复用到多个应用。</string>
@@ -253,6 +252,7 @@
     <string name="templates_empty">还没有权限模板</string>
     <string name="templates_empty_detail">新模板会预置相机、麦克风、位置、剪贴板、通知和联系人等常用权限，初始模式为系统默认。</string>
     <string name="template_rule_count">%1$d 项权限规则</string>
+    <string name="template_rule_count_compact">%1$d 项</string>
     <string name="template_editor_detail">套用模板时，AppOpsNext 会按每项权限接受的方式，自动选择按应用还是按 UID 写入。</string>
     <string name="template_reorder_hint">长按权限条目并拖动可调整顺序。</string>
     <string name="template_reorder_action">长按拖动排序</string>
