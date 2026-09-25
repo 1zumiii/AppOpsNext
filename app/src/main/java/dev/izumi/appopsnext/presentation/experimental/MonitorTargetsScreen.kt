@@ -7,15 +7,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -108,7 +113,7 @@ fun MonitorTargetsScreen(
                         text = stringResource(R.string.monitor_targets_selected_header),
                     )
                 }
-                items(watched, key = InstalledApp::packageName) { app ->
+                itemsIndexed(watched, key = { _, app -> app.packageName }) { index, app ->
                     // The row says how many operations are watched rather than
                     // naming them; the list grows past what one row can show and
                     // the names are one tap away.
@@ -118,7 +123,8 @@ fun MonitorTargetsScreen(
                             R.string.monitor_selected_count,
                             selectionByPackage[app.packageName].orEmpty().size,
                         ),
-                        watched = true,
+                        first = index == 0,
+                        last = index == watched.lastIndex,
                         onClick = { onAppSelected(app) },
                     )
                 }
@@ -129,11 +135,12 @@ fun MonitorTargetsScreen(
                         text = stringResource(R.string.monitor_targets_other_header),
                     )
                 }
-                items(others, key = InstalledApp::packageName) { app ->
+                itemsIndexed(others, key = { _, app -> app.packageName }) { index, app ->
                     TargetRow(
                         app = app,
                         detail = app.packageName,
-                        watched = false,
+                        first = index == 0,
+                        last = index == others.lastIndex,
                         onClick = { onAppSelected(app) },
                     )
                 }
@@ -146,9 +153,9 @@ fun MonitorTargetsScreen(
 private fun TargetsSectionHeader(text: String) {
     Text(
         text = text,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 8.dp),
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         fontWeight = FontWeight.SemiBold,
     )
 }
@@ -157,41 +164,43 @@ private fun TargetsSectionHeader(text: String) {
 private fun TargetRow(
     app: InstalledApp,
     detail: String,
-    watched: Boolean,
+    first: Boolean,
+    last: Boolean,
     onClick: () -> Unit,
 ) {
-    ListItem(
-        modifier = Modifier.clickable(onClick = onClick),
-        leadingContent = {
-            AppIcon(packageName = app.packageName, appLabel = app.label)
-        },
-        headlineContent = {
-            Text(text = app.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        },
-        supportingContent = {
-            Text(
-                text = detail,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                color = if (watched) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    Color.Unspecified
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(
+            topStart = if (first) 18.dp else 0.dp,
+            topEnd = if (first) 18.dp else 0.dp,
+            bottomStart = if (last) 18.dp else 0.dp,
+            bottomEnd = if (last) 18.dp else 0.dp,
+        ),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column {
+            ListItem(
+                modifier = Modifier.clickable(onClick = onClick),
+                leadingContent = {
+                    AppIcon(packageName = app.packageName, appLabel = app.label)
                 },
+                headlineContent = {
+                    Text(text = app.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                },
+                supportingContent = {
+                    Text(
+                        text = detail,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
             )
-        },
-        trailingContent = if (!watched) {
-            null
-        } else {
-            {
-                Icon(
-                    painter = painterResource(R.drawable.ic_ph_bell),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
+            if (!last) {
+                HorizontalDivider(modifier = Modifier.padding(start = 64.dp, end = 16.dp))
             }
-        },
-    )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

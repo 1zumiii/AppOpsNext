@@ -1,18 +1,15 @@
 package dev.izumi.appopsnext.presentation.history
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -23,7 +20,9 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -37,40 +36,45 @@ fun HistoryFilterBar(
     ranges: List<HistoryTimeRange>,
     onRangeChange: (HistoryTimeRange) -> Unit,
     modifier: Modifier = Modifier,
-    /** Null leaves the app filter out, as on the overview. */
-    appFilterLabel: String? = null,
-    appFilterActive: Boolean = false,
-    onAppFilterClick: (() -> Unit)? = null,
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            ranges.forEachIndexed { index, option ->
-                SegmentedButton(
-                    selected = option == range,
-                    onClick = { onRangeChange(option) },
-                    shape = SegmentedButtonDefaults.itemShape(index, ranges.size),
-                    label = { Text(text = stringResource(option.labelRes())) },
-                )
-            }
-        }
-        if (onAppFilterClick != null && appFilterLabel != null) {
-            FilterChip(
-                selected = appFilterActive,
-                onClick = onAppFilterClick,
-                label = {
-                    Text(
-                        text = appFilterLabel,
-                        modifier = Modifier.widthIn(max = 160.dp),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
+    SingleChoiceSegmentedButtonRow(modifier = modifier.fillMaxWidth()) {
+        ranges.forEachIndexed { index, option ->
+            SegmentedButton(
+                selected = option == range,
+                onClick = { onRangeChange(option) },
+                shape = SegmentedButtonDefaults.itemShape(index, ranges.size),
+                label = { Text(text = stringResource(option.labelRes())) },
             )
         }
     }
+}
+
+@Composable
+fun HistoryAppFilterButton(
+    label: String,
+    active: Boolean,
+    onClick: () -> Unit,
+) {
+    FilterChip(
+        selected = active,
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        label = {
+            Text(
+                text = label,
+                modifier = Modifier.widthIn(max = 150.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        trailingIcon = {
+            Icon(
+                painter = painterResource(R.drawable.ic_ph_caret_right),
+                contentDescription = null,
+                modifier = Modifier.rotate(90f),
+            )
+        },
+    )
 }
 
 /** Only apps with records in the range are listed, so the list needs no counts. */

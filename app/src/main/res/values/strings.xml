@@ -193,8 +193,10 @@
     <string name="history_range_month">30 days</string>
     <string name="history_range_all">All</string>
     <string name="settings_history_section">History</string>
-    <string name="settings_save_history">Save individual history records</string>
-    <string name="settings_save_history_detail">The system keeps individual records for 7 days only. When on, they are also saved on this device. When off, accesses older than 7 days are shown as interval counts.</string>
+    <string name="settings_save_history">Save history records</string>
+    <string name="settings_save_history_short">Keep individual records on this device</string>
+    <string name="settings_save_history_detail">Android keeps individual records for 7 days. Saving keeps them available after that.</string>
+    <string name="settings_saved_history_records_section">Records</string>
     <string name="settings_saved_history_operations">Permissions to save</string>
     <string name="settings_saved_history_operations_hint">Only permissions the system keeps individual records for are listed.</string>
     <string name="settings_saved_history_operations_none">None selected</string>
@@ -212,6 +214,7 @@
     <string name="settings_saved_history_unreadable">The saved records could not be read. Saving is paused so they are not overwritten. Deleting them all starts saving again.</string>
     <string name="settings_saved_history_write_failed">Recent records could not be written to storage, possibly because it is full. They are kept in memory and written at the next history read.</string>
     <string name="settings_delete_range_start">Start date</string>
+    <string name="settings_saved_history_date_range_section">Range to delete</string>
     <string name="settings_delete_range_end">End date</string>
     <string name="settings_delete_range_hint">Whole days, both ends included. The system still keeps the last 7 days of individual records itself, so while saving is on, the next history read saves those 7 days again.</string>
     <string name="settings_delete_range">Delete range</string>

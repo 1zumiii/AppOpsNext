@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -30,6 +29,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDates
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.presentation.components.AppBottomSheet
@@ -124,7 +125,7 @@ fun SavedHistoryScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_arrow_back),
+                            painter = painterResource(R.drawable.ic_ph_arrow_left),
                             contentDescription = stringResource(R.string.action_back),
                         )
                     }
@@ -132,7 +133,7 @@ fun SavedHistoryScreen(
                 actions = {
                     IconButton(onClick = { showHelp = true }) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_action_info),
+                            painter = painterResource(R.drawable.ic_ph_info),
                             contentDescription = stringResource(R.string.settings_saved_history_help_title),
                         )
                     }
@@ -142,79 +143,97 @@ fun SavedHistoryScreen(
     ) { padding ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
             item {
-                ListItem(
-                    modifier = Modifier.clickable {
-                        onSaveIndividualHistoryChange(!uiState.saveIndividualHistory)
-                    },
-                    headlineContent = { Text(text = stringResource(R.string.settings_save_history)) },
-                    supportingContent = { Text(text = stringResource(R.string.settings_save_history_detail)) },
-                    trailingContent = {
-                        Switch(
-                            checked = uiState.saveIndividualHistory,
-                            onCheckedChange = onSaveIndividualHistoryChange,
-                        )
-                    },
-                )
-            }
-            item {
-                // Collapsed by default: the four choices are set once and rarely revisited.
-                ListItem(
-                    modifier = Modifier.clickable { operationsExpanded = !operationsExpanded },
-                    headlineContent = { Text(text = stringResource(R.string.settings_saved_history_operations)) },
-                    supportingContent = { Text(text = savedOperationsSummary(uiState.savedHistoryOperations)) },
-                    trailingContent = {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_chevron_right),
-                            contentDescription = stringResource(
-                                if (operationsExpanded) R.string.watchers_collapse else R.string.watchers_expand,
-                            ),
-                            modifier = Modifier.rotate(if (operationsExpanded) 90f else 0f),
-                        )
-                    },
-                )
-            }
-            if (operationsExpanded) {
-                item {
-                    Text(
-                        text = stringResource(R.string.settings_saved_history_operations_hint),
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                items(HistoryArchiveRecorder.SAVEABLE_OPERATIONS, key = { it }) { operation ->
-                    val saved = operation in uiState.savedHistoryOperations
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+                ) {
                     ListItem(
-                        modifier = Modifier
-                            .clickable { onSavedHistoryOperationChange(operation, !saved) }
-                            .padding(start = 16.dp),
-                        headlineContent = { Text(text = operationLabel(operation)) },
+                        modifier = Modifier.clickable {
+                            onSaveIndividualHistoryChange(!uiState.saveIndividualHistory)
+                        },
+                        leadingContent = { MainPageEntryIcon(R.drawable.ic_ph_archive) },
+                        headlineContent = { Text(text = stringResource(R.string.settings_save_history)) },
+                        supportingContent = { Text(text = stringResource(R.string.settings_save_history_short)) },
                         trailingContent = {
-                            Checkbox(
-                                checked = saved,
-                                onCheckedChange = { onSavedHistoryOperationChange(operation, it) },
+                            Switch(
+                                checked = uiState.saveIndividualHistory,
+                                onCheckedChange = onSaveIndividualHistoryChange,
                             )
                         },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     )
                 }
-            }
-            item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp)) }
-            item {
                 Text(
-                    text = stringResource(R.string.settings_saved_history),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold,
-                    style = MaterialTheme.typography.labelLarge,
+                    text = stringResource(R.string.settings_save_history_detail),
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            item {
+                SavedHistorySectionTitle(stringResource(R.string.settings_saved_history_records_section))
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                ) {
+                    Column {
+                        // Collapsed by default: these choices are rarely revisited.
+                        ListItem(
+                            modifier = Modifier.clickable { operationsExpanded = !operationsExpanded },
+                            headlineContent = { Text(text = stringResource(R.string.settings_saved_history_operations)) },
+                            supportingContent = { Text(text = savedOperationsSummary(uiState.savedHistoryOperations)) },
+                            trailingContent = {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_ph_caret_right),
+                                    contentDescription = stringResource(
+                                        if (operationsExpanded) R.string.watchers_collapse else R.string.watchers_expand,
+                                    ),
+                                    modifier = Modifier.rotate(if (operationsExpanded) 90f else 0f),
+                                )
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        )
+                        if (operationsExpanded) {
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            Text(
+                                text = stringResource(R.string.settings_saved_history_operations_hint),
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            HistoryArchiveRecorder.SAVEABLE_OPERATIONS.forEach { operation ->
+                                val selected = operation in uiState.savedHistoryOperations
+                                ListItem(
+                                    modifier = Modifier.clickable {
+                                        onSavedHistoryOperationChange(operation, !selected)
+                                    },
+                                    headlineContent = { Text(text = operationLabel(operation)) },
+                                    trailingContent = {
+                                        Checkbox(
+                                            checked = selected,
+                                            onCheckedChange = { onSavedHistoryOperationChange(operation, it) },
+                                        )
+                                    },
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            item {
+                SavedHistorySectionTitle(stringResource(R.string.settings_saved_history))
                 Text(
                     text = savedHistoryText(saved),
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = 24.dp),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
                 )
                 SavedHistoryUsage(
                     summary = saved,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                 )
             }
             saved.problem?.let { problem ->
@@ -244,19 +263,29 @@ fun SavedHistoryScreen(
             }
             if (range != null && earliest != null) {
                 item {
-                    ListItem(
-                        modifier = Modifier.clickable { picking = DateEnd.START },
-                        headlineContent = { Text(text = stringResource(R.string.settings_delete_range_start)) },
-                        supportingContent = { Text(text = formatDate(range.start, zoneId)) },
-                    )
-                    ListItem(
-                        modifier = Modifier.clickable { picking = DateEnd.END },
-                        headlineContent = { Text(text = stringResource(R.string.settings_delete_range_end)) },
-                        supportingContent = { Text(text = formatDate(range.end, zoneId)) },
-                    )
+                    SavedHistorySectionTitle(stringResource(R.string.settings_saved_history_date_range_section))
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    ) {
+                        Column {
+                            SavedHistoryDateRow(
+                                title = stringResource(R.string.settings_delete_range_start),
+                                date = formatDate(range.start, zoneId),
+                                onClick = { picking = DateEnd.START },
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            SavedHistoryDateRow(
+                                title = stringResource(R.string.settings_delete_range_end),
+                                date = formatDate(range.end, zoneId),
+                                onClick = { picking = DateEnd.END },
+                            )
+                        }
+                    }
                     Text(
                         text = stringResource(R.string.settings_delete_range_hint),
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -366,6 +395,38 @@ fun SavedHistoryScreen(
             },
         )
     }
+}
+
+@Composable
+private fun SavedHistorySectionTitle(text: String) {
+    Text(
+        text = text,
+        modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 8.dp),
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+@Composable
+private fun SavedHistoryDateRow(title: String, date: String, onClick: () -> Unit) {
+    ListItem(
+        modifier = Modifier.clickable(onClick = onClick),
+        headlineContent = { Text(text = title) },
+        trailingContent = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = date,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                MainPageChevron()
+            }
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+    )
 }
 
 /**

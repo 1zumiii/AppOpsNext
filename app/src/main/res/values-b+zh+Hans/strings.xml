@@ -189,8 +189,10 @@
     <string name="history_range_month">30 天</string>
     <string name="history_range_all">全部</string>
     <string name="settings_history_section">历史记录</string>
-    <string name="settings_save_history">保存单条历史记录</string>
-    <string name="settings_save_history_detail">系统只保留 7 天的单条记录，开启后会另存一份到本机。关闭时，7 天前的访问只能按时间段统计查看。</string>
+    <string name="settings_save_history">保存历史记录</string>
+    <string name="settings_save_history_short">将单条记录保存在本机</string>
+    <string name="settings_save_history_detail">系统只保留最近 7 天的单条记录。开启后，这些记录可在本机留存更久。</string>
+    <string name="settings_saved_history_records_section">记录</string>
     <string name="settings_saved_history_operations">保存哪些权限</string>
     <string name="settings_saved_history_operations_hint">只列出系统保留单条记录的权限。</string>
     <string name="settings_saved_history_operations_none">未选择</string>
@@ -208,6 +210,7 @@
     <string name="settings_saved_history_unreadable">已保存的记录无法读取。为了不覆盖它们，保存已暂停。全部删除后会重新开始保存。</string>
     <string name="settings_saved_history_write_failed">最近的记录未能写入存储，可能是存储空间不足。它们暂存在内存中，下次读取历史时会重新写入。</string>
     <string name="settings_delete_range_start">开始日期</string>
+    <string name="settings_saved_history_date_range_section">删除范围</string>
     <string name="settings_delete_range_end">结束日期</string>
     <string name="settings_delete_range_hint">按天计算，包含开始和结束当天。系统自己仍保留最近 7 天的单条记录，保存开启时，下次读取历史会把这 7 天重新存回来。</string>
     <string name="settings_delete_range">删除所选范围</string>

@@ -60,6 +60,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.input.pointer.pointerInput
@@ -539,9 +540,6 @@ fun PermissionHistoryDetailScreen(
                     range = timeRange,
                     ranges = HistoryTimeRange.available(savingIndividualRecords),
                     onRangeChange = onTimeRangeChange,
-                    appFilterLabel = appFilterLabel,
-                    appFilterActive = appFilter != null,
-                    onAppFilterClick = { showAppFilter = true },
                     modifier = Modifier.padding(bottom = 12.dp),
                 )
             }
@@ -579,12 +577,22 @@ fun PermissionHistoryDetailScreen(
                 )
             }
             item {
-                Text(
-                    text = stringResource(R.string.history_timeline_title),
-                    modifier = Modifier.padding(bottom = 12.dp),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.history_timeline_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    HistoryAppFilterButton(
+                        label = appFilterLabel,
+                        active = appFilter != null,
+                        onClick = { showAppFilter = true },
+                    )
+                }
             }
             if (isLoading && history == null) {
                 item {
@@ -936,6 +944,16 @@ private fun SevenDayHistoryChart(
                 verticalAlignment = Alignment.Bottom,
             ) {
                 counts.forEach { dailyCount ->
+                    val proportion = dailyCount.count.toFloat() / maximum.toFloat()
+                    val barColor = if (dailyCount.count > 0) {
+                        lerp(
+                            MaterialTheme.colorScheme.primaryContainer,
+                            MaterialTheme.colorScheme.primary,
+                            0.2f + 0.8f * proportion,
+                        )
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerHighest
+                    }
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -954,11 +972,7 @@ private fun SevenDayHistoryChart(
                                 .widthIn(max = 28.dp)
                                 .fillMaxWidth()
                                 .height(
-                                    (
-                                        92f *
-                                            dailyCount.count.toFloat() /
-                                            maximum.toFloat()
-                                    ).coerceAtLeast(
+                                    (92f * proportion).coerceAtLeast(
                                         if (dailyCount.count > 0) 4f else 1f,
                                     ).dp,
                                 )
@@ -968,14 +982,7 @@ private fun SevenDayHistoryChart(
                                         topEnd = 5.dp,
                                     ),
                                 )
-                                .background(
-                                    if (dailyCount.count > 0) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme
-                                            .surfaceContainerHighest
-                                    },
-                                ),
+                                .background(barColor),
                         )
                         Spacer(Modifier.height(6.dp))
                         Text(
