@@ -48,7 +48,7 @@ fun AppVersionRow(
     ListItem(
         modifier = clickAction?.let { Modifier.clickable(onClick = it) } ?: Modifier,
         leadingContent = {
-            MainPageEntryIcon(R.drawable.ic_action_info)
+            MainPageEntryIcon(R.drawable.ic_ph_info)
         },
         headlineContent = {
             Text(text = stringResource(R.string.settings_app_version))

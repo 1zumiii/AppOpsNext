@@ -15,29 +15,29 @@ internal data class HistoryPermissionVisual(
 internal object HistoryPermissionIconCatalog {
     private val visuals = mapOf(
         "CAMERA" to HistoryPermissionVisual(
-            R.drawable.ic_permission_camera, HistoryPermissionTone.PRIMARY,
+            R.drawable.ic_ph_camera, HistoryPermissionTone.PRIMARY,
         ),
         "RECORD_AUDIO" to HistoryPermissionVisual(
-            R.drawable.ic_permission_microphone, HistoryPermissionTone.TERTIARY,
+            R.drawable.ic_ph_microphone, HistoryPermissionTone.TERTIARY,
         ),
         "FINE_LOCATION" to HistoryPermissionVisual(
-            R.drawable.ic_permission_location, HistoryPermissionTone.SECONDARY,
+            R.drawable.ic_ph_map_pin, HistoryPermissionTone.SECONDARY,
         ),
         "COARSE_LOCATION" to HistoryPermissionVisual(
-            R.drawable.ic_permission_location, HistoryPermissionTone.SECONDARY,
+            R.drawable.ic_ph_map_pin, HistoryPermissionTone.SECONDARY,
         ),
         "READ_CLIPBOARD" to HistoryPermissionVisual(
-            R.drawable.ic_permission_clipboard, HistoryPermissionTone.NEUTRAL,
+            R.drawable.ic_ph_clipboard_text, HistoryPermissionTone.NEUTRAL,
         ),
         "WRITE_CLIPBOARD" to HistoryPermissionVisual(
-            R.drawable.ic_permission_clipboard, HistoryPermissionTone.NEUTRAL,
+            R.drawable.ic_ph_clipboard_text, HistoryPermissionTone.NEUTRAL,
         ),
     )
 
     fun visualFor(operationName: String): HistoryPermissionVisual {
         val key = operationName.removePrefix("android:").uppercase(Locale.ROOT)
         return visuals[key] ?: HistoryPermissionVisual(
-            R.drawable.ic_action_manage, HistoryPermissionTone.NEUTRAL,
+            R.drawable.ic_ph_shield, HistoryPermissionTone.NEUTRAL,
         )
     }
 }

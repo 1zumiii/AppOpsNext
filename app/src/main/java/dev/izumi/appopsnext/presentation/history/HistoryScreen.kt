@@ -70,6 +70,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.ui.theme.mainPageHeadingWeight
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.history.model.AppOpHistoryFailureReason
 import dev.izumi.appopsnext.history.model.HistoryPermission
@@ -107,7 +108,7 @@ fun HistoryOverviewScreen(
                 title = {
                     Text(
                         text = stringResource(R.string.history_title),
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = mainPageHeadingWeight(),
                     )
                 },
                 actions = {
@@ -116,7 +117,7 @@ fun HistoryOverviewScreen(
                     ) {
                         Icon(
                             painter = painterResource(
-                                R.drawable.ic_action_edit_list,
+                                R.drawable.ic_ph_list_plus,
                             ),
                             contentDescription = stringResource(
                                 R.string.history_manage_permissions,
@@ -128,7 +129,7 @@ fun HistoryOverviewScreen(
                     ) {
                         Icon(
                             painter = painterResource(
-                                R.drawable.ic_action_info,
+                                R.drawable.ic_ph_info,
                             ),
                             contentDescription = stringResource(
                                 R.string.history_information,

@@ -68,7 +68,7 @@ fun SavedHistoryEntry(uiState: SettingsUiState, onOpen: () -> Unit) {
     val count = uiState.savedHistory.recordCount
     ListItem(
         modifier = Modifier.clickable(onClick = onOpen),
-        leadingContent = { MainPageEntryIcon(R.drawable.ic_navigation_history) },
+        leadingContent = { MainPageEntryIcon(R.drawable.ic_ph_archive) },
         headlineContent = { Text(text = stringResource(R.string.settings_saved_history_entry)) },
         supportingContent = {
             Text(

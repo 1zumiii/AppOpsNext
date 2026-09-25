@@ -25,9 +25,9 @@ enum class StatusVisual {
 @Composable
 fun StatusGlyph(status: StatusVisual, modifier: Modifier = Modifier) {
     val iconRes = when (status) {
-        StatusVisual.NEUTRAL -> R.drawable.ic_action_info
-        StatusVisual.SUCCESS -> R.drawable.ic_status_check
-        StatusVisual.WARNING, StatusVisual.ERROR -> R.drawable.ic_status_alert
+        StatusVisual.NEUTRAL -> R.drawable.ic_ph_info
+        StatusVisual.SUCCESS -> R.drawable.ic_ph_check_circle
+        StatusVisual.WARNING, StatusVisual.ERROR -> R.drawable.ic_ph_warning_circle
     }
     val dark = isSystemInDarkTheme()
     val color = when (status) {

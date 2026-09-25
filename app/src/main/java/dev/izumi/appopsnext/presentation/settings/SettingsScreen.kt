@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.BuildConfig
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.ui.theme.mainPageHeadingWeight
 import dev.izumi.appopsnext.appops.model.AppOpsReadState
 import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticLogModule
 import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticsSection
@@ -83,7 +84,7 @@ fun SettingsScreen(
                 title = {
                     Text(
                         text = stringResource(R.string.settings_title),
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = mainPageHeadingWeight(),
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -108,7 +109,7 @@ fun SettingsScreen(
                             onHideSystemAppsChange(!uiState.hideSystemApps)
                         },
                         leadingContent = {
-                            MainPageEntryIcon(R.drawable.ic_navigation_apps)
+                            MainPageEntryIcon(R.drawable.ic_ph_squares_four)
                         },
                         headlineContent = {
                             Text(text = stringResource(R.string.settings_hide_system_apps))
@@ -128,7 +129,7 @@ fun SettingsScreen(
                     ListItem(
                         modifier = Modifier.clickable { showLanguageDialog = true },
                         leadingContent = {
-                            MainPageEntryIcon(R.drawable.ic_settings_language)
+                            MainPageEntryIcon(R.drawable.ic_ph_translate)
                         },
                         headlineContent = {
                             Text(text = stringResource(R.string.settings_language))
@@ -206,7 +207,7 @@ fun SettingsScreen(
                     ListItem(
                         modifier = Modifier.clickable(onClick = onOpenExperimental),
                         leadingContent = {
-                            MainPageEntryIcon(R.drawable.ic_notification_monitor)
+                            MainPageEntryIcon(R.drawable.ic_ph_bell_ringing)
                         },
                         headlineContent = {
                             Text(text = stringResource(R.string.experimental_title))
@@ -253,7 +254,7 @@ fun SettingsScreen(
                     SettingsGroupDivider()
                     ListItem(
                         leadingContent = {
-                            MainPageEntryIcon(R.drawable.ic_settings_person)
+                            MainPageEntryIcon(R.drawable.ic_ph_user)
                         },
                         headlineContent = {
                             Text(text = stringResource(R.string.settings_developer))
@@ -273,7 +274,7 @@ fun SettingsScreen(
                             }
                         },
                         leadingContent = {
-                            MainPageEntryIcon(R.drawable.ic_settings_link)
+                            MainPageEntryIcon(R.drawable.ic_ph_link)
                         },
                         headlineContent = {
                             Text(text = stringResource(R.string.settings_github))
@@ -283,7 +284,7 @@ fun SettingsScreen(
                         },
                         trailingContent = {
                             Icon(
-                                painter = painterResource(R.drawable.ic_open_in_new),
+                                painter = painterResource(R.drawable.ic_ph_arrow_square_out),
                                 contentDescription = stringResource(R.string.settings_open_external),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -374,7 +375,7 @@ private fun SettingsSectionTitle(text: String) {
         text = text,
         modifier = Modifier.padding(start = 24.dp, end = 20.dp, top = 20.dp, bottom = 10.dp),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = mainPageHeadingWeight(),
         style = MaterialTheme.typography.titleSmall,
     )
 }

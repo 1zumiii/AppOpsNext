@@ -14,10 +14,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.ui.theme.mainPageHeadingWeight
 
 @Composable
 fun MainPageSectionTitle(
@@ -29,7 +29,7 @@ fun MainPageSectionTitle(
         text = text,
         modifier = modifier.padding(horizontal = horizontalPadding, vertical = 10.dp),
         style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = mainPageHeadingWeight(),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
@@ -59,7 +59,7 @@ fun MainPageEntryIcon(
 @Composable
 fun MainPageChevron() {
     Icon(
-        painter = painterResource(R.drawable.ic_chevron_right),
+        painter = painterResource(R.drawable.ic_ph_caret_right),
         contentDescription = null,
         tint = MaterialTheme.colorScheme.onSurfaceVariant,
     )
