@@ -246,6 +246,7 @@
     <string name="template_new_app_policy_description">Automatically applies common privacy controls. This template cannot be deleted. Installs made while AppOpsNext was not running are handled the next time it opens. A brief result notification is sent when notification permission is available.</string>
     <string name="template_new_app_auto_apply">Automatically apply to new apps</string>
     <string name="template_preview_more">%1$s +%2$d</string>
+    <string name="template_preview_count_only">+%1$d</string>
     <string name="template_more_options">More template actions</string>
     <string name="template_new_app_policy_information">About automatic application</string>
     <string name="new_app_policy_notification_channel">New app policy</string>
