@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -25,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.history.model.HistoryPermission
 
 @Composable
@@ -55,7 +55,7 @@ fun HistoryPermissionManagementDialog(
             localizedName.contains(query, ignoreCase = true)
     }
 
-    AlertDialog(
+    AppBottomSheet(
         onDismissRequest = onDismiss,
         title = {
             Text(text = stringResource(R.string.history_manage_permissions))

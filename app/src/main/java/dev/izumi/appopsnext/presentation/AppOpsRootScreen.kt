@@ -401,26 +401,28 @@ fun AppOpsRootScreen(
     }
 
     if (selectedApp != null) {
-        AppDetailScreen(
-            uiState = appDetailUiState,
-            modeChangeState = appOpModeChangeUiState,
-            searchQuery = appOpSearchQuery,
-            onBack = navigateBackFromDetail,
-            onRefresh = onRefreshAppDetail,
-            onSearchQueryChange = onAppOpSearchQueryChange,
-            onModeChangeRequested = onAppOpModeChangeRequested,
-            onModeChangeConfirmed = onAppOpModeChangeConfirmed,
-            onModeChangeDismissed = onAppOpModeChangeDismissed,
-            onDenyFallbackNoticeDismissed =
-                onDenyFallbackNoticeDismissed,
-            onForegroundAlternativeRequested =
-                onForegroundAlternativeRequested,
-            templates = templatesUiState.templates,
-            onTemplateApplyRequested = { template, app ->
-                onTemplateApplyRequested(template, listOf(app))
-            },
-            onPermissionBatchRequested = onPermissionBatchRequested,
-        )
+        MainPageTypography {
+            AppDetailScreen(
+                uiState = appDetailUiState,
+                modeChangeState = appOpModeChangeUiState,
+                searchQuery = appOpSearchQuery,
+                onBack = navigateBackFromDetail,
+                onRefresh = onRefreshAppDetail,
+                onSearchQueryChange = onAppOpSearchQueryChange,
+                onModeChangeRequested = onAppOpModeChangeRequested,
+                onModeChangeConfirmed = onAppOpModeChangeConfirmed,
+                onModeChangeDismissed = onAppOpModeChangeDismissed,
+                onDenyFallbackNoticeDismissed =
+                    onDenyFallbackNoticeDismissed,
+                onForegroundAlternativeRequested =
+                    onForegroundAlternativeRequested,
+                templates = templatesUiState.templates,
+                onTemplateApplyRequested = { template, app ->
+                    onTemplateApplyRequested(template, listOf(app))
+                },
+                onPermissionBatchRequested = onPermissionBatchRequested,
+            )
+        }
     } else {
         val destinationContent: @Composable () -> Unit = {
             when (selectedDestination) {
@@ -532,12 +534,12 @@ fun AppOpsRootScreen(
                 )
             }
         }
-        val isMainPage = when (selectedDestination) {
+        val useSharedTypography = when (selectedDestination) {
             MainDestination.APPS, MainDestination.SETTINGS -> true
-            MainDestination.TEMPLATES -> templatesUiState.selectedTemplate == null
+            MainDestination.TEMPLATES -> true
             MainDestination.HISTORY -> selectedHistoryPermission == null
         }
-        if (isMainPage) {
+        if (useSharedTypography) {
             MainPageTypography(content = destinationContent)
         } else {
             destinationContent()

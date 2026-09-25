@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -20,6 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpModeChangePhase
 import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
@@ -34,7 +34,7 @@ fun BatchOperationDialog(
     when (state) {
         BatchOperationUiState.Idle -> Unit
 
-        is BatchOperationUiState.Confirming -> AlertDialog(
+        is BatchOperationUiState.Confirming -> AppBottomSheet(
             onDismissRequest = onDismiss,
             title = {
                 Text(text = stringResource(R.string.batch_confirm_title))
@@ -74,8 +74,10 @@ fun BatchOperationDialog(
             },
         )
 
-        is BatchOperationUiState.Running -> AlertDialog(
+        is BatchOperationUiState.Running -> AppBottomSheet(
             onDismissRequest = {},
+            dismissible = false,
+            showActions = false,
             title = {
                 Text(text = stringResource(R.string.batch_running_title))
             },
@@ -104,7 +106,7 @@ fun BatchOperationDialog(
             confirmButton = {},
         )
 
-        is BatchOperationUiState.Finished -> AlertDialog(
+        is BatchOperationUiState.Finished -> AppBottomSheet(
             onDismissRequest = onDismiss,
             title = {
                 Text(text = stringResource(R.string.batch_result_title))

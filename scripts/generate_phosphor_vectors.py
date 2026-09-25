@@ -9,12 +9,15 @@ from xml.sax.saxutils import quoteattr
 
 REGULAR_ICONS = (
     "archive",
+    "arrow-left",
     "arrow-square-out",
     "camera",
     "caret-right",
     "check-circle",
     "clipboard-text",
     "clock-counter-clockwise",
+    "dots-six-vertical",
+    "dots-three",
     "file-text",
     "flask",
     "gear",

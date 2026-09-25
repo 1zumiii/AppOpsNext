@@ -21,7 +21,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -29,8 +28,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -45,7 +44,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
@@ -55,6 +53,9 @@ import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.presentation.batch.PermissionBatchSelection
 import dev.izumi.appopsnext.presentation.batch.TemplatePickerDialog
+import dev.izumi.appopsnext.presentation.components.AppIcon
+import dev.izumi.appopsnext.presentation.components.CompactSearchField
+import dev.izumi.appopsnext.ui.theme.mainPageHeadingWeight
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
 import java.util.Locale
 
@@ -110,13 +111,13 @@ fun AppDetailScreen(
                             ?: stringResource(R.string.app_detail_title),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = mainPageHeadingWeight(),
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_arrow_back),
+                            painter = painterResource(R.drawable.ic_ph_arrow_left),
                             contentDescription = stringResource(
                                 R.string.action_back,
                             ),
@@ -128,7 +129,7 @@ fun AppDetailScreen(
                         IconButton(onClick = { showTemplatePicker = true }) {
                             Icon(
                                 painter = painterResource(
-                                    R.drawable.ic_navigation_templates,
+                                    R.drawable.ic_ph_file_text,
                                 ),
                                 contentDescription = stringResource(
                                     R.string.batch_apply_template,
@@ -144,9 +145,9 @@ fun AppDetailScreen(
                             Icon(
                                 painter = painterResource(
                                     if (batchSelectionMode) {
-                                        R.drawable.ic_action_close
+                                        R.drawable.ic_ph_x
                                     } else {
-                                        R.drawable.ic_action_batch
+                                        R.drawable.ic_ph_list_checks
                                     },
                                 ),
                                 contentDescription = stringResource(
@@ -319,30 +320,24 @@ private fun ReadyContent(
             )
         }
         item {
-            OutlinedTextField(
+            CompactSearchField(
                 value = searchQuery,
                 onValueChange = onSearchQueryChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = {
-                    Text(
-                        text = stringResource(
-                            R.string.app_detail_search_label,
-                        ),
-                    )
-                },
-                singleLine = true,
+                label = stringResource(R.string.app_detail_search_label),
             )
         }
-        item {
-            Text(
-                text = stringResource(
-                    R.string.app_detail_filtered_count,
-                    displayItems.size,
-                    totalOperationCount,
-                ),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        if (searchQuery.isNotBlank() || displayItems.size != totalOperationCount) {
+            item {
+                Text(
+                    text = stringResource(
+                        R.string.app_detail_filtered_count,
+                        displayItems.size,
+                        totalOperationCount,
+                    ),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         if (batchSelectionMode) {
             item {
@@ -415,7 +410,6 @@ private fun ReadyContent(
                         )
                     },
                 )
-                HorizontalDivider()
             }
         }
     }
@@ -429,50 +423,56 @@ private fun BatchPermissionControls(
     onApply: () -> Unit,
 ) {
     var modeMenuExpanded by remember { mutableStateOf(false) }
-    Column(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
     ) {
-        Text(
-            text = stringResource(
-                R.string.batch_selected_count,
-                selectedCount,
-            ),
-        )
-        Box(modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(
-                onClick = { modeMenuExpanded = true },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    text = stringResource(
-                        R.string.batch_apply_mode_value,
-                        batchModeLabel(selectedMode),
-                    ),
-                )
-            }
-            DropdownMenu(
-                expanded = modeMenuExpanded,
-                onDismissRequest = { modeMenuExpanded = false },
-            ) {
-                AppOpMode.entries.forEach { mode ->
-                    DropdownMenuItem(
-                        text = { Text(text = batchModeLabel(mode)) },
-                        enabled = mode != selectedMode,
-                        onClick = {
-                            modeMenuExpanded = false
-                            onModeChange(mode)
-                        },
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = stringResource(
+                    R.string.batch_selected_count,
+                    selectedCount,
+                ),
+            )
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { modeMenuExpanded = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = stringResource(
+                            R.string.batch_apply_mode_value,
+                            batchModeLabel(selectedMode),
+                        ),
                     )
                 }
+                DropdownMenu(
+                    expanded = modeMenuExpanded,
+                    onDismissRequest = { modeMenuExpanded = false },
+                ) {
+                    AppOpMode.entries.forEach { mode ->
+                        DropdownMenuItem(
+                            text = { Text(text = batchModeLabel(mode)) },
+                            enabled = mode != selectedMode,
+                            onClick = {
+                                modeMenuExpanded = false
+                                onModeChange(mode)
+                            },
+                        )
+                    }
+                }
             }
-        }
-        FilledTonalButton(
-            onClick = onApply,
-            enabled = selectedCount > 0,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(text = stringResource(R.string.action_apply))
+            FilledTonalButton(
+                onClick = onApply,
+                enabled = selectedCount > 0,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = stringResource(R.string.action_apply))
+            }
         }
     }
 }
@@ -499,40 +499,53 @@ private fun AppSummaryCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = app.packageName,
-                style = MaterialTheme.typography.bodyMedium,
+            AppIcon(
+                packageName = app.packageName,
+                appLabel = app.label,
+                size = 44.dp,
             )
-            Text(
-                text = stringResource(
-                    if (app.isSystemApp) {
-                        R.string.app_type_system
-                    } else {
-                        R.string.app_type_user
-                    },
-                    app.uid,
-                ),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = operationCount?.let {
-                    stringResource(
-                        R.string.app_detail_operation_count,
-                        it,
-                    )
-                } ?: stringResource(
-                    R.string.app_detail_loading_operations,
-                ),
-                fontWeight = FontWeight.SemiBold,
-            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Text(
+                    text = app.packageName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = stringResource(
+                        if (app.isSystemApp) {
+                            R.string.app_type_system
+                        } else {
+                            R.string.app_type_user
+                        },
+                        app.uid,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = operationCount?.let {
+                        stringResource(R.string.app_detail_operation_count, it)
+                    } ?: stringResource(R.string.app_detail_loading_operations),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
     }
 }
@@ -565,45 +578,50 @@ private fun DetailLoadingContent(
         }
         items(SKELETON_ROW_COUNT) {
             AppOpSkeletonItem()
-            HorizontalDivider()
         }
     }
 }
 
 @Composable
 private fun AppOpSkeletonItem() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(9.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(9.dp),
+            ) {
+                SkeletonBlock(
+                    modifier = Modifier
+                        .width(92.dp)
+                        .height(12.dp),
+                )
+                SkeletonBlock(
+                    modifier = Modifier
+                        .width(168.dp)
+                        .height(20.dp),
+                )
+                SkeletonBlock(
+                    modifier = Modifier
+                        .width(132.dp)
+                        .height(14.dp),
+                )
+            }
             SkeletonBlock(
                 modifier = Modifier
-                    .width(92.dp)
-                    .height(12.dp),
-            )
-            SkeletonBlock(
-                modifier = Modifier
-                    .width(168.dp)
-                    .height(20.dp),
-            )
-            SkeletonBlock(
-                modifier = Modifier
-                    .width(132.dp)
-                    .height(14.dp),
+                    .width(88.dp)
+                    .height(40.dp),
             )
         }
-        SkeletonBlock(
-            modifier = Modifier
-                .width(88.dp)
-                .height(40.dp),
-        )
     }
 }
 

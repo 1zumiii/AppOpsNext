@@ -14,11 +14,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -50,6 +48,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.history.HistoryArchiveProblem
 import dev.izumi.appopsnext.history.HistoryArchiveRecorder
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
@@ -282,7 +281,7 @@ fun SavedHistoryScreen(
     }
 
     if (showHelp) {
-        AlertDialog(
+        AppBottomSheet(
             onDismissRequest = { showHelp = false },
             title = { Text(text = stringResource(R.string.settings_saved_history_help_title)) },
             text = {
@@ -327,7 +326,7 @@ fun SavedHistoryScreen(
         )
     }
     confirming?.let { deletion ->
-        AlertDialog(
+        AppBottomSheet(
             onDismissRequest = { confirming = null },
             title = { Text(text = stringResource(R.string.settings_delete_saved_history_title)) },
             text = {
@@ -445,7 +444,7 @@ private fun SavedHistoryDatePicker(
             override fun isSelectableYear(year: Int): Boolean = year in earliest.year..latest.year
         },
     )
-    DatePickerDialog(
+    AppBottomSheet(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(
@@ -458,9 +457,8 @@ private fun SavedHistoryDatePicker(
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(text = stringResource(R.string.action_cancel)) }
         },
-    ) {
-        DatePicker(state = state)
-    }
+        text = { DatePicker(state = state, modifier = Modifier.fillMaxWidth()) },
+    )
 }
 
 @Composable

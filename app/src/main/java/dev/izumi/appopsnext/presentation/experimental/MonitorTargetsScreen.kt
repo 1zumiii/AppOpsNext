@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -35,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.apps.AppListFilter
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.monitor.AppOpCodes
@@ -229,7 +229,7 @@ fun MonitorOperationsScreen(
     }
     var warning by remember { mutableStateOf(false) }
     if (warning) {
-        AlertDialog(
+        AppBottomSheet(
             onDismissRequest = { warning = false },
             title = { Text(text = stringResource(R.string.monitor_all_ops_warning_title)) },
             text = { Text(text = stringResource(R.string.monitor_all_ops_warning_text)) },
