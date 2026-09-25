@@ -27,6 +27,30 @@ class HistoryAppStatisticsTest {
         assertEquals(30L, summaries.first().latestAccessTimeMillis)
     }
 
+    @Test
+    fun `denied attempts count toward default activity order and other orders remain available`() {
+        val summaries = HistoryAppStatistics.summarize(
+            listOf(
+                event(alpha, accessCount = 5, timestamp = 10L),
+                event(beta, accessCount = 1, rejectCount = 10, timestamp = 20L),
+            ),
+        )
+
+        assertEquals(listOf(beta, alpha), summaries.map { it.app })
+        assertEquals(
+            listOf(alpha, beta),
+            HistoryAppStatistics.sort(summaries, HistoryAppSort.ACCESSES).map { it.app },
+        )
+        assertEquals(
+            listOf(beta, alpha),
+            HistoryAppStatistics.sort(summaries, HistoryAppSort.DENIALS).map { it.app },
+        )
+        assertEquals(
+            listOf(beta, alpha),
+            HistoryAppStatistics.sort(summaries, HistoryAppSort.RECENT).map { it.app },
+        )
+    }
+
     private fun app(
         label: String,
         packageName: String,
@@ -42,6 +66,7 @@ class HistoryAppStatisticsTest {
         app: InstalledApp,
         accessCount: Int,
         timestamp: Long,
+        rejectCount: Int = 0,
     ) = ResolvedHistoryEvent(
         event = AppOpHistoryEvent(
             uid = app.uid,
@@ -53,6 +78,7 @@ class HistoryAppStatisticsTest {
             uidState = "top",
             flags = "s",
             accessCount = accessCount,
+            rejectCount = rejectCount,
         ),
         app = app,
     )

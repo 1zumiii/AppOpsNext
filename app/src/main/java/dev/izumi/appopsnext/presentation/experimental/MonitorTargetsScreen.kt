@@ -2,11 +2,13 @@ package dev.izumi.appopsnext.presentation.experimental
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedButton
@@ -29,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -217,11 +220,12 @@ fun MonitorOperationsScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    var query by remember(app.packageName) { mutableStateOf("") }
     // The shortlist is a judgement about what usually matters, not a limit of
     // the watch, so everything the operation table knows can be offered instead.
     // An operation that is already picked stays on the list either way, so
     // turning the shortlist back on cannot hide a live selection.
-    val options = remember(showAll, selected) {
+    val options = remember(showAll, selected, context) {
         val names = if (showAll) {
             AppOpCodes.ALL_NAMES
         } else {
@@ -235,7 +239,22 @@ fun MonitorOperationsScreen(
                 )
         }.sortedBy { it.second }
     }
+    val visibleOptions = remember(options, query, showAll) {
+        if (!showAll || query.isBlank()) options else options.filter { (name, label) ->
+            name.contains(query, ignoreCase = true) || label.contains(query, ignoreCase = true)
+        }
+    }
     var warning by remember { mutableStateOf(false) }
+    val requestShowAll: (Boolean) -> Unit = { on ->
+        when {
+            !on -> {
+                query = ""
+                onShowAllChange(false)
+            }
+            warningSuppressed -> onShowAllChange(true)
+            else -> warning = true
+        }
+    }
     if (warning) {
         AppBottomSheet(
             onDismissRequest = { warning = false },
@@ -287,57 +306,96 @@ fun MonitorOperationsScreen(
             )
         },
     ) { contentPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(contentPadding),
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(contentPadding),
+            contentPadding = PaddingValues(bottom = 16.dp),
         ) {
-            Text(
-                text = stringResource(R.string.monitor_operations_hint),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            LazyColumn {
-                item {
-                    ExperimentalListRow(
-                        headlineContent = {
-                            Text(text = stringResource(R.string.monitor_all_ops_title))
-                        },
+            item {
+                Text(
+                    text = stringResource(R.string.monitor_operations_hint),
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+                ) {
+                    ListItem(
+                        modifier = Modifier.clickable { requestShowAll(!showAll) },
+                        headlineContent = { Text(stringResource(R.string.monitor_all_ops_title)) },
+                        supportingContent = { Text(stringResource(R.string.monitor_all_ops_summary)) },
                         trailingContent = {
-                            Switch(
-                                checked = showAll,
-                                onCheckedChange = { on ->
-                                    when {
-                                        !on -> onShowAllChange(false)
-                                        warningSuppressed -> onShowAllChange(true)
-                                        else -> warning = true
-                                    }
-                                },
-                            )
+                            Switch(checked = showAll, onCheckedChange = requestShowAll)
                         },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     )
                 }
-                items(options, key = { it.first }) { (name, label) ->
-                    val checked = name in selected
-                    ExperimentalListRow(
+            }
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 20.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.monitor_operations_section),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = stringResource(R.string.batch_selected_count, selected.size),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            if (showAll) {
+                item {
+                    CompactSearchField(
+                        value = query,
+                        onValueChange = { query = it },
+                        label = stringResource(R.string.monitor_operations_search),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
+            }
+            if (visibleOptions.isEmpty()) {
+                item {
+                    Text(
+                        text = stringResource(R.string.monitor_operations_empty),
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 24.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            itemsIndexed(visibleOptions, key = { _, option -> option.first }) { index, (name, label) ->
+                val checked = name in selected
+                Column {
+                    ListItem(
                         modifier = Modifier.clickable {
-                            onSelectionChange(
-                                if (checked) selected - name else selected + name,
-                            )
+                            onSelectionChange(if (checked) selected - name else selected + name)
                         },
-                        headlineContent = { Text(text = label) },
+                        headlineContent = {
+                            Text(text = label, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        },
                         trailingContent = {
                             Checkbox(
                                 checked = checked,
                                 onCheckedChange = { isChecked ->
-                                    onSelectionChange(
-                                        if (isChecked) selected + name else selected - name,
-                                    )
+                                    onSelectionChange(if (isChecked) selected + name else selected - name)
                                 },
                             )
                         },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     )
+                    if (index < visibleOptions.lastIndex) {
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp))
+                    }
                 }
             }
         }

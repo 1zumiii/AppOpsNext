@@ -475,6 +475,8 @@ fun AppOpsRootScreen(
                         )
                     } else if (showHistoryAppStatistics) {
                         HistoryAppStatisticsScreen(
+                            permission = selectedHistoryPermission,
+                            timeRange = effectiveHistoryRange,
                             history = historyUiState.permissions.firstOrNull {
                                 it.permission == selectedHistoryPermission
                             }?.let {

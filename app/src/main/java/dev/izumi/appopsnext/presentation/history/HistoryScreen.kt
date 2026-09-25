@@ -501,7 +501,7 @@ fun PermissionHistoryDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_arrow_back),
+                            painter = painterResource(R.drawable.ic_ph_arrow_left),
                             contentDescription = stringResource(
                                 R.string.action_back,
                             ),
@@ -514,7 +514,7 @@ fun PermissionHistoryDetailScreen(
                     ) {
                         Icon(
                             painter = painterResource(
-                                R.drawable.ic_action_info,
+                                R.drawable.ic_ph_info,
                             ),
                             contentDescription = stringResource(
                                 R.string.history_information,
@@ -890,7 +890,7 @@ private fun SummaryMetric(
                 if (onClick != null) {
                     Icon(
                         painter = painterResource(
-                            R.drawable.ic_chevron_right,
+                            R.drawable.ic_ph_caret_right,
                         ),
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
