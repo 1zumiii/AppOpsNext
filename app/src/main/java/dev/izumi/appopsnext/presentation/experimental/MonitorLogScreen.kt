@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -36,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.monitor.MonitorLogEntry
 import dev.izumi.appopsnext.monitor.MonitorOutcomes
@@ -148,7 +148,7 @@ fun MonitorLogScreen(
     }
 
     if (confirmingClear) {
-        AlertDialog(
+        AppBottomSheet(
             onDismissRequest = { confirmingClear = false },
             title = { Text(text = stringResource(R.string.monitor_log_clear)) },
             text = { Text(text = stringResource(R.string.monitor_log_clear_confirm, entries.size)) },

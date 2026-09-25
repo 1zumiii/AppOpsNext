@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.presentation.components.MainPageChevron
 import dev.izumi.appopsnext.presentation.components.MainPageEntryIcon
 
@@ -78,7 +78,7 @@ private fun DiagnosticReportDialog(
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-    AlertDialog(
+    AppBottomSheet(
         onDismissRequest = onDismiss,
         title = {
             Text(text = stringResource(R.string.diagnostic_report_title))

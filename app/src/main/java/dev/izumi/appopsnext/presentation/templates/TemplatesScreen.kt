@@ -25,7 +25,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -33,7 +32,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -69,11 +67,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.ui.theme.mainPageHeadingWeight
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 import dev.izumi.appopsnext.presentation.app_detail.KnownAppOp
 import dev.izumi.appopsnext.presentation.components.MainPageSectionTitle
+import dev.izumi.appopsnext.presentation.components.PermissionEntryIcon
 import dev.izumi.appopsnext.presentation.components.MainPageEntryIcon
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
 import dev.izumi.appopsnext.templates.model.PermissionTemplateRule
@@ -134,11 +134,7 @@ fun TemplatesScreen(
                             ?: stringResource(R.string.templates_title),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        fontWeight = if (selectedTemplate == null) {
-                            mainPageHeadingWeight()
-                        } else {
-                            FontWeight.SemiBold
-                        },
+                        fontWeight = mainPageHeadingWeight(),
                     )
                 },
                 navigationIcon = {
@@ -146,7 +142,7 @@ fun TemplatesScreen(
                         IconButton(onClick = onCloseEditor) {
                             Icon(
                                 painter = painterResource(
-                                    R.drawable.ic_arrow_back,
+                                    R.drawable.ic_ph_arrow_left,
                                 ),
                                 contentDescription = stringResource(
                                     R.string.action_back,
@@ -175,7 +171,7 @@ fun TemplatesScreen(
                         ) {
                             Icon(
                                 painter = painterResource(
-                                    R.drawable.ic_action_info,
+                                    R.drawable.ic_ph_info,
                                 ),
                                 contentDescription = stringResource(
                                     R.string
@@ -187,7 +183,7 @@ fun TemplatesScreen(
                         Box {
                             IconButton(onClick = { showTemplateActions = true }) {
                                 Icon(
-                                    painter = painterResource(R.drawable.ic_action_more),
+                                    painter = painterResource(R.drawable.ic_ph_dots_three),
                                     contentDescription = stringResource(R.string.template_more_options),
                                 )
                             }
@@ -249,7 +245,7 @@ fun TemplatesScreen(
     }
 
     deleteCandidate?.let { template ->
-        AlertDialog(
+        AppBottomSheet(
             onDismissRequest = { deleteCandidate = null },
             title = {
                 Text(text = stringResource(R.string.template_delete_title))
@@ -281,7 +277,7 @@ fun TemplatesScreen(
     }
 
     if (showNewAppPolicyInfo) {
-        AlertDialog(
+        AppBottomSheet(
             onDismissRequest = { showNewAppPolicyInfo = false },
             title = {
                 Text(
@@ -708,10 +704,9 @@ private fun TemplateEditor(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item {
-            Text(
-                text = stringResource(R.string.template_editor_detail),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 8.dp),
+            MainPageSectionTitle(
+                text = stringResource(R.string.template_rule_count, displayedRules.size),
+                horizontalPadding = 0.dp,
             )
             Text(
                 text = stringResource(R.string.template_reorder_hint),
@@ -740,7 +735,6 @@ private fun TemplateEditor(
                         }
                     },
             )
-            HorizontalDivider()
         }
         item {
             FilledTonalButton(
@@ -781,11 +775,12 @@ private fun TemplateRuleItem(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isDragging) {
                 MaterialTheme.colorScheme.surfaceContainerHigh
             } else {
-                Color.Transparent
+                MaterialTheme.colorScheme.surfaceContainerLow
             },
         ),
         elevation = CardDefaults.cardElevation(
@@ -800,29 +795,35 @@ private fun TemplateRuleItem(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = knownOperation?.let {
-                        stringResource(it.labelRes)
-                    } ?: rule.stableOperationName,
-                    modifier = Modifier.weight(1f),
-                    fontWeight = FontWeight.Medium,
-                    style = MaterialTheme.typography.titleMedium,
-                )
+                PermissionEntryIcon(rule.stableOperationName)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = knownOperation?.let {
+                            stringResource(it.labelRes)
+                        } ?: rule.stableOperationName,
+                        fontWeight = FontWeight.Medium,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    if (knownOperation != null) {
+                        Text(
+                            text = rule.stableOperationName,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
                 Icon(
-                    painter = painterResource(R.drawable.ic_drag_handle),
+                    painter = painterResource(R.drawable.ic_ph_dots_six_vertical),
                     contentDescription = stringResource(
                         R.string.template_reorder_action,
                     ),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Text(
-                text = rule.stableOperationName,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall,
-            )
+            Spacer(Modifier.height(4.dp))
             TemplateSettingRow(
                 title = stringResource(R.string.template_mode_title),
                 description = stringResource(R.string.template_mode_detail),
@@ -915,7 +916,7 @@ private fun CreateTemplateDialog(
     onDismiss: () -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
-    AlertDialog(
+    AppBottomSheet(
         onDismissRequest = onDismiss,
         title = {
             Text(text = stringResource(R.string.template_create_title))
@@ -924,6 +925,7 @@ private fun CreateTemplateDialog(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
+                modifier = Modifier.fillMaxWidth(),
                 label = {
                     Text(text = stringResource(R.string.template_name))
                 },
@@ -1006,7 +1008,7 @@ private fun PermissionManagerDialog(
             selectedNames - operationName
         }
     }
-    AlertDialog(
+    AppBottomSheet(
         onDismissRequest = onDismiss,
         title = {
             Text(text = stringResource(R.string.template_manage_permissions))
@@ -1016,6 +1018,7 @@ private fun PermissionManagerDialog(
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
+                    modifier = Modifier.fillMaxWidth(),
                     label = {
                         Text(
                             text = stringResource(

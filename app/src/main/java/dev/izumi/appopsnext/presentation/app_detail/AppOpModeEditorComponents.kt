@@ -8,16 +8,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +34,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.presentation.components.AppBottomSheet
+import dev.izumi.appopsnext.presentation.components.PermissionEntryIcon
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpModeChangePhase
 import dev.izumi.appopsnext.appops.model.AppOpsRestorationStatus
@@ -53,93 +58,98 @@ internal fun AppOpListItem(
             context.getString(resourceId, *arguments.toTypedArray())
         },
     )
-    ListItem(
-        leadingContent = selectedForBatch?.let { selected ->
-            {
-                Checkbox(
-                    checked = selected,
-                    onCheckedChange = onBatchSelectionChange,
-                )
-            }
-        },
-        headlineContent = {
-            Text(
-                text = item.labelRes?.let { stringResource(it) }
-                    ?: item.operationName,
-                fontWeight = FontWeight.Medium,
-                style = MaterialTheme.typography.titleMedium,
-            )
-        },
-        supportingContent = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(3.dp),
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = item.operationName,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                if (item.isImplicitDefault) {
-                    Text(
-                        text = stringResource(
-                            R.string.app_detail_implicit_default_hint,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.labelSmall,
+                if (selectedForBatch != null) {
+                    Checkbox(
+                        checked = selectedForBatch,
+                        onCheckedChange = onBatchSelectionChange,
                     )
+                } else {
+                    PermissionEntryIcon(item.operationName)
                 }
-                usageDetails?.let { details ->
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = details,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.labelSmall,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
+                        text = item.labelRes?.let { stringResource(it) }
+                            ?: item.operationName,
+                        fontWeight = FontWeight.Medium,
+                        style = MaterialTheme.typography.titleMedium,
                     )
+                    if (item.labelRes != null) {
+                        Text(
+                            text = item.operationName,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
             }
-        },
-        trailingContent = {
-            if (isApplying) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp,
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.app_detail_mode_item_applying,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.labelSmall,
-                    )
-                }
-            } else if (currentMode != null && selectedForBatch == null) {
-                EditableModeMenu(
-                    currentMode = currentMode,
-                    enabled = editEnabled,
-                    onModeSelected = onModeSelected,
-                )
-            } else if (selectedForBatch == null) {
+            if (item.isImplicitDefault) {
                 Text(
-                    text = item.mode,
+                    text = stringResource(R.string.app_detail_implicit_default_hint),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+            usageDetails?.let { details ->
+                Text(
+                    text = details,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-            } else {
-                Text(
-                    text = currentMode?.let { modeLabel(it) } ?: item.mode,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold,
-                )
             }
-        },
-    )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (isApplying) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                        )
+                        Text(
+                            text = stringResource(R.string.app_detail_mode_item_applying),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
+                } else if (currentMode != null && selectedForBatch == null) {
+                    EditableModeMenu(
+                        currentMode = currentMode,
+                        enabled = editEnabled,
+                        onModeSelected = onModeSelected,
+                    )
+                } else {
+                    Text(
+                        text = currentMode?.let { modeLabel(it) } ?: item.mode,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -189,13 +199,16 @@ internal fun ModeChangeDialog(
     onForegroundAlternativeRequested: () -> Unit,
 ) {
     when (state) {
-        is AppOpModeChangeUiState.Confirming -> AlertDialog(
+        is AppOpModeChangeUiState.Confirming -> AppBottomSheet(
             onDismissRequest = onDismiss,
             title = {
                 Text(text = stringResource(R.string.app_detail_mode_confirm_title))
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
                     Text(
                         text = stringResource(
                             R.string.app_detail_mode_confirm_operation,
@@ -278,7 +291,7 @@ private fun DenyFallbackAppliedDialog(
         mutableStateOf(false)
     }
     val dismiss = { onDismiss(dontShowAgain) }
-    AlertDialog(
+    AppBottomSheet(
         onDismissRequest = dismiss,
         title = {
             Text(
@@ -345,7 +358,7 @@ private fun ModeChangeFailureDialog(
             request = state.request,
             result = state.result,
         )
-    AlertDialog(
+    AppBottomSheet(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -357,7 +370,10 @@ private fun ModeChangeFailureDialog(
             )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
                 if (state.denyFallbackAttempted) {
                     Text(
                         text = stringResource(
@@ -445,7 +461,7 @@ private fun RuntimePermissionRequiredDialog(
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-    AlertDialog(
+    AppBottomSheet(
         onDismissRequest = onDismiss,
         title = {
             Text(
