@@ -10,6 +10,7 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -59,9 +60,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -521,20 +524,40 @@ private fun TemplateRulePreview(
             stringResource(it.labelRes)
         } ?: rule.stableOperationName
     }
-    val preview = names.joinToString(" · ")
-    val remaining = template.rules.size - names.size
-    Text(
-        text = if (remaining > 0) {
-            stringResource(R.string.template_preview_more, preview, remaining)
+    val style = MaterialTheme.typography.bodySmall
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    BoxWithConstraints(modifier = modifier.fillMaxWidth().padding(top = 4.dp)) {
+        val availableWidth = with(density) { maxWidth.roundToPx() }
+        val preview = (names.size downTo 1).firstNotNullOfOrNull { visibleCount ->
+            val visibleNames = names.take(visibleCount).joinToString(" · ")
+            val hiddenCount = template.rules.size - visibleCount
+            val candidate = if (hiddenCount > 0) {
+                stringResource(R.string.template_preview_more, visibleNames, hiddenCount)
+            } else {
+                visibleNames
+            }
+            candidate.takeIf {
+                textMeasurer.measure(
+                    text = it,
+                    style = style,
+                    maxLines = 1,
+                    softWrap = false,
+                ).size.width <= availableWidth
+            }
+        } ?: if (template.rules.size == 1) {
+            names.first()
         } else {
-            preview
-        },
-        modifier = modifier.padding(top = 4.dp),
-        color = color,
-        style = MaterialTheme.typography.bodySmall,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
+            stringResource(R.string.template_preview_count_only, template.rules.size)
+        }
+        Text(
+            text = preview,
+            color = color,
+            style = style,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
 
 @Composable

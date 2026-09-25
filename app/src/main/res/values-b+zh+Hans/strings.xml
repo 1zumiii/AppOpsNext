@@ -242,6 +242,7 @@
     <string name="template_new_app_policy_description">自动套用常见的隐私限制。模板不可删除。AppOpsNext 未运行时装的应用，会在下次打开后补处理。获得通知权限后，每次处理完成会发送一条简短的结果通知。</string>
     <string name="template_new_app_auto_apply">自动套用到新装应用</string>
     <string name="template_preview_more">%1$s +%2$d</string>
+    <string name="template_preview_count_only">+%1$d</string>
     <string name="template_more_options">更多模板操作</string>
     <string name="template_new_app_policy_information">自动套用说明</string>
     <string name="new_app_policy_notification_channel">新装应用规则</string>
