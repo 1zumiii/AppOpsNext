@@ -11,33 +11,28 @@ access history, and live monitoring. It runs through
 - **Outcomes:** Did the system allow or deny the access?
 - **Listeners:** Which other processes are watching for permission changes?
 
----
-
-- **Finer permission controls.** Control camera, location, clipboard and other
-  AppOps for each app. Every change is read back to check that it took effect.
-- **Templates for existing and new apps.** Save common restrictions as a template,
-  apply it to several apps at once, or have it applied automatically to new installs.
-- **See who used what, and when.** Explore daily charts, timelines and per-app
-  statistics, with filters for time range and app and counts of denied attempts.
-  Enable history persistence to keep individual records beyond Android's seven-day
-  retention period.
-- **Access monitoring (experimental).** Monitor specific permissions for specific
-  apps, get live reports of accesses and whether the system allowed or denied them,
-  and review them later in the log. Android itself does not keep individual records
-  of denied attempts.
-- **Permission change listeners (experimental).** See which processes are
-  registered to watch for changes to permission settings.
-- **Strict limits on privileged access.** Privileged operations use only a fixed
-  set of AppOps commands and interfaces, with no arbitrary shell execution. All
-  records stay on the device. The only network request is the update check.
-
 [Download APK](https://github.com/1zumiii/AppOpsNext/releases/latest) ·
 [Report an issue](https://github.com/1zumiii/AppOpsNext/issues) ·
 [Build status](https://github.com/1zumiii/AppOpsNext/actions/workflows/ci.yml)
 
 ## Preview
 
-![AppOpsNext interface preview in English](docs/Preview-en.png)
+[![AppOpsNext interface preview in English](docs/Preview-en.png)](docs/Preview-en.png)
+
+## Highlights
+
+- **Permission controls.** Set AppOps such as camera, location, and clipboard
+  per app, then read back each change to verify it.
+- **Templates.** Apply saved rules to several apps or automatically to new installs.
+- **History.** Filter by time and app, including counts of denied attempts. Save
+  individual records on the device beyond Android's seven-day retention period.
+- **Access monitoring (experimental).** Watch chosen app permissions, get reports
+  of allowed and denied accesses, and review them in a log.
+- **Permission change listeners (experimental).** See which processes are
+  registered to watch for permission-setting changes.
+- **Limited privileged access.** Use a fixed set of AppOps commands and interfaces,
+  with no arbitrary shell execution. Records stay on the device; only the update
+  check uses the network.
 
 ## What you can do
 
