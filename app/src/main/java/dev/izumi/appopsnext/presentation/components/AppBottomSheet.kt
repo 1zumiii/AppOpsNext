@@ -19,6 +19,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -34,6 +35,7 @@ fun AppBottomSheet(
     dismissButton: (@Composable () -> Unit)? = null,
     dismissible: Boolean = true,
     showActions: Boolean = true,
+    bodyHorizontalPadding: Dp = 24.dp,
 ) {
     val canDismiss by rememberUpdatedState(dismissible)
     val sheetState = rememberModalBottomSheetState(
@@ -44,6 +46,7 @@ fun AppBottomSheet(
         onDismissRequest = { if (canDismiss) onDismissRequest() },
         sheetState = sheetState,
         sheetMaxWidth = Dp.Unspecified,
+        containerColor = MaterialTheme.colorScheme.surface,
         dragHandle = if (dismissible) {
             { BottomSheetDefaults.DragHandle() }
         } else {
@@ -53,8 +56,7 @@ fun AppBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .imePadding()
-                .padding(horizontal = 24.dp),
+                .imePadding(),
         ) {
             if (title != null) {
                 ProvideTextStyle(
@@ -65,6 +67,7 @@ fun AppBottomSheet(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .padding(horizontal = 24.dp)
                             .padding(bottom = 16.dp),
                     ) {
                         title()
@@ -75,7 +78,8 @@ fun AppBottomSheet(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f, fill = false),
+                        .weight(1f, fill = false)
+                        .padding(horizontal = bodyHorizontalPadding),
                 ) {
                     text()
                 }
@@ -84,8 +88,9 @@ fun AppBottomSheet(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
                         .padding(top = 16.dp, bottom = 16.dp),
-                    horizontalArrangement = Arrangement.End,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                 ) {
                     dismissButton?.invoke()
                     confirmButton()

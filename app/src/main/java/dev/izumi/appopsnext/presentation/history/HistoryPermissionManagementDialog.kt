@@ -7,12 +7,12 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.presentation.components.AppBottomSheet
+import dev.izumi.appopsnext.presentation.components.CompactSearchField
 import dev.izumi.appopsnext.history.model.HistoryPermission
 
 @Composable
@@ -68,20 +69,13 @@ fun HistoryPermissionManagementDialog(
                         draftSelection.size,
                     ),
                 )
-                OutlinedTextField(
+                CompactSearchField(
                     value = query,
                     onValueChange = { query = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp),
-                    label = {
-                        Text(
-                            text = stringResource(
-                                R.string.history_permission_search,
-                            ),
-                        )
-                    },
-                    singleLine = true,
+                    label = stringResource(R.string.history_permission_search),
                 )
                 LazyColumn(
                     modifier = Modifier
@@ -140,7 +134,7 @@ fun HistoryPermissionManagementDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = {
                     onApply(
                         availablePermissions
@@ -153,7 +147,7 @@ fun HistoryPermissionManagementDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            OutlinedButton(onClick = onDismiss) {
                 Text(text = stringResource(R.string.action_cancel))
             }
         },

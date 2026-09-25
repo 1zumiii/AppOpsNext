@@ -6,6 +6,7 @@ import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -13,6 +14,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -97,28 +100,6 @@ internal fun AppOpListItem(
                         )
                     }
                 }
-            }
-            if (item.isImplicitDefault) {
-                Text(
-                    text = stringResource(R.string.app_detail_implicit_default_hint),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.labelSmall,
-                )
-            }
-            usageDetails?.let { details ->
-                Text(
-                    text = details,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
                 if (isApplying) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -148,6 +129,22 @@ internal fun AppOpListItem(
                     )
                 }
             }
+            if (item.isImplicitDefault) {
+                Text(
+                    text = stringResource(R.string.app_detail_implicit_default_hint),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+            usageDetails?.let { details ->
+                Text(
+                    text = details,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
@@ -163,6 +160,7 @@ private fun EditableModeMenu(
         TextButton(
             onClick = { expanded = true },
             enabled = enabled,
+            contentPadding = PaddingValues(0.dp),
         ) {
             Text(
                 text = stringResource(
@@ -254,12 +252,12 @@ internal fun ModeChangeDialog(
                 }
             },
             confirmButton = {
-                TextButton(onClick = onConfirm) {
+                Button(onClick = onConfirm) {
                     Text(text = stringResource(R.string.action_apply))
                 }
             },
             dismissButton = {
-                TextButton(onClick = onDismiss) {
+                OutlinedButton(onClick = onDismiss) {
                     Text(text = stringResource(R.string.action_cancel))
                 }
             },
@@ -327,7 +325,7 @@ private fun DenyFallbackAppliedDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = dismiss) {
+            Button(onClick = dismiss) {
                 Text(text = stringResource(R.string.action_dismiss))
             }
         },
@@ -424,7 +422,7 @@ private fun ModeChangeFailureDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = if (canTryForeground) {
                     onForegroundAlternativeRequested
                 } else {
@@ -445,7 +443,7 @@ private fun ModeChangeFailureDialog(
         },
         dismissButton = if (canTryForeground) {
             {
-                TextButton(onClick = onDismiss) {
+                OutlinedButton(onClick = onDismiss) {
                     Text(text = stringResource(R.string.action_dismiss))
                 }
             }
@@ -479,7 +477,7 @@ private fun RuntimePermissionRequiredDialog(
             )
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = {
                     context.startActivity(
                         Intent(
@@ -498,7 +496,7 @@ private fun RuntimePermissionRequiredDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            OutlinedButton(onClick = onDismiss) {
                 Text(text = stringResource(R.string.action_cancel))
             }
         },
