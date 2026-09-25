@@ -93,7 +93,7 @@ fun AppListScreen(
                                 if (batchSelectionMode) {
                                     R.drawable.ic_ph_x
                                 } else {
-                                    R.drawable.ic_ph_selection
+                                    R.drawable.ic_ph_list_checks
                                 },
                             ),
                             contentDescription = stringResource(

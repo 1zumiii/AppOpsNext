@@ -207,7 +207,7 @@ fun SettingsScreen(
                     ListItem(
                         modifier = Modifier.clickable(onClick = onOpenExperimental),
                         leadingContent = {
-                            MainPageEntryIcon(R.drawable.ic_ph_bell_ringing)
+                            MainPageEntryIcon(R.drawable.ic_ph_flask)
                         },
                         headlineContent = {
                             Text(text = stringResource(R.string.experimental_title))
