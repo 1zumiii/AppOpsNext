@@ -122,8 +122,9 @@ individual records):
 - The choice starts from the history page's selection and is independent of it
   afterwards.
 - Permissions the history page shows are saved as it refreshes. The rest are
-  saved when the app is opened, at most every six hours. Opening the app at
-  least once a week therefore leaves no gap.
+  saved when the app is opened, at most every six hours. When reads and writes
+  succeed, opening the app at least once every seven days avoids gaps caused
+  by individual records expiring.
 - Periods that were not saved are filled from interval counts within 30 days.
   An interval that partly overlaps saved records counts only the accesses
   beyond them, which can be slightly high because Android may merge accesses
@@ -313,6 +314,7 @@ It is not a fork, port, modified build, or official successor.
 
 It includes no legacy application source, decompiled code, assets, branding,
 or configuration data, and does not require or provide migration from that app.
+
 AppOpsNext is not developed, endorsed, or supported by RikkaApps or the original
 App Ops author. Its use of Shizuku does not imply affiliation with its maintainers.
 “AppOps” refers to Android's built-in system service.
