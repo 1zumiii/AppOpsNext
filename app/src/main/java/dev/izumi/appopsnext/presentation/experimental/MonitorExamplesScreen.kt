@@ -5,10 +5,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -58,7 +56,7 @@ fun MonitorExamplesScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_arrow_back),
+                            painter = painterResource(R.drawable.ic_ph_arrow_left),
                             contentDescription = stringResource(R.string.action_back),
                         )
                     }
@@ -80,8 +78,7 @@ fun MonitorExamplesScreen(
                 )
             }
             items(examples, key = { it.first }) { (title, body) ->
-                HorizontalDivider()
-                ListItem(
+                ExperimentalListRow(
                     headlineContent = {
                         Text(
                             text = stringResource(title),

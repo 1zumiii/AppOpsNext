@@ -359,6 +359,10 @@
     <string name="monitor_title">Access monitor</string>
     <string name="monitor_summary">Notifies you when the chosen apps use the chosen permissions, and records every access.</string>
     <string name="monitor_notification_required">Notification permission must be enabled to receive monitoring alerts. Keep the monitoring notification channels enabled too.</string>
+    <string name="monitor_notification_summary">Allow notifications and keep the monitoring channel enabled to receive alerts.</string>
+    <string name="monitor_about_title">About access monitoring</string>
+    <string name="experimental_monitor_section">Monitoring</string>
+    <string name="experimental_diagnostics_section">Diagnostics</string>
     <string name="monitor_open_notification_settings">Open notification settings</string>
     <string name="monitor_explainer">Enabling this checks the system watch registrations. A matching registration does not prove events can be delivered, and callback errors are shown here when detected. Monitoring relies on device support and keeps an ongoing notification.</string>
     <string name="monitor_checking">Running the self-check…</string>

@@ -5,17 +5,24 @@ import android.content.Intent
 import android.provider.Settings
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -34,6 +41,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.presentation.components.MainPageChevron
+import dev.izumi.appopsnext.presentation.components.MainPageEntryIcon
+import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.monitor.MonitorSelfCheckResult
 import dev.izumi.appopsnext.monitor.MonitorStatus
 import dev.izumi.appopsnext.appops.parser.WatchRegistration
@@ -60,6 +70,7 @@ fun ExperimentalScreen(
 ) {
     val context = LocalContext.current
     var notificationsEnabled by remember { mutableStateOf(true) }
+    var showAbout by remember { mutableStateOf(false) }
     // The exemption is granted in system settings, so it is re-read on every
     // return to this screen rather than once when it is first shown.
     LifecycleResumeEffect(Unit) {
@@ -80,7 +91,7 @@ fun ExperimentalScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_arrow_back),
+                            painter = painterResource(R.drawable.ic_ph_arrow_left),
                             contentDescription = stringResource(R.string.action_back),
                         )
                     }
@@ -101,7 +112,6 @@ fun ExperimentalScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            item { HorizontalDivider() }
             item {
                 MonitorFeature(
                     uiState = uiState,
@@ -112,35 +122,97 @@ fun ExperimentalScreen(
                         context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                             .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
                     },
-                    onOpenSettings = onOpenSettings,
                     onOpenBatterySettings = onOpenBatterySettings,
                     onDismissBatteryNotice = onDismissBatteryNotice,
                 )
             }
             item {
-                ListItem(
-                    modifier = Modifier.clickable(onClick = onOpenLog),
-                    headlineContent = { Text(stringResource(R.string.monitor_log_title)) },
-                    supportingContent = {
-                        Text(
-                            if (logCount > 0) {
-                                stringResource(R.string.monitor_log_summary, logCount)
+                ExperimentalSectionTitle(stringResource(R.string.experimental_monitor_section))
+                ExperimentalGroup {
+                    val locked = uiState.monitorEnabled || uiState.monitorBusy
+                    ExperimentalGroupRow(
+                        modifier = if (locked) Modifier else Modifier.clickable(onClick = onOpenSettings),
+                        leadingContent = { ExperimentalRowIcon(R.drawable.ic_ph_gear) },
+                        headlineContent = {
+                            Text(
+                                text = stringResource(R.string.monitor_settings_title),
+                                color = if (locked) MaterialTheme.colorScheme.onSurfaceVariant else Color.Unspecified,
+                            )
+                        },
+                        supportingContent = {
+                            val summary = if (uiState.targetCount == 0) {
+                                stringResource(R.string.monitor_targets_empty)
                             } else {
-                                stringResource(R.string.monitor_log_summary_empty)
-                            },
-                        )
-                    },
-                )
+                                stringResource(R.string.monitor_targets_summary, uiState.targetCount)
+                            }
+                            Text(
+                                text = if (locked) stringResource(R.string.monitor_targets_locked, summary) else summary,
+                            )
+                        },
+                        trailingContent = { if (!locked) MainPageChevron() },
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 56.dp, end = 16.dp))
+                    ExperimentalGroupRow(
+                        modifier = Modifier.clickable(onClick = onOpenLog),
+                        leadingContent = { ExperimentalRowIcon(R.drawable.ic_ph_clock_counter_clockwise) },
+                        headlineContent = { Text(stringResource(R.string.monitor_log_title)) },
+                        supportingContent = {
+                            Text(
+                                if (logCount > 0) {
+                                    stringResource(R.string.monitor_log_summary, logCount)
+                                } else {
+                                    stringResource(R.string.monitor_log_summary_empty)
+                                },
+                            )
+                        },
+                        trailingContent = { MainPageChevron() },
+                    )
+                }
             }
-            item { HorizontalDivider() }
             item {
-                ListItem(
-                    modifier = Modifier.clickable(onClick = onOpenWatchers),
-                    headlineContent = { Text(stringResource(R.string.watchers_title)) },
-                    supportingContent = { Text(stringResource(R.string.watchers_summary)) },
-                )
+                TextButton(
+                    onClick = { showAbout = true },
+                    modifier = Modifier.padding(start = 16.dp, top = 8.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_ph_info),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(text = stringResource(R.string.monitor_about_title))
+                }
+            }
+            item {
+                ExperimentalSectionTitle(stringResource(R.string.experimental_diagnostics_section))
+                ExperimentalGroup {
+                    ExperimentalGroupRow(
+                        modifier = Modifier.clickable(onClick = onOpenWatchers),
+                        leadingContent = { ExperimentalRowIcon(R.drawable.ic_ph_user) },
+                        headlineContent = { Text(stringResource(R.string.watchers_title)) },
+                        supportingContent = { Text(stringResource(R.string.watchers_summary)) },
+                        trailingContent = { MainPageChevron() },
+                    )
+                }
             }
         }
+    }
+    if (showAbout) {
+        AppBottomSheet(
+            onDismissRequest = { showAbout = false },
+            title = { Text(stringResource(R.string.monitor_about_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(stringResource(R.string.monitor_notification_required))
+                    Text(stringResource(R.string.monitor_explainer))
+                    Text(stringResource(R.string.monitor_event_count_note))
+                }
+            },
+            confirmButton = {
+                Button(onClick = { showAbout = false }) {
+                    Text(stringResource(R.string.action_dismiss))
+                }
+            },
+        )
     }
 }
 
@@ -151,26 +223,35 @@ private fun MonitorFeature(
     onEnableUnconfirmedMonitor: () -> Unit,
     notificationsEnabled: Boolean,
     onOpenNotificationSettings: () -> Unit,
-    onOpenSettings: () -> Unit,
     onOpenBatterySettings: () -> Unit,
     onDismissBatteryNotice: () -> Unit,
 ) {
     Column {
-        ListItem(
-            headlineContent = { Text(text = stringResource(R.string.monitor_title)) },
-            supportingContent = { Text(text = stringResource(R.string.monitor_summary)) },
-            trailingContent = {
-                Switch(
-                    checked = uiState.monitorEnabled,
-                    enabled = !uiState.monitorBusy && uiState.targetCount > 0,
-                    onCheckedChange = onMonitorChange,
-                )
-            },
-        )
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            shape = RoundedCornerShape(18.dp),
+            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+        ) {
+            ListItem(
+                leadingContent = { MainPageEntryIcon(R.drawable.ic_ph_eye) },
+                headlineContent = { Text(text = stringResource(R.string.monitor_title)) },
+                supportingContent = { Text(text = stringResource(R.string.monitor_summary)) },
+                trailingContent = {
+                    Switch(
+                        checked = uiState.monitorEnabled,
+                        enabled = !uiState.monitorBusy && uiState.targetCount > 0,
+                        onCheckedChange = onMonitorChange,
+                    )
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            )
+        }
         Text(
-            text = stringResource(R.string.monitor_notification_required),
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.bodyMedium,
+            text = stringResource(R.string.monitor_notification_summary),
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.bodySmall,
             color = if (notificationsEnabled) MaterialTheme.colorScheme.onSurfaceVariant
                 else MaterialTheme.colorScheme.error,
         )
@@ -179,61 +260,6 @@ private fun MonitorFeature(
                 Text(stringResource(R.string.monitor_open_notification_settings))
             }
         }
-        // One entry is closed while the monitor runs instead of every setting
-        // inside it, so the reason has to be stated once.
-        val locked = uiState.monitorEnabled || uiState.monitorBusy
-        ListItem(
-            modifier = if (locked) {
-                Modifier
-            } else {
-                Modifier.clickable(onClick = onOpenSettings)
-            },
-            leadingContent = {
-                Icon(
-                    painter = painterResource(R.drawable.ic_action_manage),
-                    contentDescription = null,
-                    tint = if (locked) {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
-                )
-            },
-            headlineContent = {
-                Text(
-                    text = stringResource(R.string.monitor_settings_title),
-                    color = if (locked) {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    } else {
-                        Color.Unspecified
-                    },
-                )
-            },
-            supportingContent = {
-                val summary = if (uiState.targetCount == 0) {
-                    stringResource(R.string.monitor_targets_empty)
-                } else {
-                    stringResource(
-                        R.string.monitor_targets_summary,
-                        uiState.targetCount,
-                    )
-                }
-                Text(
-                    text = if (locked) {
-                        stringResource(R.string.monitor_targets_locked, summary)
-                    } else {
-                        summary
-                    },
-                )
-            },
-        )
-        Text(
-            text = stringResource(R.string.monitor_explainer) + "\n\n" +
-                stringResource(R.string.monitor_event_count_note),
-            modifier = Modifier.padding(horizontal = 16.dp),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
         MonitorStatusText(uiState)
         if (!uiState.monitorEnabled && !uiState.monitorBusy &&
             uiState.selfCheckResult is MonitorSelfCheckResult.Unconfirmed
@@ -248,8 +274,15 @@ private fun MonitorFeature(
         // reads. The notice can therefore be true forever on such a device, so
         // it can be dismissed by hand as well as resolving itself.
         if (uiState.showBatteryNotice) {
-            ListItem(
+            ExperimentalListCard(
                 modifier = Modifier.clickable(onClick = onOpenBatterySettings),
+                leadingContent = {
+                    MainPageEntryIcon(
+                        iconRes = R.drawable.ic_ph_warning_circle,
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.error,
+                    )
+                },
                 headlineContent = {
                     Text(
                         text = stringResource(R.string.monitor_battery_title),
@@ -262,7 +295,7 @@ private fun MonitorFeature(
                 trailingContent = {
                     IconButton(onClick = onDismissBatteryNotice) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_action_close),
+                            painter = painterResource(R.drawable.ic_ph_x),
                             contentDescription = stringResource(
                                 R.string.monitor_battery_dismiss,
                             ),
@@ -272,6 +305,17 @@ private fun MonitorFeature(
             )
         }
     }
+}
+
+@Composable
+private fun ExperimentalSectionTitle(text: String) {
+    Text(
+        text = text,
+        modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 8.dp),
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @Composable

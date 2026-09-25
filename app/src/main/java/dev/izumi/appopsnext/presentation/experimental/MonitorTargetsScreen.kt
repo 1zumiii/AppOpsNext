@@ -11,7 +11,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -72,7 +71,7 @@ fun MonitorTargetsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_arrow_back),
+                            painter = painterResource(R.drawable.ic_ph_arrow_left),
                             contentDescription = stringResource(R.string.action_back),
                         )
                     }
@@ -186,7 +185,7 @@ private fun TargetRow(
         } else {
             {
                 Icon(
-                    painter = painterResource(R.drawable.ic_notification_monitor),
+                    painter = painterResource(R.drawable.ic_ph_bell),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                 )
@@ -271,7 +270,7 @@ fun MonitorOperationsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_arrow_back),
+                            painter = painterResource(R.drawable.ic_ph_arrow_left),
                             contentDescription = stringResource(R.string.action_back),
                         )
                     }
@@ -292,7 +291,7 @@ fun MonitorOperationsScreen(
             )
             LazyColumn {
                 item {
-                    ListItem(
+                    ExperimentalListRow(
                         headlineContent = {
                             Text(text = stringResource(R.string.monitor_all_ops_title))
                         },
@@ -310,10 +309,9 @@ fun MonitorOperationsScreen(
                         },
                     )
                 }
-                item { HorizontalDivider() }
                 items(options, key = { it.first }) { (name, label) ->
                     val checked = name in selected
-                    ListItem(
+                    ExperimentalListRow(
                         modifier = Modifier.clickable {
                             onSelectionChange(
                                 if (checked) selected - name else selected + name,

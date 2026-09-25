@@ -33,6 +33,7 @@ fun AppBottomSheet(
     text: @Composable () -> Unit,
     confirmButton: @Composable () -> Unit,
     dismissButton: (@Composable () -> Unit)? = null,
+    leadingButton: (@Composable () -> Unit)? = null,
     dismissible: Boolean = true,
     showActions: Boolean = true,
     bodyHorizontalPadding: Dp = 24.dp,
@@ -92,6 +93,10 @@ fun AppBottomSheet(
                         .padding(top = 16.dp, bottom = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                 ) {
+                    if (leadingButton != null) {
+                        leadingButton()
+                        Spacer(Modifier.weight(1f))
+                    }
                     dismissButton?.invoke()
                     confirmButton()
                 }
