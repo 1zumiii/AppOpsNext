@@ -12,6 +12,13 @@ data class AppHistorySummary(
     val intervalAccessCount: Int = 0,
 )
 
+enum class HistoryAppSort {
+    TOTAL_ACTIVITY,
+    ACCESSES,
+    DENIALS,
+    RECENT,
+}
+
 object HistoryAppStatistics {
     fun summarize(
         events: List<ResolvedHistoryEvent>,
@@ -38,15 +45,20 @@ object HistoryAppStatistics {
                     rejectCount = appEvents.sumOf { it.event.rejectCount },
                 )
             }
-            .sortedWith(
-                compareByDescending<AppHistorySummary> {
-                    it.accessCount
-                }.thenByDescending {
-                    it.rejectCount
-                }.thenBy {
-                    it.app.label.lowercase(Locale.ROOT)
-                }.thenBy {
-                    it.app.packageName
-                },
-            )
+            .let { sort(it, HistoryAppSort.TOTAL_ACTIVITY) }
+
+    fun sort(summaries: List<AppHistorySummary>, order: HistoryAppSort): List<AppHistorySummary> {
+        val comparator = when (order) {
+            HistoryAppSort.TOTAL_ACTIVITY -> compareByDescending<AppHistorySummary> {
+                it.accessCount.toLong() + it.rejectCount
+            }
+            HistoryAppSort.ACCESSES -> compareByDescending<AppHistorySummary> { it.accessCount }
+            HistoryAppSort.DENIALS -> compareByDescending<AppHistorySummary> { it.rejectCount }
+            HistoryAppSort.RECENT -> compareByDescending<AppHistorySummary> { it.latestAccessTimeMillis }
+        }
+        return summaries.sortedWith(
+            comparator.thenBy { it.app.label.lowercase(Locale.ROOT) }
+                .thenBy { it.app.packageName },
+        )
+    }
 }

@@ -120,17 +120,11 @@ private fun DiagnosticReportDialog(
             }
         },
         confirmButton = {
-            FilledIconButton(
-                onClick = {
-                    copyDiagnosticReport(context, report)
-                },
-                enabled = report.isNotBlank(),
-                modifier = Modifier.size(48.dp),
+            OutlinedButton(
+                onClick = onDismiss,
+                contentPadding = PaddingValues(horizontal = 12.dp),
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_ph_copy),
-                    contentDescription = stringResource(R.string.diagnostic_report_copy),
-                )
+                Text(text = stringResource(R.string.action_dismiss))
             }
         },
         leadingButton = {
@@ -142,11 +136,18 @@ private fun DiagnosticReportDialog(
             }
         },
         dismissButton = {
-            OutlinedButton(
-                onClick = onDismiss,
-                contentPadding = PaddingValues(horizontal = 12.dp),
+            FilledIconButton(
+                onClick = {
+                    copyDiagnosticReport(context, report)
+                },
+                enabled = report.isNotBlank(),
+                modifier = Modifier.size(40.dp),
             ) {
-                Text(text = stringResource(R.string.action_dismiss))
+                Icon(
+                    painter = painterResource(R.drawable.ic_ph_copy),
+                    contentDescription = stringResource(R.string.diagnostic_report_copy),
+                    modifier = Modifier.size(20.dp),
+                )
             }
         },
     )

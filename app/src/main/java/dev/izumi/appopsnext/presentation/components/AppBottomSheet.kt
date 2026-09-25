@@ -92,6 +92,7 @@ fun AppBottomSheet(
                         .padding(horizontal = 24.dp)
                         .padding(top = 16.dp, bottom = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (leadingButton != null) {
                         leadingButton()

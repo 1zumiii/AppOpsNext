@@ -11,13 +11,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -42,8 +45,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
@@ -292,125 +298,124 @@ private fun ReadyContent(
         )
     }
     val entries = state.snapshot.entries
-    val displayItems = remember(entries, searchQuery, context, alternateContext) {
+    val allDisplayItems = remember(entries, context, alternateContext) {
         AppOpDisplayCatalog.build(
+            entries = entries,
+            query = "",
+            labelResolver = context::getString,
+            alternateLabelResolver = alternateContext::getString,
+        )
+    }
+    val displayItems = remember(entries, searchQuery, context, alternateContext, allDisplayItems) {
+        if (searchQuery.isBlank()) allDisplayItems else AppOpDisplayCatalog.build(
             entries = entries,
             query = searchQuery,
             labelResolver = context::getString,
             alternateLabelResolver = alternateContext::getString,
         )
     }
-    val totalOperationCount = remember(entries, context, alternateContext) {
-        AppOpDisplayCatalog.build(
-            entries = entries,
-            query = "",
-            labelResolver = context::getString,
-            alternateLabelResolver = alternateContext::getString,
-        ).size
+    val selectedItems = remember(allDisplayItems, selectedBatchKeys) {
+        allDisplayItems.filter { it.batchSelectionKey() in selectedBatchKeys }
     }
-    LazyColumn(
-        modifier = modifier,
-        contentPadding = DetailContentPadding,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item {
-            AppSummaryCard(
-                app = state.app,
-                operationCount = totalOperationCount,
-            )
-        }
-        item {
-            CompactSearchField(
-                value = searchQuery,
-                onValueChange = onSearchQueryChange,
-                label = stringResource(R.string.app_detail_search_label),
-            )
-        }
-        if (searchQuery.isNotBlank() || displayItems.size != totalOperationCount) {
+    val totalOperationCount = allDisplayItems.size
+    Column(modifier = modifier.imePadding()) {
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            contentPadding = DetailContentPadding,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             item {
-                Text(
-                    text = stringResource(
-                        R.string.app_detail_filtered_count,
-                        displayItems.size,
-                        totalOperationCount,
-                    ),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                AppSummaryCard(
+                    app = state.app,
+                    operationCount = totalOperationCount,
                 )
             }
-        }
-        if (batchSelectionMode) {
             item {
-                BatchPermissionControls(
-                    selectedCount = selectedBatchKeys.size,
-                    selectedMode = selectedBatchMode,
-                    onModeChange = onBatchModeChange,
-                    onApply = {
-                        onApplyPermissionBatch(
-                            displayItems
-                                .filter {
-                                    it.batchSelectionKey() in
-                                        selectedBatchKeys
-                                }
-                                .map {
-                                    PermissionBatchSelection(
-                                        operationName = it.operationName,
-                                        scope = it.scope,
-                                    )
-                                },
-                        )
+                CompactSearchField(
+                    value = searchQuery,
+                    onValueChange = onSearchQueryChange,
+                    label = stringResource(R.string.app_detail_search_label),
+                )
+            }
+            if (searchQuery.isNotBlank() || displayItems.size != totalOperationCount) {
+                item {
+                    Text(
+                        text = stringResource(
+                            R.string.app_detail_filtered_count,
+                            displayItems.size,
+                            totalOperationCount,
+                        ),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            if (displayItems.isEmpty()) {
+                item {
+                    Text(
+                        text = stringResource(
+                            if (state.snapshot.entries.isEmpty()) {
+                                R.string.app_detail_no_operations
+                            } else {
+                                R.string.app_detail_no_matching_operations
+                            },
+                        ),
+                        modifier = Modifier.padding(vertical = 32.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                itemsIndexed(
+                    items = displayItems,
+                    key = { index, item ->
+                        "$index:${item.scope}:${item.operationName}"
                     },
-                )
-            }
-        }
-        if (displayItems.isEmpty()) {
-            item {
-                Text(
-                    text = stringResource(
-                        if (state.snapshot.entries.isEmpty()) {
-                            R.string.app_detail_no_operations
+                ) { _, item ->
+                    AppOpListItem(
+                        item = item,
+                        isApplying =
+                            applyingRequest?.matches(item) == true,
+                        editEnabled =
+                            applyingRequest == null && !batchSelectionMode,
+                        selectedForBatch = if (batchSelectionMode) {
+                            item.batchSelectionKey() in selectedBatchKeys
                         } else {
-                            R.string.app_detail_no_matching_operations
+                            null
                         },
-                    ),
-                    modifier = Modifier.padding(vertical = 32.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                        onBatchSelectionChange = { selected ->
+                            onBatchSelectionChange(
+                                item.batchSelectionKey(),
+                                selected,
+                            )
+                        },
+                        onModeSelected = { originalMode, requestedMode ->
+                            onModeChangeRequested(
+                                item.operationName,
+                                item.scope,
+                                originalMode,
+                                requestedMode,
+                            )
+                        },
+                    )
+                }
             }
-        } else {
-            itemsIndexed(
-                items = displayItems,
-                key = { index, item ->
-                    "$index:${item.scope}:${item.operationName}"
+        }
+        if (batchSelectionMode && selectedItems.isNotEmpty()) {
+            BatchPermissionControls(
+                selectedCount = selectedItems.size,
+                selectedMode = selectedBatchMode,
+                onModeChange = onBatchModeChange,
+                onApply = {
+                    onApplyPermissionBatch(
+                        selectedItems.map {
+                            PermissionBatchSelection(
+                                operationName = it.operationName,
+                                scope = it.scope,
+                            )
+                        },
+                    )
                 },
-            ) { _, item ->
-                AppOpListItem(
-                    item = item,
-                    isApplying =
-                        applyingRequest?.matches(item) == true,
-                    editEnabled =
-                        applyingRequest == null && !batchSelectionMode,
-                    selectedForBatch = if (batchSelectionMode) {
-                        item.batchSelectionKey() in selectedBatchKeys
-                    } else {
-                        null
-                    },
-                    onBatchSelectionChange = { selected ->
-                        onBatchSelectionChange(
-                            item.batchSelectionKey(),
-                            selected,
-                        )
-                    },
-                    onModeSelected = { originalMode, requestedMode ->
-                        onModeChangeRequested(
-                            item.operationName,
-                            item.scope,
-                            originalMode,
-                            requestedMode,
-                        )
-                    },
-                )
-            }
+            )
         }
     }
 }
@@ -423,31 +428,42 @@ private fun BatchPermissionControls(
     onApply: () -> Unit,
 ) {
     var modeMenuExpanded by remember { mutableStateOf(false) }
+    val modeDescription = stringResource(
+        R.string.batch_apply_mode_value,
+        batchModeLabel(selectedMode),
+    )
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shadowElevation = 4.dp,
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringResource(
-                    R.string.batch_selected_count,
-                    selectedCount,
-                ),
+                text = stringResource(R.string.batch_selected_count, selectedCount),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
-            Box(modifier = Modifier.fillMaxWidth()) {
+            Box {
                 OutlinedButton(
                     onClick = { modeMenuExpanded = true },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.semantics { contentDescription = modeDescription },
+                    contentPadding = PaddingValues(horizontal = 12.dp),
                 ) {
                     Text(
-                        text = stringResource(
-                            R.string.batch_apply_mode_value,
-                            batchModeLabel(selectedMode),
-                        ),
+                        text = batchModeLabel(selectedMode),
+                        maxLines = 1,
+                    )
+                    Icon(
+                        painter = painterResource(R.drawable.ic_ph_caret_right),
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp).rotate(90f),
                     )
                 }
                 DropdownMenu(
@@ -466,12 +482,11 @@ private fun BatchPermissionControls(
                     }
                 }
             }
-            FilledTonalButton(
+            Button(
                 onClick = onApply,
-                enabled = selectedCount > 0,
-                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 12.dp),
             ) {
-                Text(text = stringResource(R.string.action_apply))
+                Text(text = stringResource(R.string.batch_apply_short))
             }
         }
     }
