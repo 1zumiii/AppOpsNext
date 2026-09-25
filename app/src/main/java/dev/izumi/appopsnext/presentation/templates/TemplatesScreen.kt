@@ -25,6 +25,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -37,7 +40,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -68,6 +70,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.presentation.components.AppBottomSheet
+import dev.izumi.appopsnext.presentation.components.CompactSearchField
+import dev.izumi.appopsnext.presentation.components.CompactTextField
 import dev.izumi.appopsnext.ui.theme.mainPageHeadingWeight
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
@@ -259,17 +263,21 @@ fun TemplatesScreen(
                 )
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         deleteCandidate = null
                         onDeleteTemplate(template.id)
                     },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ),
                 ) {
                     Text(text = stringResource(R.string.action_delete))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { deleteCandidate = null }) {
+                OutlinedButton(onClick = { deleteCandidate = null }) {
                     Text(text = stringResource(R.string.action_cancel))
                 }
             },
@@ -294,7 +302,7 @@ fun TemplatesScreen(
                 )
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = { showNewAppPolicyInfo = false },
                 ) {
                     Text(text = stringResource(R.string.action_got_it))
@@ -826,7 +834,6 @@ private fun TemplateRuleItem(
             Spacer(Modifier.height(4.dp))
             TemplateSettingRow(
                 title = stringResource(R.string.template_mode_title),
-                description = stringResource(R.string.template_mode_detail),
             ) {
                 ModeMenu(
                     mode = rule.mode,
@@ -848,28 +855,18 @@ private fun ruleItemKey(operationName: String): String =
 @Composable
 private fun TemplateSettingRow(
     title: String,
-    description: String,
     menu: @Composable () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
+        Text(
+            text = title,
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = title,
-                fontWeight = FontWeight.Medium,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                text = description,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
+            fontWeight = FontWeight.Medium,
+            style = MaterialTheme.typography.bodyMedium,
+        )
         menu()
     }
 }
@@ -922,18 +919,15 @@ private fun CreateTemplateDialog(
             Text(text = stringResource(R.string.template_create_title))
         },
         text = {
-            OutlinedTextField(
+            CompactTextField(
                 value = name,
                 onValueChange = { name = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = {
-                    Text(text = stringResource(R.string.template_name))
-                },
-                singleLine = true,
+                label = stringResource(R.string.template_name),
             )
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = { onCreate(name) },
                 enabled = name.isNotBlank(),
             ) {
@@ -941,7 +935,7 @@ private fun CreateTemplateDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            OutlinedButton(onClick = onDismiss) {
                 Text(text = stringResource(R.string.action_cancel))
             }
         },
@@ -1015,18 +1009,11 @@ private fun PermissionManagerDialog(
         },
         text = {
             Column {
-                OutlinedTextField(
+                CompactSearchField(
                     value = query,
                     onValueChange = { query = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = {
-                        Text(
-                            text = stringResource(
-                                R.string.template_permission_search,
-                            ),
-                        )
-                    },
-                    singleLine = true,
+                    label = stringResource(R.string.template_permission_search),
                 )
                 LazyColumn(
                     modifier = Modifier
@@ -1075,7 +1062,7 @@ private fun PermissionManagerDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = {
                     val currentOrder = currentRules
                         .map(PermissionTemplateRule::stableOperationName)
@@ -1094,7 +1081,7 @@ private fun PermissionManagerDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            OutlinedButton(onClick = onDismiss) {
                 Text(text = stringResource(R.string.action_cancel))
             }
         },

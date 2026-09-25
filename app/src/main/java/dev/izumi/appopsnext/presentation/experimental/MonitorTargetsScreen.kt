@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -14,11 +16,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.presentation.components.AppBottomSheet
+import dev.izumi.appopsnext.presentation.components.CompactSearchField
 import dev.izumi.appopsnext.apps.AppListFilter
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.monitor.AppOpCodes
@@ -93,14 +94,13 @@ fun MonitorTargetsScreen(
                 )
             }
             item {
-                OutlinedTextField(
+                CompactSearchField(
                     value = query,
                     onValueChange = { query = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
-                    label = { Text(text = stringResource(R.string.monitor_targets_search)) },
-                    singleLine = true,
+                    label = stringResource(R.string.monitor_targets_search),
                 )
             }
             if (watched.isNotEmpty()) {
@@ -234,7 +234,7 @@ fun MonitorOperationsScreen(
             title = { Text(text = stringResource(R.string.monitor_all_ops_warning_title)) },
             text = { Text(text = stringResource(R.string.monitor_all_ops_warning_text)) },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         warning = false
                         onShowAllChange(true)
@@ -244,7 +244,7 @@ fun MonitorOperationsScreen(
                 }
             },
             dismissButton = {
-                TextButton(
+                OutlinedButton(
                     onClick = {
                         warning = false
                         onSuppressWarning()

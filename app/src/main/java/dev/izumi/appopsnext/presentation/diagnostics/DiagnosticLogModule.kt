@@ -13,12 +13,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -112,13 +113,13 @@ private fun DiagnosticReportDialog(
                         )
                     }
                 }
-                TextButton(onClick = onClear) {
+                OutlinedButton(onClick = onClear) {
                     Text(text = stringResource(R.string.diagnostic_log_clear))
                 }
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = {
                     copyDiagnosticReport(context, report)
                 },
@@ -128,7 +129,7 @@ private fun DiagnosticReportDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            OutlinedButton(onClick = onDismiss) {
                 Text(text = stringResource(R.string.action_dismiss))
             }
         },

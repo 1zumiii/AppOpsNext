@@ -14,9 +14,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -25,7 +28,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Switch
@@ -300,7 +302,7 @@ fun SavedHistoryScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showHelp = false }) {
+                Button(onClick = { showHelp = false }) {
                     Text(text = stringResource(R.string.action_dismiss))
                 }
             },
@@ -345,17 +347,20 @@ fun SavedHistoryScreen(
                 )
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         confirming = null
                         onDeleteSavedHistory(deletion.range)
                     },
                     enabled = deletion.unreadable || deletion.count > 0,
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ),
                 ) { Text(text = stringResource(R.string.action_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirming = null }) {
+                OutlinedButton(onClick = { confirming = null }) {
                     Text(text = stringResource(R.string.action_cancel))
                 }
             },
@@ -447,7 +452,7 @@ private fun SavedHistoryDatePicker(
     AppBottomSheet(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = {
                     state.selectedDateMillis?.let { onConfirm(LocalDate.ofEpochDay(Math.floorDiv(it, MILLIS_PER_DAY))) }
                 },
@@ -455,9 +460,18 @@ private fun SavedHistoryDatePicker(
             ) { Text(text = stringResource(R.string.action_confirm)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(text = stringResource(R.string.action_cancel)) }
+            OutlinedButton(onClick = onDismiss) { Text(text = stringResource(R.string.action_cancel)) }
         },
-        text = { DatePicker(state = state, modifier = Modifier.fillMaxWidth()) },
+        bodyHorizontalPadding = 0.dp,
+        text = {
+            DatePicker(
+                state = state,
+                modifier = Modifier.fillMaxWidth(),
+                colors = DatePickerDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
+            )
+        },
     )
 }
 

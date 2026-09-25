@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -19,7 +21,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -153,16 +154,19 @@ fun MonitorLogScreen(
             title = { Text(text = stringResource(R.string.monitor_log_clear)) },
             text = { Text(text = stringResource(R.string.monitor_log_clear_confirm, entries.size)) },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         confirmingClear = false
                         onClear()
                     },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ),
                 ) { Text(text = stringResource(R.string.action_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmingClear = false }) {
+                OutlinedButton(onClick = { confirmingClear = false }) {
                     Text(text = stringResource(R.string.action_cancel))
                 }
             },
