@@ -56,6 +56,7 @@ import dev.izumi.appopsnext.settings.AppLanguage
 import dev.izumi.appopsnext.presentation.templates.TemplatesScreen
 import dev.izumi.appopsnext.presentation.templates.TemplatesUiState
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
+import dev.izumi.appopsnext.ui.theme.MainPageTypography
 import java.time.ZoneId
 
 @Composable
@@ -421,113 +422,125 @@ fun AppOpsRootScreen(
             onPermissionBatchRequested = onPermissionBatchRequested,
         )
     } else {
-        when (selectedDestination) {
-            MainDestination.APPS -> AppListScreen(
-                uiState = appListUiState,
-                onSearchQueryChange = onAppSearchQueryChange,
-                onRefresh = onRefreshApps,
-                onAppSelected = { app ->
-                    focusManager.clearFocus()
-                    keyboardController?.hide()
-                    selectedApp = app
-                    onAppSelected(app)
-                },
-                templates = templatesUiState.templates,
-                onTemplateApplyRequested = onTemplateApplyRequested,
-                bottomBar = navigationBar,
-            )
+        val destinationContent: @Composable () -> Unit = {
+            when (selectedDestination) {
+                MainDestination.APPS -> AppListScreen(
+                    uiState = appListUiState,
+                    onSearchQueryChange = onAppSearchQueryChange,
+                    onRefresh = onRefreshApps,
+                    onAppSelected = { app ->
+                        focusManager.clearFocus()
+                        keyboardController?.hide()
+                        selectedApp = app
+                        onAppSelected(app)
+                    },
+                    templates = templatesUiState.templates,
+                    onTemplateApplyRequested = onTemplateApplyRequested,
+                    bottomBar = navigationBar,
+                )
 
-            MainDestination.TEMPLATES -> TemplatesScreen(
-                uiState = templatesUiState,
-                onCreateTemplate = onCreateTemplate,
-                onSelectTemplate = onSelectTemplate,
-                onCloseEditor = onCloseTemplateEditor,
-                onDeleteTemplate = onDeleteTemplate,
-                onRuleModeChange = onTemplateRuleModeChange,
-                onRuleSelectionChange = onTemplateRuleSelectionChange,
-                onRuleOrderChange = onTemplateRuleOrderChange,
-                onAutoApplyNewAppTemplateChange =
-                    onAutoApplyNewAppTemplateChange,
-                bottomBar = navigationBar,
-            )
+                MainDestination.TEMPLATES -> TemplatesScreen(
+                    uiState = templatesUiState,
+                    onCreateTemplate = onCreateTemplate,
+                    onSelectTemplate = onSelectTemplate,
+                    onCloseEditor = onCloseTemplateEditor,
+                    onDeleteTemplate = onDeleteTemplate,
+                    onRuleModeChange = onTemplateRuleModeChange,
+                    onRuleSelectionChange = onTemplateRuleSelectionChange,
+                    onRuleOrderChange = onTemplateRuleOrderChange,
+                    onAutoApplyNewAppTemplateChange =
+                        onAutoApplyNewAppTemplateChange,
+                    bottomBar = navigationBar,
+                )
 
-            MainDestination.HISTORY -> {
-                if (selectedHistoryPermission == null) {
-                    HistoryOverviewScreen(
-                        uiState = historyUiState,
-                        timeRange = effectiveHistoryRange,
-                        onTimeRangeChange = { historyTimeRange = it },
-                        onRefresh = onRefreshHistory,
-                        onPermissionSelected = { permission ->
-                            selectedHistoryPermissionName =
-                                permission.shellOperationName
-                            showHistoryAppStatistics = false
-                            historyAppFilter = null
-                        },
-                        onPermissionsChanged = onHistoryPermissionsChanged,
-                        onPermissionOrderChanged =
-                            onHistoryPermissionOrderChanged,
-                        bottomBar = navigationBar,
-                    )
-                } else if (showHistoryAppStatistics) {
-                    HistoryAppStatisticsScreen(
-                        history = historyUiState.permissions.firstOrNull {
-                            it.permission == selectedHistoryPermission
-                        }?.let {
-                            // The same apps the detail page counted, so its app count
-                            // and this list cannot disagree while a filter is active.
-                            HistoryFilter.apply(
-                                it, effectiveHistoryRange, historyAppFilter,
-                                System.currentTimeMillis(), ZoneId.systemDefault(),
-                            )
-                        },
-                        onBack = {
-                            showHistoryAppStatistics = false
-                        },
-                        onAppSelected = { app ->
-                            selectedApp = app
-                            onAppSelected(app)
-                        },
-                    )
-                } else {
-                    PermissionHistoryDetailScreen(
-                        permission = selectedHistoryPermission,
-                        history = historyUiState.permissions.firstOrNull {
-                            it.permission == selectedHistoryPermission
-                        },
-                        isLoading = historyUiState.isLoading,
-                        savingIndividualRecords = historyUiState.saveIndividualHistory,
-                        timeRange = effectiveHistoryRange,
-                        onTimeRangeChange = { historyTimeRange = it },
-                        appFilter = historyAppFilter,
-                        onAppFilterChange = { historyAppFilter = it },
-                        onBack = {
-                            selectedHistoryPermissionName = null
-                        },
-                        onAppsSelected = {
-                            showHistoryAppStatistics = true
-                        },
-                        onAppSelected = { app ->
-                            selectedApp = app
-                            onAppSelected(app)
-                        },
-                    )
+                MainDestination.HISTORY -> {
+                    if (selectedHistoryPermission == null) {
+                        HistoryOverviewScreen(
+                            uiState = historyUiState,
+                            timeRange = effectiveHistoryRange,
+                            onTimeRangeChange = { historyTimeRange = it },
+                            onRefresh = onRefreshHistory,
+                            onPermissionSelected = { permission ->
+                                selectedHistoryPermissionName =
+                                    permission.shellOperationName
+                                showHistoryAppStatistics = false
+                                historyAppFilter = null
+                            },
+                            onPermissionsChanged = onHistoryPermissionsChanged,
+                            onPermissionOrderChanged =
+                                onHistoryPermissionOrderChanged,
+                            bottomBar = navigationBar,
+                        )
+                    } else if (showHistoryAppStatistics) {
+                        HistoryAppStatisticsScreen(
+                            history = historyUiState.permissions.firstOrNull {
+                                it.permission == selectedHistoryPermission
+                            }?.let {
+                                // The same apps the detail page counted, so its app count
+                                // and this list cannot disagree while a filter is active.
+                                HistoryFilter.apply(
+                                    it, effectiveHistoryRange, historyAppFilter,
+                                    System.currentTimeMillis(), ZoneId.systemDefault(),
+                                )
+                            },
+                            onBack = {
+                                showHistoryAppStatistics = false
+                            },
+                            onAppSelected = { app ->
+                                selectedApp = app
+                                onAppSelected(app)
+                            },
+                        )
+                    } else {
+                        PermissionHistoryDetailScreen(
+                            permission = selectedHistoryPermission,
+                            history = historyUiState.permissions.firstOrNull {
+                                it.permission == selectedHistoryPermission
+                            },
+                            isLoading = historyUiState.isLoading,
+                            savingIndividualRecords = historyUiState.saveIndividualHistory,
+                            timeRange = effectiveHistoryRange,
+                            onTimeRangeChange = { historyTimeRange = it },
+                            appFilter = historyAppFilter,
+                            onAppFilterChange = { historyAppFilter = it },
+                            onBack = {
+                                selectedHistoryPermissionName = null
+                            },
+                            onAppsSelected = {
+                                showHistoryAppStatistics = true
+                            },
+                            onAppSelected = { app ->
+                                selectedApp = app
+                                onAppSelected(app)
+                            },
+                        )
+                    }
                 }
-            }
 
-            MainDestination.SETTINGS -> SettingsScreen(
-                uiState = settingsUiState,
-                diagnosticsUiState = diagnosticsUiState,
-                onHideSystemAppsChange = onHideSystemAppsChange,
-                onOpenSavedHistory = { showSavedHistory = true },
-                onOpenExperimental = { experimentalRoute = ROUTE_EXPERIMENTAL },
-                onCheckForUpdate = onCheckForUpdate,
-                onAppLanguageChange = onAppLanguageChange,
-                onShizukuAction = onShizukuAction,
-                onPrivilegedServiceRetry = onPrivilegedServiceRetry,
-                onClearDiagnosticLog = onClearDiagnosticLog,
-                bottomBar = navigationBar,
-            )
+                MainDestination.SETTINGS -> SettingsScreen(
+                    uiState = settingsUiState,
+                    diagnosticsUiState = diagnosticsUiState,
+                    onHideSystemAppsChange = onHideSystemAppsChange,
+                    onOpenSavedHistory = { showSavedHistory = true },
+                    onOpenExperimental = { experimentalRoute = ROUTE_EXPERIMENTAL },
+                    onCheckForUpdate = onCheckForUpdate,
+                    onAppLanguageChange = onAppLanguageChange,
+                    onShizukuAction = onShizukuAction,
+                    onPrivilegedServiceRetry = onPrivilegedServiceRetry,
+                    onClearDiagnosticLog = onClearDiagnosticLog,
+                    bottomBar = navigationBar,
+                )
+            }
+        }
+        val isMainPage = when (selectedDestination) {
+            MainDestination.APPS, MainDestination.SETTINGS -> true
+            MainDestination.TEMPLATES -> templatesUiState.selectedTemplate == null
+            MainDestination.HISTORY -> selectedHistoryPermission == null
+        }
+        if (isMainPage) {
+            MainPageTypography(content = destinationContent)
+        } else {
+            destinationContent()
         }
     }
 

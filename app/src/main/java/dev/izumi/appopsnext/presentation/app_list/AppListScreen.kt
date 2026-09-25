@@ -47,6 +47,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.ui.theme.mainPageHeadingWeight
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.presentation.batch.TemplatePickerDialog
 import dev.izumi.appopsnext.presentation.components.AppIcon
@@ -77,7 +78,7 @@ fun AppListScreen(
                 title = {
                     Text(
                         text = stringResource(R.string.app_list_title),
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = mainPageHeadingWeight(),
                     )
                 },
                 actions = {
@@ -90,9 +91,9 @@ fun AppListScreen(
                         Icon(
                             painter = painterResource(
                                 if (batchSelectionMode) {
-                                    R.drawable.ic_action_close
+                                    R.drawable.ic_ph_x
                                 } else {
-                                    R.drawable.ic_action_batch
+                                    R.drawable.ic_ph_selection
                                 },
                             ),
                             contentDescription = stringResource(
@@ -218,7 +219,7 @@ private fun AppListContent(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_action_search),
+                            painter = painterResource(R.drawable.ic_ph_magnifying_glass),
                             contentDescription = null,
                             modifier = Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,

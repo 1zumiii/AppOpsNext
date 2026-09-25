@@ -45,7 +45,7 @@ fun DiagnosticLogModule(
     ListItem(
         modifier = modifier.clickable { showReport = true },
         leadingContent = {
-            MainPageEntryIcon(R.drawable.ic_navigation_templates)
+            MainPageEntryIcon(R.drawable.ic_ph_file_text)
         },
         headlineContent = {
             Text(text = stringResource(R.string.diagnostic_log_title))

@@ -202,8 +202,9 @@ AppOpsNext 是自由软件：你可以依据自由软件基金会发布的 GNU �
 
 Copyright (C) 2026 1zumiii.
 
-第三方组件保留各自的授权：Shizuku API 为 MIT，AndroidX 与 Jetpack Compose
-为 Apache-2.0，两者均与 GPL-3.0 兼容。
+第三方组件保留各自的授权：Shizuku API 和 Phosphor Icons 为 MIT，AndroidX 与
+Jetpack Compose 为 Apache-2.0，均与 GPL-3.0 兼容。Phosphor 的许可声明位于
+`app/src/main/assets/licenses/phosphor-icons.txt`。
 
 ## 项目背景
 

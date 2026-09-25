@@ -16,22 +16,27 @@ import dev.izumi.appopsnext.R
 enum class MainDestination(
     @StringRes val labelRes: Int,
     @DrawableRes val iconRes: Int,
+    @DrawableRes val selectedIconRes: Int,
 ) {
     APPS(
         labelRes = R.string.navigation_apps,
-        iconRes = R.drawable.ic_navigation_apps,
+        iconRes = R.drawable.ic_ph_squares_four,
+        selectedIconRes = R.drawable.ic_ph_squares_four_fill,
     ),
     TEMPLATES(
         labelRes = R.string.navigation_templates,
-        iconRes = R.drawable.ic_navigation_templates,
+        iconRes = R.drawable.ic_ph_file_text,
+        selectedIconRes = R.drawable.ic_ph_file_text_fill,
     ),
     HISTORY(
         labelRes = R.string.navigation_history,
-        iconRes = R.drawable.ic_navigation_history,
+        iconRes = R.drawable.ic_ph_clock_counter_clockwise,
+        selectedIconRes = R.drawable.ic_ph_clock_counter_clockwise_fill,
     ),
     SETTINGS(
         labelRes = R.string.navigation_settings,
-        iconRes = R.drawable.ic_navigation_settings_gear,
+        iconRes = R.drawable.ic_ph_gear,
+        selectedIconRes = R.drawable.ic_ph_gear_fill,
     ),
 }
 
@@ -50,7 +55,13 @@ fun AppNavigationBar(
                 onClick = { onDestinationSelected(destination) },
                 icon = {
                     Icon(
-                        painter = painterResource(destination.iconRes),
+                        painter = painterResource(
+                            if (destination == selectedDestination) {
+                                destination.selectedIconRes
+                            } else {
+                                destination.iconRes
+                            },
+                        ),
                         contentDescription = stringResource(
                             destination.labelRes,
                         ),

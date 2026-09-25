@@ -69,6 +69,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.ui.theme.mainPageHeadingWeight
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 import dev.izumi.appopsnext.presentation.app_detail.KnownAppOp
@@ -133,7 +134,11 @@ fun TemplatesScreen(
                             ?: stringResource(R.string.templates_title),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = if (selectedTemplate == null) {
+                            mainPageHeadingWeight()
+                        } else {
+                            FontWeight.SemiBold
+                        },
                     )
                 },
                 navigationIcon = {
@@ -155,7 +160,7 @@ fun TemplatesScreen(
                         IconButton(onClick = { showCreateDialog = true }) {
                             Icon(
                                 painter = painterResource(
-                                    R.drawable.ic_action_add,
+                                    R.drawable.ic_ph_plus,
                                 ),
                                 contentDescription = stringResource(
                                     R.string.template_create_title,
@@ -404,7 +409,7 @@ private fun NewAppPolicyCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MainPageEntryIcon(
-                    iconRes = R.drawable.ic_navigation_templates,
+                    iconRes = R.drawable.ic_ph_file_text,
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
@@ -424,7 +429,7 @@ private fun NewAppPolicyCard(
                 }
                 IconButton(onClick = onEdit) {
                     Icon(
-                        painter = painterResource(R.drawable.ic_action_edit),
+                        painter = painterResource(R.drawable.ic_ph_pencil_simple),
                         contentDescription = stringResource(R.string.action_edit),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -477,7 +482,7 @@ private fun CustomTemplateCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             MainPageEntryIcon(
-                iconRes = R.drawable.ic_action_edit_list,
+                iconRes = R.drawable.ic_ph_note_pencil,
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
             )
