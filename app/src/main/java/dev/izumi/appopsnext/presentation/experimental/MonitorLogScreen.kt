@@ -17,7 +17,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -82,7 +81,7 @@ fun MonitorLogScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_arrow_back),
+                            painter = painterResource(R.drawable.ic_ph_arrow_left),
                             contentDescription = stringResource(R.string.action_back),
                         )
                     }
@@ -90,7 +89,7 @@ fun MonitorLogScreen(
                 actions = {
                     IconButton(onClick = { confirmingClear = true }, enabled = entries.isNotEmpty()) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_action_delete),
+                            painter = painterResource(R.drawable.ic_ph_trash),
                             contentDescription = stringResource(R.string.monitor_log_clear),
                         )
                     }
@@ -200,7 +199,7 @@ private fun AccessRow(
     val time = remember(entry.timeMillis, zoneId) {
         Instant.ofEpochMilli(entry.timeMillis).atZone(zoneId).toLocalTime().format(TIME_FORMAT)
     }
-    ListItem(
+    ExperimentalListRow(
         modifier = if (app != null) Modifier.clickable { onOpenApp(app) } else Modifier,
         leadingContent = { AppIcon(packageName = entry.packageName, appLabel = label) },
         headlineContent = { Text(text = label) },

@@ -1,13 +1,15 @@
 package dev.izumi.appopsnext.presentation.experimental
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -17,7 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.presentation.components.MainPageChevron
 
 /**
  * Everything that configures the monitor, gathered behind one entry.
@@ -49,7 +53,7 @@ fun MonitorSettingsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_arrow_back),
+                            painter = painterResource(R.drawable.ic_ph_arrow_left),
                             contentDescription = stringResource(R.string.action_back),
                         )
                     }
@@ -57,14 +61,17 @@ fun MonitorSettingsScreen(
             )
         },
     ) { contentPadding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(contentPadding),
+                .padding(contentPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(top = 12.dp, bottom = 16.dp),
         ) {
-            item {
-                ListItem(
+            ExperimentalGroup {
+                ExperimentalGroupRow(
                     modifier = Modifier.clickable(onClick = onOpenTargets),
+                    leadingContent = { ExperimentalRowIcon(R.drawable.ic_ph_user) },
                     headlineContent = {
                         Text(text = stringResource(R.string.monitor_targets_title))
                     },
@@ -80,11 +87,12 @@ fun MonitorSettingsScreen(
                             },
                         )
                     },
+                    trailingContent = { MainPageChevron() },
                 )
-            }
-            item {
-                ListItem(
+                HorizontalDivider(modifier = Modifier.padding(start = 56.dp, end = 16.dp))
+                ExperimentalGroupRow(
                     modifier = Modifier.clickable(onClick = onOpenPoints),
+                    leadingContent = { ExperimentalRowIcon(R.drawable.ic_ph_list_checks) },
                     headlineContent = {
                         Text(text = stringResource(R.string.monitor_points_title))
                     },
@@ -100,21 +108,23 @@ fun MonitorSettingsScreen(
                             },
                         )
                     },
+                    trailingContent = { MainPageChevron() },
                 )
-            }
-            item {
-                ListItem(
+                HorizontalDivider(modifier = Modifier.padding(start = 56.dp, end = 16.dp))
+                ExperimentalGroupRow(
                     modifier = Modifier.clickable(onClick = onOpenExamples),
+                    leadingContent = { ExperimentalRowIcon(R.drawable.ic_ph_info) },
                     headlineContent = {
                         Text(text = stringResource(R.string.monitor_examples_entry))
                     },
                     supportingContent = {
                         Text(text = stringResource(R.string.monitor_examples_summary))
                     },
+                    trailingContent = { MainPageChevron() },
                 )
-            }
-            item {
-                ListItem(
+                HorizontalDivider(modifier = Modifier.padding(start = 56.dp, end = 16.dp))
+                ExperimentalGroupRow(
+                    leadingContent = { ExperimentalRowIcon(R.drawable.ic_ph_gear) },
                     headlineContent = {
                         Text(text = stringResource(R.string.monitor_heads_up_title))
                     },

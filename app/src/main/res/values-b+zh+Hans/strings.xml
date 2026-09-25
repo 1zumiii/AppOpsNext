@@ -355,6 +355,10 @@
     <string name="monitor_title">访问监测</string>
     <string name="monitor_summary">选定的应用使用指定权限时发出通知，每次访问都会记录下来。</string>
     <string name="monitor_notification_required">此功能的访问提醒需要开启通知权限才能生效。请同时保持监测相关通知类别开启。</string>
+    <string name="monitor_notification_summary">访问提醒需要通知权限，并保持监测通知类别开启。</string>
+    <string name="monitor_about_title">关于访问监测</string>
+    <string name="experimental_monitor_section">监测</string>
+    <string name="experimental_diagnostics_section">诊断</string>
     <string name="monitor_open_notification_settings">打开通知设置</string>
     <string name="monitor_explainer">启用时会检查系统监听注册。找到匹配注册不代表事件一定能够送达，检测到回调解析异常时会在此显示。功能依赖设备支持，运行期间会保留常驻通知。</string>
     <string name="monitor_checking">正在自检…</string>

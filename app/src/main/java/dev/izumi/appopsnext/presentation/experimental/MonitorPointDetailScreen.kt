@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -20,7 +21,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -89,7 +89,7 @@ fun MonitorPointDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_arrow_back),
+                            painter = painterResource(R.drawable.ic_ph_arrow_left),
                             contentDescription = stringResource(R.string.action_back),
                         )
                     }
@@ -101,7 +101,8 @@ fun MonitorPointDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(contentPadding)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = 16.dp),
         ) {
             if (!enabled) {
                 Text(
@@ -111,70 +112,75 @@ fun MonitorPointDetailScreen(
                     color = MaterialTheme.colorScheme.error,
                 )
             }
-            ListItem(
-                headlineContent = {
-                    Text(text = stringResource(R.string.monitor_point_throttle_title))
-                },
-                supportingContent = {
-                    Text(text = stringResource(R.string.monitor_point_throttle_summary))
-                },
-                trailingContent = {
-                    Switch(
-                        checked = point.settings.throttleSeconds != null,
-                        enabled = enabled,
-                        onCheckedChange = { on ->
-                            // The field is about to be removed, so the keyboard it
-                            // opened has to go with it.
-                            focusManager.clearFocus()
-                            onThrottleChange(if (on) MonitorThrottles.DEFAULT_SECONDS else null)
-                        },
-                    )
-                },
-            )
-            point.settings.throttleSeconds?.let { seconds ->
-                IntervalRow(seconds = seconds, enabled = enabled, onChange = onThrottleChange)
+            ExperimentalGroup {
+                ExperimentalGroupRow(
+                    headlineContent = {
+                        Text(text = stringResource(R.string.monitor_point_throttle_title))
+                    },
+                    supportingContent = {
+                        Text(text = stringResource(R.string.monitor_point_throttle_summary))
+                    },
+                    trailingContent = {
+                        Switch(
+                            checked = point.settings.throttleSeconds != null,
+                            enabled = enabled,
+                            onCheckedChange = { on ->
+                                // The field is about to be removed, so the keyboard it
+                                // opened has to go with it.
+                                focusManager.clearFocus()
+                                onThrottleChange(if (on) MonitorThrottles.DEFAULT_SECONDS else null)
+                            },
+                        )
+                    },
+                )
+                point.settings.throttleSeconds?.let { seconds ->
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    IntervalRow(seconds = seconds, enabled = enabled, onChange = onThrottleChange)
+                }
             }
-            HorizontalDivider()
-            ChoiceRow(
-                title = stringResource(R.string.monitor_point_alert_title),
-                summary = stringResource(R.string.monitor_point_alert_summary),
-                selected = monitorAlertLabel(point.settings.headsUp),
-                enabled = enabled,
-                choices = listOf(
-                    monitorAlertLabel(null) to null,
-                    monitorAlertLabel(false) to false,
-                    monitorAlertLabel(true) to true,
-                ),
-                onSelected = onHeadsUpChange,
-            )
-            HorizontalDivider()
-            ChoiceRow(
-                title = stringResource(R.string.monitor_point_outcome_title),
-                summary = stringResource(R.string.monitor_point_outcome_summary),
-                selected = monitorOutcomesLabel(point.settings.outcomes, includeAll = true)
-                    ?: "",
-                enabled = enabled,
-                choices = MonitorOutcomes.entries.map { outcome ->
-                    (monitorOutcomesLabel(outcome, includeAll = true) ?: "") to outcome
-                },
-                onSelected = onOutcomesChange,
-            )
-            HorizontalDivider()
-            ListItem(
-                headlineContent = {
-                    Text(text = stringResource(R.string.monitor_point_background_title))
-                },
-                supportingContent = {
-                    Text(text = stringResource(R.string.monitor_point_background_summary))
-                },
-                trailingContent = {
-                    Switch(
-                        checked = point.settings.backgroundOnly,
-                        enabled = enabled,
-                        onCheckedChange = onBackgroundOnlyChange,
-                    )
-                },
-            )
+            Spacer(Modifier.height(12.dp))
+            ExperimentalGroup {
+                ChoiceRow(
+                    title = stringResource(R.string.monitor_point_alert_title),
+                    summary = stringResource(R.string.monitor_point_alert_summary),
+                    selected = monitorAlertLabel(point.settings.headsUp),
+                    enabled = enabled,
+                    choices = listOf(
+                        monitorAlertLabel(null) to null,
+                        monitorAlertLabel(false) to false,
+                        monitorAlertLabel(true) to true,
+                    ),
+                    onSelected = onHeadsUpChange,
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                ChoiceRow(
+                    title = stringResource(R.string.monitor_point_outcome_title),
+                    summary = stringResource(R.string.monitor_point_outcome_summary),
+                    selected = monitorOutcomesLabel(point.settings.outcomes, includeAll = true)
+                        ?: "",
+                    enabled = enabled,
+                    choices = MonitorOutcomes.entries.map { outcome ->
+                        (monitorOutcomesLabel(outcome, includeAll = true) ?: "") to outcome
+                    },
+                    onSelected = onOutcomesChange,
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                ExperimentalGroupRow(
+                    headlineContent = {
+                        Text(text = stringResource(R.string.monitor_point_background_title))
+                    },
+                    supportingContent = {
+                        Text(text = stringResource(R.string.monitor_point_background_summary))
+                    },
+                    trailingContent = {
+                        Switch(
+                            checked = point.settings.backgroundOnly,
+                            enabled = enabled,
+                            onCheckedChange = onBackgroundOnlyChange,
+                        )
+                    },
+                )
+            }
         }
     }
 }
@@ -190,7 +196,7 @@ private fun <T> ChoiceRow(
     onSelected: (T) -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
-    ListItem(
+    ExperimentalGroupRow(
         headlineContent = { Text(text = title) },
         supportingContent = { Text(text = summary) },
         trailingContent = {
@@ -229,40 +235,39 @@ private fun IntervalRow(seconds: Int, enabled: Boolean, onChange: (Int) -> Unit)
         if (updated != null && MonitorThrottles.isValid(updated)) onChange(updated)
     }
 
-    ListItem(
-        headlineContent = { Text(text = stringResource(R.string.monitor_point_interval_title)) },
-        supportingContent = if (valid) {
-            null
-        } else {
-            {
-                Text(
-                    text = stringResource(
-                        R.string.monitor_throttle_invalid,
-                        MonitorThrottles.MAX_SECONDS / 60,
-                    ),
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
-        },
-        trailingContent = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                IntervalField(
-                    value = minutes,
-                    unit = stringResource(R.string.monitor_throttle_minutes),
-                    enabled = enabled,
-                    isError = !valid,
-                    onValueChange = { edited(it, secondsField) },
-                )
-                IntervalField(
-                    value = secondsField,
-                    unit = stringResource(R.string.monitor_throttle_seconds),
-                    enabled = enabled,
-                    isError = !valid,
-                    onValueChange = { edited(minutes, it) },
-                )
+    ExperimentalGroupRow(
+        headlineContent = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(text = stringResource(R.string.monitor_point_interval_title))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    IntervalField(
+                        value = minutes,
+                        unit = stringResource(R.string.monitor_throttle_minutes),
+                        enabled = enabled,
+                        isError = !valid,
+                        onValueChange = { edited(it, secondsField) },
+                    )
+                    IntervalField(
+                        value = secondsField,
+                        unit = stringResource(R.string.monitor_throttle_seconds),
+                        enabled = enabled,
+                        isError = !valid,
+                        onValueChange = { edited(minutes, it) },
+                    )
+                }
+                if (!valid) {
+                    Text(
+                        text = stringResource(
+                            R.string.monitor_throttle_invalid,
+                            MonitorThrottles.MAX_SECONDS / 60,
+                        ),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         },
     )

@@ -6,10 +6,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -25,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.monitor.MonitorPointSettings
 import dev.izumi.appopsnext.presentation.components.AppIcon
+import dev.izumi.appopsnext.presentation.components.MainPageChevron
 
 /** One monitoring point as the list and the detail page need to show it. */
 data class MonitorPointRow(
@@ -69,7 +68,7 @@ fun MonitorPointsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_arrow_back),
+                            painter = painterResource(R.drawable.ic_ph_arrow_left),
                             contentDescription = stringResource(R.string.action_back),
                         )
                     }
@@ -107,7 +106,6 @@ fun MonitorPointsScreen(
             // greyed out in place.
             if (retained.isNotEmpty()) {
                 item {
-                    HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
                     Text(
                         text = stringResource(R.string.monitor_points_retained_header),
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -127,7 +125,7 @@ fun MonitorPointsScreen(
 @Composable
 private fun PointRow(point: MonitorPointRow, onClick: () -> Unit) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
-    ListItem(
+    ExperimentalListRow(
         modifier = Modifier.clickable(onClick = onClick),
         leadingContent = {
             AppIcon(packageName = point.packageName, appLabel = point.appLabel)
@@ -149,11 +147,7 @@ private fun PointRow(point: MonitorPointRow, onClick: () -> Unit) {
             )
         },
         trailingContent = {
-            Icon(
-                painter = painterResource(R.drawable.ic_chevron_right),
-                contentDescription = null,
-                tint = muted,
-            )
+            MainPageChevron()
         },
     )
 }
