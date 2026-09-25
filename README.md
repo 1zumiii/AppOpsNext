@@ -35,6 +35,10 @@ access history, and live monitoring. It runs through
 [Report an issue](https://github.com/1zumiii/AppOpsNext/issues) ·
 [Build status](https://github.com/1zumiii/AppOpsNext/actions/workflows/ci.yml)
 
+## Preview
+
+![AppOpsNext interface preview in English](docs/Preview-en.png)
+
 ## What you can do
 
 | Area | Features |

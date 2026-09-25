@@ -22,6 +22,10 @@ AppOpsNext 借助 [Shizuku](https://shizuku.rikka.app/) 管理应用的 AppOps �
 [反馈问题](https://github.com/1zumiii/AppOpsNext/issues) ·
 [构建状态](https://github.com/1zumiii/AppOpsNext/actions/workflows/ci.yml)
 
+## 界面预览
+
+![AppOpsNext 中文界面预览](docs/Preview-zh.png)
+
 ## 主要功能
 
 | 功能 | 说明 |
