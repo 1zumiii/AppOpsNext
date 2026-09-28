@@ -83,6 +83,7 @@ fun AppDetailScreen(
     onModeChangeConfirmed: () -> Unit,
     onModeChangeDismissed: () -> Unit,
     onDenyFallbackNoticeDismissed: (Boolean) -> Unit,
+    onPermissionFlagNoticeDismissed: (Boolean) -> Unit,
     onForegroundAlternativeRequested: () -> Unit,
     templates: List<PermissionTemplate>,
     onTemplateApplyRequested:
@@ -243,6 +244,8 @@ fun AppDetailScreen(
         onDismiss = onModeChangeDismissed,
         onDenyFallbackNoticeDismiss =
             onDenyFallbackNoticeDismissed,
+        onPermissionFlagNoticeDismiss =
+            onPermissionFlagNoticeDismissed,
         onForegroundAlternativeRequested =
             onForegroundAlternativeRequested,
     )

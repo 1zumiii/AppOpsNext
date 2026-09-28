@@ -10,6 +10,16 @@ data class AdaptiveScopeModeChangeOutcome(
     val result: AppOpModeChangeResult,
     val appliedScope: AppOpScope,
     val fallbackAttempted: Boolean,
+    /** The result came from the permission's `REVOKED_COMPAT` flag. */
+    val permissionFlagApplied: Boolean = false,
+    /** See [RevokedCompatFallbackOutcome.restrictionBlocked]. */
+    val restrictionBlocked: Boolean = false,
+)
+
+/** Lets a rejected runtime-permission write retry through the permission flag. */
+class RevokedCompatRetry(
+    val operationName: String,
+    val apply: suspend (permissionName: String) -> AppOpModeChangeResult?,
 )
 
 /**
@@ -17,12 +27,49 @@ data class AdaptiveScopeModeChangeOutcome(
  *
  * UID fallback is allowed only when the UID belongs exclusively to the target
  * package. This prevents a transparent retry from changing sibling packages
- * that happen to share the same UID.
+ * that happen to share the same UID. The permission flag retry follows the
+ * same rule because the flag also covers the whole UID.
  */
 class AdaptiveScopeModeChangeExecutor(
     private val packagesForUid: (Int) -> List<String>,
 ) {
+    private val revokedCompatExecutor = RevokedCompatFallbackExecutor()
+
     suspend fun execute(
+        packageName: String,
+        uid: Int,
+        preferredScope: AppOpScope,
+        requestedMode: AppOpMode,
+        readMode: suspend (AppOpScope) -> AppOpMode?,
+        revokedCompatRetry: RevokedCompatRetry? = null,
+        applyMode: suspend (AppOpScope) -> AppOpModeChangeResult,
+    ): AdaptiveScopeModeChangeOutcome {
+        val scopeOutcome = executeScopes(
+            packageName, uid, preferredScope, requestedMode, readMode, applyMode,
+        )
+        revokedCompatRetry ?: return scopeOutcome
+
+        val flagOutcome = revokedCompatExecutor.execute(
+            operationName = revokedCompatRetry.operationName,
+            requestedMode = requestedMode,
+            canAffectUid = preferredScope == AppOpScope.UID ||
+                canUseScope(packageName, uid, AppOpScope.UID),
+            appOpsResult = scopeOutcome.result,
+            applyFlag = revokedCompatRetry.apply,
+        )
+        return scopeOutcome.copy(
+            result = flagOutcome.result,
+            appliedScope = if (flagOutcome.flagApplied) {
+                AppOpScope.UID
+            } else {
+                scopeOutcome.appliedScope
+            },
+            permissionFlagApplied = flagOutcome.flagApplied,
+            restrictionBlocked = flagOutcome.restrictionBlocked,
+        )
+    }
+
+    private suspend fun executeScopes(
         packageName: String,
         uid: Int,
         preferredScope: AppOpScope,

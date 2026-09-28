@@ -351,6 +351,34 @@ class PrivilegedServiceClient(
                 ?: throw IllegalStateException("Privileged service is unavailable")
         }
 
+    override suspend fun getPackagePermissions(
+        packageName: String,
+    ): ShellCommandResult =
+        withContext(Dispatchers.IO) {
+            executeNative { it.getPackagePermissions(packageName) }
+                ?: service?.getPackagePermissions(packageName)
+                ?: throw IllegalStateException("Privileged service is unavailable")
+        }
+
+    override suspend fun setRevokedCompat(
+        userId: Int,
+        packageName: String,
+        permissionName: String,
+        revoked: Boolean,
+    ): ShellCommandResult =
+        withContext(Dispatchers.IO) {
+            executeNative {
+                it.setRevokedCompat(userId, packageName, permissionName, revoked)
+            }
+                ?: service?.setRevokedCompat(
+                    userId,
+                    packageName,
+                    permissionName,
+                    revoked,
+                )
+                ?: throw IllegalStateException("Privileged service is unavailable")
+        }
+
     override suspend fun setPackageOpMode(
         packageName: String,
         operationName: String,

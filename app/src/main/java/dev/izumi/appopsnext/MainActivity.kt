@@ -136,6 +136,8 @@ class MainActivity : ComponentActivity() {
                         appDetailViewModel::dismissModeChange,
                     onDenyFallbackNoticeDismissed =
                         appDetailViewModel::dismissDenyFallbackNotice,
+                    onPermissionFlagNoticeDismissed =
+                        appDetailViewModel::dismissPermissionFlagNotice,
                     onForegroundAlternativeRequested =
                         appDetailViewModel::requestForegroundAlternative,
                     onHideSystemAppsChange =

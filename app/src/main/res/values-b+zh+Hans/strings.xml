@@ -91,6 +91,12 @@
     <string name="app_detail_mode_deny_fallback_dont_show">不再提示此自动回退结果</string>
     <string name="app_detail_mode_change_rejected_hint">系统未接受请求的模式。Android 运行时权限或厂商策略仍可能阻止访问。AppOps 可以限制已授予的权限，但不能额外授予权限。</string>
     <string name="app_detail_mode_allow_foreground_hint">系统未接受“允许”。如果此权限支持仅在使用应用时生效，可以手动尝试“仅前台”。</string>
+    <string name="app_detail_mode_runtime_managed_hint">在此系统上，这项 AppOp 由 Android 运行时权限统一管理，系统不接受直接修改 AppOps。</string>
+    <string name="app_detail_mode_permission_flag_title">已通过权限设为“忽略”</string>
+    <string name="app_detail_mode_permission_flag_deny">此系统不支持对这项权限设置“拒绝”，已改用“忽略”。</string>
+    <string name="app_detail_mode_permission_flag_applied">在此系统上，这项 AppOp 由 Android 运行时权限统一管理。AppOpsNext 为该权限加上了兼容撤销标记，应用仍持有权限，但 AppOp 会显示为“忽略”。</string>
+    <string name="app_detail_mode_permission_flag_settings">系统设置中可能仍显示该权限为已允许。</string>
+    <string name="app_detail_mode_permission_flag_dont_show">不再提示</string>
     <string name="app_detail_mode_try_foreground">尝试仅前台</string>
     <string name="app_detail_mode_observed">系统回读值：%1$s</string>
     <string name="app_detail_mode_phase_read_original">读取原值</string>

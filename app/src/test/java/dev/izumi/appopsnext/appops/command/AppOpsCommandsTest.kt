@@ -120,4 +120,62 @@ class AppOpsCommandsTest {
             )
         }
     }
+
+    @Test
+    fun `package permissions use a validated dumpsys argument list`() {
+        assertEquals(
+            listOf("/system/bin/dumpsys", "package", "dev.izumi.appopsnext"),
+            AppOpsCommands.getPackagePermissions("dev.izumi.appopsnext"),
+        )
+    }
+
+    @Test
+    fun `revoked compat commands name the user and only that flag`() {
+        assertEquals(
+            listOf(
+                "/system/bin/cmd",
+                "package",
+                "set-permission-flags",
+                "--user",
+                "10",
+                "dev.izumi.appopsnext",
+                "android.permission.CAMERA",
+                "revoked-compat",
+            ),
+            AppOpsCommands.setRevokedCompat(
+                userId = 10,
+                packageName = "dev.izumi.appopsnext",
+                permissionName = "android.permission.CAMERA",
+                revoked = true,
+            ),
+        )
+        assertEquals(
+            "clear-permission-flags",
+            AppOpsCommands.setRevokedCompat(
+                userId = 0,
+                packageName = "dev.izumi.appopsnext",
+                permissionName = "android.permission.CAMERA",
+                revoked = false,
+            )[2],
+        )
+    }
+
+    @Test
+    fun `revoked compat commands reject other permissions and users`() {
+        for ((userId, permission) in listOf(
+            -1 to "android.permission.CAMERA",
+            0 to "com.example.permission.CAMERA",
+            0 to "android.permission.CAMERA;id",
+            0 to "android.permission.camera",
+        )) {
+            assertThrows(IllegalArgumentException::class.java) {
+                AppOpsCommands.setRevokedCompat(
+                    userId = userId,
+                    packageName = "dev.izumi.appopsnext",
+                    permissionName = permission,
+                    revoked = true,
+                )
+            }
+        }
+    }
 }
