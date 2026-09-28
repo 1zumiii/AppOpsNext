@@ -15,6 +15,8 @@ access history, and live monitoring. It runs through
 [Report an issue](https://github.com/1zumiii/AppOpsNext/issues) ·
 [Build status](https://github.com/1zumiii/AppOpsNext/actions/workflows/ci.yml)
 
+Official APKs are published **ONLY** on GitHub Releases. No guarantee is made for APKs from any third-party source.
+
 ## Preview
 
 [![AppOpsNext interface preview in English](docs/Preview-en.png)](docs/Preview-en.png)
