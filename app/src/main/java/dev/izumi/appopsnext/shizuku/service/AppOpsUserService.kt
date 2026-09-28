@@ -62,6 +62,28 @@ class AppOpsUserService : IPrivilegedAppOpsService.Stub {
         )
     }
 
+    override fun getPackagePermissions(
+        packageName: String,
+    ): ShellCommandResult =
+        commandExecutor.execute(
+            AppOpsCommands.getPackagePermissions(packageName),
+        )
+
+    override fun setRevokedCompat(
+        userId: Int,
+        packageName: String,
+        permissionName: String,
+        revoked: Boolean,
+    ): ShellCommandResult =
+        commandExecutor.execute(
+            AppOpsCommands.setRevokedCompat(
+                userId = userId,
+                packageName = packageName,
+                permissionName = permissionName,
+                revoked = revoked,
+            ),
+        )
+
     override fun setPackageOpMode(
         packageName: String,
         operationName: String,

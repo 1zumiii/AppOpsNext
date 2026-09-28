@@ -93,6 +93,12 @@
     <string name="app_detail_mode_deny_fallback_dont_show">Do not show this automatic fallback result again</string>
     <string name="app_detail_mode_change_rejected_hint">The system did not retain the requested mode. AppOps cannot grant a capability blocked by an Android runtime permission or vendor policy, but it can further restrict a granted permission.</string>
     <string name="app_detail_mode_allow_foreground_hint">Android rejected Allow. If this permission supports while-in-use access, you can manually try Foreground only.</string>
+    <string name="app_detail_mode_runtime_managed_hint">On this system, Android manages this AppOp through the runtime permission and does not accept direct AppOps changes.</string>
+    <string name="app_detail_mode_permission_flag_title">Set to Ignore through the permission</string>
+    <string name="app_detail_mode_permission_flag_deny">This system does not accept Deny for this permission, so AppOpsNext used Ignore instead.</string>
+    <string name="app_detail_mode_permission_flag_applied">Android manages this AppOp through the runtime permission here. AppOpsNext marked the permission as revoked for compatibility, so the app keeps the permission but the AppOp reads Ignore.</string>
+    <string name="app_detail_mode_permission_flag_settings">System settings may still show the permission as allowed.</string>
+    <string name="app_detail_mode_permission_flag_dont_show">Do not show this again</string>
     <string name="app_detail_mode_try_foreground">Try Foreground only</string>
     <string name="app_detail_mode_observed">System read-back value: %1$s</string>
     <string name="app_detail_mode_phase_read_original">Read original value</string>

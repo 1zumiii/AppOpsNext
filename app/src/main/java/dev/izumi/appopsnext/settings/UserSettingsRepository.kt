@@ -38,6 +38,10 @@ class UserSettingsRepository(
                     preferences[Keys.SUPPRESS_DENY_FALLBACK_NOTICE]
                         ?: UserSettingsDefaults
                             .SUPPRESS_DENY_FALLBACK_NOTICE,
+                suppressPermissionFlagNotice =
+                    preferences[Keys.SUPPRESS_PERMISSION_FLAG_NOTICE]
+                        ?: UserSettingsDefaults
+                            .SUPPRESS_PERMISSION_FLAG_NOTICE,
                 autoApplyNewAppTemplate =
                     preferences[Keys.AUTO_APPLY_NEW_APP_TEMPLATE]
                         ?: UserSettingsDefaults
@@ -73,6 +77,12 @@ class UserSettingsRepository(
     suspend fun setDenyFallbackNoticeSuppressed(suppressed: Boolean) {
         dataStore.edit { preferences ->
             preferences[Keys.SUPPRESS_DENY_FALLBACK_NOTICE] = suppressed
+        }
+    }
+
+    suspend fun setPermissionFlagNoticeSuppressed(suppressed: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[Keys.SUPPRESS_PERMISSION_FLAG_NOTICE] = suppressed
         }
     }
 
@@ -141,6 +151,8 @@ class UserSettingsRepository(
         val HIDE_SYSTEM_APPS = booleanPreferencesKey("hide_system_apps")
         val SUPPRESS_DENY_FALLBACK_NOTICE =
             booleanPreferencesKey("suppress_deny_fallback_notice")
+        val SUPPRESS_PERMISSION_FLAG_NOTICE =
+            booleanPreferencesKey("suppress_permission_flag_notice")
         val AUTO_APPLY_NEW_APP_TEMPLATE =
             booleanPreferencesKey("auto_apply_new_app_template")
         val BACKGROUND_MONITOR = booleanPreferencesKey("background_monitor")

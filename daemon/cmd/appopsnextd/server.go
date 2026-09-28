@@ -26,6 +26,8 @@ const (
 var (
 	packageNamePattern   = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$`)
 	operationNamePattern = regexp.MustCompile(`^[A-Za-z0-9_.:-]+$`)
+	// Only platform runtime permissions are backed by app ops.
+	permissionNamePattern = regexp.MustCompile(`^android\.permission\.[A-Z0-9_]+$`)
 	allowedModes         = map[string]struct{}{
 		"allow":      {},
 		"ignore":     {},
@@ -201,9 +203,54 @@ func parseCommand(request string) (appOpsCommand, error) {
 			fields[3],
 		), nil
 
+	case "GET_PACKAGE_PERMISSIONS":
+		if len(fields) != 2 || !validPackageName(fields[1]) {
+			return appOpsCommand{}, errors.New("invalid permission query")
+		}
+		return command(
+			"/system/bin/dumpsys",
+			"package",
+			fields[1],
+		), nil
+
+	case "SET_REVOKED_COMPAT", "CLEAR_REVOKED_COMPAT":
+		if !validPermissionFlagCommand(fields) {
+			return appOpsCommand{}, errors.New("invalid permission flag request")
+		}
+		action := "set-permission-flags"
+		if fields[0] == "CLEAR_REVOKED_COMPAT" {
+			action = "clear-permission-flags"
+		}
+		return command(
+			"/system/bin/cmd",
+			"package",
+			action,
+			"--user",
+			fields[1],
+			fields[2],
+			fields[3],
+			"revoked-compat",
+		), nil
+
 	default:
 		return appOpsCommand{}, errors.New("unsupported daemon command")
 	}
+}
+
+func validPermissionFlagCommand(fields []string) bool {
+	if len(fields) != 4 {
+		return false
+	}
+	userID, err := strconv.Atoi(fields[1])
+	return err == nil &&
+		userID >= 0 &&
+		strconv.Itoa(userID) == fields[1] &&
+		validPackageName(fields[2]) &&
+		validPermissionName(fields[3])
+}
+
+func validPermissionName(value string) bool {
+	return len(value) <= 255 && permissionNamePattern.MatchString(value)
 }
 
 func validModeCommand(fields []string) bool {

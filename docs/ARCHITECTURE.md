@@ -242,6 +242,19 @@ confirmation. Android may normalize or reject a requested UID mode when it is
 coupled to a runtime permission; this is reported as a verification failure,
 and the repository restores and verifies the original mode.
 
+Some Android 16 builds derive runtime-permission app ops from the permission
+and drop both UID and package writes for them. When an AppOps write for such an
+op is rejected, detail edits, batch changes and templates, including the
+automatic new-app template, retry through the permission's
+`REVOKED_COMPAT` flag with `cmd package set-permission-flags` or
+`clear-permission-flags` for the target's user. Setting the flag makes Android
+derive `ignore` while the permission stays granted. Clearing it hands the mode
+back to Android, which derives `allow` or `foreground` from the grant. The flag
+path never grants a permission, is skipped for Deny and Default, and applies to
+the whole UID, so it is only used when a UID-scoped write would be. The same
+transaction reads `dumpsys package <PACKAGE>` before the change and restores the
+flag if the derived UID mode does not verify.
+
 After a confirmed write, only the matching operation row enters a progress
 state. A verified result updates that scoped entry in the in-memory snapshot;
 the screen does not reload every operation or add a separate success card.

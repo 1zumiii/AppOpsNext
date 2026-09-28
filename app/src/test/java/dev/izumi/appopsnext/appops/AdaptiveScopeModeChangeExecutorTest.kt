@@ -213,6 +213,76 @@ class AdaptiveScopeModeChangeExecutorTest {
         }
     }
 
+    @Test
+    fun `template writes blocked in both scopes retry through the permission flag`() = runBlocking {
+        val scopes = mutableListOf<AppOpScope>()
+        val flagPermissions = mutableListOf<String>()
+        val executor = executorFor("example.app")
+
+        val outcome = executor.execute(
+            packageName = "example.app",
+            uid = 10_123,
+            preferredScope = AppOpScope.PACKAGE,
+            requestedMode = AppOpMode.IGNORE,
+            readMode = { AppOpMode.ALLOW },
+            revokedCompatRetry = RevokedCompatRetry("android:camera") { permission ->
+                flagPermissions += permission
+                success()
+            },
+        ) { scope ->
+            scopes += scope
+            rejected()
+        }
+
+        assertEquals(listOf(AppOpScope.PACKAGE, AppOpScope.UID), scopes)
+        assertEquals(listOf("android.permission.CAMERA"), flagPermissions)
+        assertTrue(outcome.result is AppOpModeChangeResult.Success)
+        assertEquals(AppOpScope.UID, outcome.appliedScope)
+        assertTrue(outcome.permissionFlagApplied)
+    }
+
+    @Test
+    fun `shared uid package writes never reach the uid wide flag`() = runBlocking {
+        val executor = AdaptiveScopeModeChangeExecutor {
+            listOf("example.app", "example.sibling")
+        }
+
+        val outcome = executor.execute(
+            packageName = "example.app",
+            uid = 10_123,
+            preferredScope = AppOpScope.PACKAGE,
+            requestedMode = AppOpMode.IGNORE,
+            readMode = { AppOpMode.ALLOW },
+            revokedCompatRetry = RevokedCompatRetry("android:camera") {
+                error("flag must not be used")
+            },
+        ) { rejected() }
+
+        assertTrue(outcome.result is AppOpModeChangeResult.Failure)
+        assertEquals(AppOpScope.PACKAGE, outcome.appliedScope)
+        assertFalse(outcome.permissionFlagApplied)
+        assertTrue(outcome.restrictionBlocked)
+    }
+
+    @Test
+    fun `explicit uid writes may use the flag for a shared uid`() = runBlocking {
+        val executor = AdaptiveScopeModeChangeExecutor {
+            listOf("example.app", "example.sibling")
+        }
+
+        val outcome = executor.execute(
+            packageName = "example.app",
+            uid = 10_123,
+            preferredScope = AppOpScope.UID,
+            requestedMode = AppOpMode.IGNORE,
+            readMode = { AppOpMode.ALLOW },
+            revokedCompatRetry = RevokedCompatRetry("CAMERA") { success() },
+        ) { rejected() }
+
+        assertTrue(outcome.permissionFlagApplied)
+        assertEquals(AppOpScope.UID, outcome.appliedScope)
+    }
+
     private fun executorFor(packageName: String) =
         AdaptiveScopeModeChangeExecutor { listOf(packageName) }
 

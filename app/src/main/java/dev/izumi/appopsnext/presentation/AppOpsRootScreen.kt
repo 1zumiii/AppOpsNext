@@ -91,6 +91,7 @@ fun AppOpsRootScreen(
     onAppOpModeChangeConfirmed: () -> Unit,
     onAppOpModeChangeDismissed: () -> Unit,
     onDenyFallbackNoticeDismissed: (Boolean) -> Unit,
+    onPermissionFlagNoticeDismissed: (Boolean) -> Unit,
     onForegroundAlternativeRequested: () -> Unit,
     onHideSystemAppsChange: (Boolean) -> Unit,
     onSaveIndividualHistoryChange: (Boolean) -> Unit,
@@ -414,6 +415,8 @@ fun AppOpsRootScreen(
                 onModeChangeDismissed = onAppOpModeChangeDismissed,
                 onDenyFallbackNoticeDismissed =
                     onDenyFallbackNoticeDismissed,
+                onPermissionFlagNoticeDismissed =
+                    onPermissionFlagNoticeDismissed,
                 onForegroundAlternativeRequested =
                     onForegroundAlternativeRequested,
                 templates = templatesUiState.templates,
