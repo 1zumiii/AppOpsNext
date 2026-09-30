@@ -12,6 +12,8 @@ import dev.izumi.appopsnext.appops.model.PackageOpsLoadResult
 import dev.izumi.appopsnext.appops.model.PackageOpsSnapshot
 import dev.izumi.appopsnext.appops.model.ShellCommandResult
 import dev.izumi.appopsnext.appops.parser.PackageOpsParser
+import dev.izumi.appopsnext.appops.parser.RuntimePermissionState
+import dev.izumi.appopsnext.appops.parser.RuntimePermissionStateParser
 import dev.izumi.appopsnext.appops.model.CancelledAppOpsWrite
 import java.util.Locale
 import kotlinx.coroutines.CancellationException
@@ -26,6 +28,8 @@ import kotlinx.coroutines.sync.withLock
 class AppOpsRepository(
     private val privilegedGateway: PrivilegedAppOpsGateway,
     private val parser: PackageOpsParser = PackageOpsParser(),
+    private val permissionParser: RuntimePermissionStateParser =
+        RuntimePermissionStateParser(),
     private val writeCoordinator: AppOpsWriteCoordinator = AppOpsWriteCoordinator.Shared,
     private val cancellationRecoveryTimeoutMillis: Long = 25_000L,
     private val onCancelledWrite: (CancelledAppOpsWrite) -> Unit = {},
@@ -226,6 +230,24 @@ class AppOpsRepository(
             check(active) { "Write transaction has finished" }
             applyModeInTransaction(packageName, operation, scope, requestedMode)
         }
+
+        /**
+         * Changes the UID-level result through the permission's
+         * `REVOKED_COMPAT` flag. Returns null when the flag cannot produce the
+         * requested mode, so the caller keeps its earlier result.
+         */
+        suspend fun applyRevokedCompat(
+            packageName: String,
+            uid: Int,
+            operation: AppOpIdentifier,
+            permissionName: String,
+            requestedMode: AppOpMode,
+        ): AppOpModeChangeResult? = operationMutex.withLock {
+            check(active) { "Write transaction has finished" }
+            applyRevokedCompatInTransaction(
+                packageName, uid, operation, permissionName, requestedMode,
+            )
+        }
     }
 
     suspend fun changeMode(
@@ -412,6 +434,156 @@ class AppOpsRepository(
         )
     }
 
+    private suspend fun applyRevokedCompatInTransaction(
+        packageName: String,
+        uid: Int,
+        operation: AppOpIdentifier,
+        permissionName: String,
+        requestedMode: AppOpMode,
+    ): AppOpModeChangeResult? {
+        val revoke = when (requestedMode) {
+            AppOpMode.IGNORE -> true
+            AppOpMode.ALLOW, AppOpMode.FOREGROUND -> false
+            AppOpMode.DENY, AppOpMode.DEFAULT -> return null
+        }
+        val userId = uid / PER_USER_UID_RANGE
+        val original = readPermissionState(packageName, userId, permissionName)
+            ?: return null
+        // The flag only restricts a granted permission. It cannot grant one.
+        if (!original.granted || original.revokedCompat == revoke) return null
+        val originalMode = readMode(packageName, operation, AppOpScope.UID)
+            ?: return null
+
+        currentCoroutineContext().ensureActive()
+        var failurePhase = AppOpModeChangePhase.APPLY_REQUESTED
+        try {
+            if (!setRevokedCompat(userId, packageName, permissionName, revoke)) {
+                return restoreRevokedCompat(
+                    packageName, userId, operation, permissionName,
+                    original, originalMode,
+                    primaryFailure = AppOpModeChangePhase.APPLY_REQUESTED,
+                    observedMode = null,
+                )
+            }
+
+            failurePhase = AppOpModeChangePhase.VERIFY_REQUESTED
+            val observedMode = readMode(packageName, operation, AppOpScope.UID)
+            // Clearing the flag hands the mode back to Android, which derives
+            // allow or foreground from the grant. Either lifts the restriction.
+            val verified = if (revoke) {
+                observedMode == AppOpMode.IGNORE
+            } else {
+                observedMode != null &&
+                    observedMode != AppOpMode.IGNORE &&
+                    observedMode != AppOpMode.DENY
+            }
+            if (!verified || observedMode == null) {
+                return restoreRevokedCompat(
+                    packageName, userId, operation, permissionName,
+                    original, originalMode,
+                    primaryFailure = AppOpModeChangePhase.VERIFY_REQUESTED,
+                    observedMode = observedMode,
+                )
+            }
+
+            return AppOpModeChangeResult.Success(
+                originalMode = originalMode,
+                appliedMode = observedMode,
+            )
+        } catch (cancelled: CancellationException) {
+            val recovery = withContext(NonCancellable) {
+                withTimeoutOrNull(cancellationRecoveryTimeoutMillis) {
+                    restoreRevokedCompat(
+                        packageName, userId, operation, permissionName,
+                        original, originalMode,
+                        primaryFailure = failurePhase,
+                        observedMode = null,
+                    )
+                } ?: AppOpModeChangeResult.Failure(
+                    phase = AppOpModeChangePhase.RESTORE_ORIGINAL,
+                    originalMode = originalMode,
+                    observedMode = null,
+                    restorationStatus = AppOpsRestorationStatus.FAILED,
+                )
+            }
+            onCancelledWrite(
+                CancelledAppOpsWrite(
+                    packageName, operation, AppOpScope.UID, recovery,
+                ),
+            )
+            throw cancelled
+        }
+    }
+
+    private suspend fun restoreRevokedCompat(
+        packageName: String,
+        userId: Int,
+        operation: AppOpIdentifier,
+        permissionName: String,
+        original: RuntimePermissionState,
+        originalMode: AppOpMode,
+        primaryFailure: AppOpModeChangePhase,
+        observedMode: AppOpMode?,
+    ): AppOpModeChangeResult.Failure {
+        if (
+            !setRevokedCompat(
+                userId, packageName, permissionName, original.revokedCompat,
+            )
+        ) {
+            return AppOpModeChangeResult.Failure(
+                phase = AppOpModeChangePhase.RESTORE_ORIGINAL,
+                originalMode = originalMode,
+                observedMode = observedMode,
+                restorationStatus = AppOpsRestorationStatus.FAILED,
+            )
+        }
+
+        val restored = readPermissionState(packageName, userId, permissionName)
+        val restoredMode = readMode(packageName, operation, AppOpScope.UID)
+        if (restored != original || restoredMode != originalMode) {
+            return AppOpModeChangeResult.Failure(
+                phase = AppOpModeChangePhase.VERIFY_RESTORED,
+                originalMode = originalMode,
+                observedMode = restoredMode,
+                restorationStatus = AppOpsRestorationStatus.FAILED,
+            )
+        }
+
+        return AppOpModeChangeResult.Failure(
+            phase = primaryFailure,
+            originalMode = originalMode,
+            observedMode = observedMode,
+            restorationStatus = AppOpsRestorationStatus.SUCCEEDED,
+        )
+    }
+
+    private suspend fun readPermissionState(
+        packageName: String,
+        userId: Int,
+        permissionName: String,
+    ): RuntimePermissionState? {
+        val result = catchBackendFailure {
+            privilegedGateway.getPackagePermissions(packageName)
+        }.getOrNull() ?: return null
+        if (!result.isSuccessful) return null
+        return permissionParser.parse(result.stdout, userId, permissionName)
+    }
+
+    private suspend fun setRevokedCompat(
+        userId: Int,
+        packageName: String,
+        permissionName: String,
+        revoked: Boolean,
+    ): Boolean =
+        catchBackendFailure {
+            privilegedGateway.setRevokedCompat(
+                userId = userId,
+                packageName = packageName,
+                permissionName = permissionName,
+                revoked = revoked,
+            )
+        }.getOrNull()?.isSuccessful == true
+
     private suspend fun readPackageMode(
         packageName: String,
         operation: AppOpIdentifier,
@@ -480,4 +652,9 @@ class AppOpsRepository(
 
     private val ShellCommandResult.isSuccessful: Boolean
         get() = !timedOut && exitCode == 0
+
+    private companion object {
+        /** Android's `UserHandle.PER_USER_RANGE`. */
+        const val PER_USER_UID_RANGE = 100_000
+    }
 }

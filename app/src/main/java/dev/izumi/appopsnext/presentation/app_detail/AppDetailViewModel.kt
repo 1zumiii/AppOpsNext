@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeExecutor
 import dev.izumi.appopsnext.appops.AppOpRuntimePermissionCatalog
+import dev.izumi.appopsnext.appops.RevokedCompatRetry
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
 import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
@@ -30,12 +31,8 @@ class AppDetailViewModel(
     private val userSettingsRepository =
         getApplication<AppOpsNextApplication>().userSettingsRepository
     private val repository = getApplication<AppOpsNextApplication>().appOpsRepository
-    private val adaptiveScopeExecutor = AdaptiveScopeModeChangeExecutor { uid ->
-        getApplication<Application>().packageManager
-            .getPackagesForUid(uid)
-            ?.toList()
-            .orEmpty()
-    }
+    private val adaptiveScopeExecutor =
+        AdaptiveScopeModeChangeExecutor(::packagesForUid)
     private val selectedApp = MutableStateFlow<InstalledApp?>(null)
     private val mutableUiState =
         MutableStateFlow<AppDetailUiState>(AppDetailUiState.Idle)
@@ -131,6 +128,8 @@ class AppDetailViewModel(
                 shellName = request.operationName,
             )
             var appliedScope = request.scope
+            var permissionFlagApplied = false
+            var restrictionBlocked = false
             val outcome = repository.withWriteTransaction { transaction ->
                 DenyFallbackModeChangeExecutor {
                         requestedMode ->
@@ -144,6 +143,17 @@ class AppDetailViewModel(
                                 packageName = request.packageName,
                                 operation = operation,
                                 scope = scope,
+                            )
+                        },
+                        revokedCompatRetry = RevokedCompatRetry(
+                            operationName = request.operationName,
+                        ) { permissionName ->
+                            transaction.applyRevokedCompat(
+                                packageName = request.packageName,
+                                uid = app.uid,
+                                operation = operation,
+                                permissionName = permissionName,
+                                requestedMode = requestedMode,
                             )
                         },
                     ) { scope ->
@@ -164,6 +174,8 @@ class AppDetailViewModel(
                             )
                         }
                     }
+                    permissionFlagApplied = scopeOutcome.permissionFlagApplied
+                    restrictionBlocked = scopeOutcome.restrictionBlocked
                     appliedScope = scopeOutcome.appliedScope
                     scopeOutcome.result
                 }.execute(request.requestedMode)
@@ -177,12 +189,21 @@ class AppDetailViewModel(
             updateDisplayedMode(resolvedRequest, result)
             mutableModeChangeState.value = when (result) {
                 is AppOpModeChangeResult.Success -> {
+                    val settings = userSettingsRepository.settings.first()
+                    val shouldShowFlagNotice =
+                        permissionFlagApplied &&
+                            result.appliedMode == AppOpMode.IGNORE &&
+                            !settings.suppressPermissionFlagNotice
                     val shouldShowFallbackNotice =
                         outcome.denyFallbackAttempted &&
-                            !userSettingsRepository.settings
-                                .first()
-                                .suppressDenyFallbackNotice
-                    if (shouldShowFallbackNotice) {
+                            !settings.suppressDenyFallbackNotice
+                    if (shouldShowFlagNotice) {
+                        AppOpModeChangeUiState.PermissionFlagApplied(
+                            request = resolvedRequest,
+                            denyFallbackAttempted =
+                                outcome.denyFallbackAttempted,
+                        )
+                    } else if (shouldShowFallbackNotice) {
                         AppOpModeChangeUiState.DenyFallbackApplied(
                             resolvedRequest,
                         )
@@ -197,6 +218,7 @@ class AppDetailViewModel(
                         result = result,
                         denyFallbackAttempted =
                             outcome.denyFallbackAttempted,
+                        runtimePermissionManaged = restrictionBlocked,
                     )
             }
         }
@@ -214,6 +236,22 @@ class AppDetailViewModel(
             viewModelScope.launch {
                 userSettingsRepository
                     .setDenyFallbackNoticeSuppressed(true)
+            }
+        }
+    }
+
+    fun dismissPermissionFlagNotice(dontShowAgain: Boolean) {
+        if (
+            mutableModeChangeState.value
+            !is AppOpModeChangeUiState.PermissionFlagApplied
+        ) {
+            return
+        }
+        mutableModeChangeState.value = AppOpModeChangeUiState.Idle
+        if (dontShowAgain) {
+            viewModelScope.launch {
+                userSettingsRepository
+                    .setPermissionFlagNoticeSuppressed(true)
             }
         }
     }
@@ -241,6 +279,12 @@ class AppDetailViewModel(
             mutableModeChangeState.value = AppOpModeChangeUiState.Idle
         }
     }
+
+    private fun packagesForUid(uid: Int): List<String> =
+        getApplication<Application>().packageManager
+            .getPackagesForUid(uid)
+            ?.toList()
+            .orEmpty()
 
     private fun affectedPackages(
         app: InstalledApp,

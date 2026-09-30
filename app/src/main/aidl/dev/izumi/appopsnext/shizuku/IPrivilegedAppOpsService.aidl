@@ -22,5 +22,12 @@ interface IPrivilegedAppOpsService {
     ShellCommandResult getHistory(String operationName) = 9;
     ShellCommandResult getUidStates(String packageName) = 10;
     ShellCommandResult getWatchers() = 11;
+    ShellCommandResult getPackagePermissions(String packageName) = 12;
+    ShellCommandResult setRevokedCompat(
+        int userId,
+        String packageName,
+        String permissionName,
+        boolean revoked
+    ) = 13;
     void destroy() = 16777114;
 }

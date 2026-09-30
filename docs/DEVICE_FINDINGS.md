@@ -97,3 +97,21 @@ explains this case and the transaction restores the original AppOps mode.
 
 - [Android AppOpsManager API](https://developer.android.com/reference/android/app/AppOpsManager)
 - [AOSP AppOpsService shell commands](https://android.googlesource.com/platform/frameworks/base/+/master/services/core/java/com/android/server/appop/AppOpsService.java)
+
+## Runtime-permission app op mapping on Android 16
+
+A realme RMX3370 on Android 16 QPR2 (`BP4A.251205.006`) rejected every write to
+runtime-permission app ops. UID writes logged `Blocked setUidMode call for
+runtime permission app op`, and package writes logged `should not be set
+directly` while the package mode stayed unchanged. Both messages come from the
+AOSP branch taken when `runtime_permission_appops_mapping_enabled` is on,
+although `aflags list` on that device did not show the flag.
+
+On the same device, a granted `ACCESS_COARSE_LOCATION` with `REVOKED_COMPAT`
+read back as `Uid mode: COARSE_LOCATION: ignore`, and the flag and mode
+survived a reboot.
+
+On the ASUS reference device, `cmd package set-permission-flags --user 0
+dev.izumi.appopsprobe android.permission.CAMERA revoked-compat`, run as the
+shell user, changed the UID mode from `foreground` to `ignore` while the
+permission stayed granted. Clearing the flag restored `foreground`.

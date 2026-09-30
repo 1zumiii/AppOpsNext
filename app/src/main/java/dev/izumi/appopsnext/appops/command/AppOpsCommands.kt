@@ -111,6 +111,41 @@ object AppOpsCommands {
         )
     }
 
+    /** The package dump carries each user's runtime permission grants and flags. */
+    fun getPackagePermissions(packageName: String): List<String> {
+        validatePackageName(packageName)
+
+        return listOf(DUMPSYS_BINARY, PACKAGE_SERVICE, packageName)
+    }
+
+    /**
+     * Sets or clears `REVOKED_COMPAT`, which makes Android derive `ignore` for
+     * the permission's app op while the permission itself stays granted.
+     */
+    fun setRevokedCompat(
+        userId: Int,
+        packageName: String,
+        permissionName: String,
+        revoked: Boolean,
+    ): List<String> {
+        require(userId >= 0) { "Invalid Android user" }
+        validatePackageName(packageName)
+        require(PermissionNameValidator.isValid(permissionName)) {
+            "Invalid Android permission name"
+        }
+
+        return listOf(
+            COMMAND_BINARY,
+            PACKAGE_SERVICE,
+            if (revoked) SET_PERMISSION_FLAGS else CLEAR_PERMISSION_FLAGS,
+            USER_OPTION,
+            userId.toString(),
+            packageName,
+            permissionName,
+            REVOKED_COMPAT_FLAG,
+        )
+    }
+
     private fun validatePackageName(packageName: String) {
         require(PackageNameValidator.isValid(packageName)) {
             "Invalid Android package name"
@@ -126,6 +161,11 @@ object AppOpsCommands {
     private const val COMMAND_BINARY = "/system/bin/cmd"
     private const val DUMPSYS_BINARY = "/system/bin/dumpsys"
     private const val APP_OPS_SERVICE = "appops"
+    private const val PACKAGE_SERVICE = "package"
+    private const val SET_PERMISSION_FLAGS = "set-permission-flags"
+    private const val CLEAR_PERMISSION_FLAGS = "clear-permission-flags"
+    private const val USER_OPTION = "--user"
+    private const val REVOKED_COMPAT_FLAG = "revoked-compat"
     private const val GET_COMMAND = "get"
     private const val SET_COMMAND = "set"
     private const val UID_OPTION = "--uid"
@@ -161,6 +201,17 @@ internal object PackageNameValidator {
             packageNamePattern.matches(value)
 
     private const val MAX_PACKAGE_NAME_LENGTH = 255
+}
+
+internal object PermissionNameValidator {
+    // Only platform runtime permissions are backed by app ops.
+    private val permissionNamePattern = Regex("""android\.permission\.[A-Z0-9_]+""")
+
+    fun isValid(value: String): Boolean =
+        value.length <= MAX_PERMISSION_NAME_LENGTH &&
+            permissionNamePattern.matches(value)
+
+    private const val MAX_PERMISSION_NAME_LENGTH = 255
 }
 
 internal object OperationNameValidator {

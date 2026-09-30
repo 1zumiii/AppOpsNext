@@ -7,6 +7,7 @@ import android.content.IntentFilter
 import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeOutcome
 import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeExecutor
 import dev.izumi.appopsnext.appops.AppOpsRepository
+import dev.izumi.appopsnext.appops.RevokedCompatRetry
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
 import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
 import dev.izumi.appopsnext.appops.model.AppOpNames
@@ -66,6 +67,17 @@ class NewAppPolicyCoordinator(
                         packageName = target.packageName,
                         operation = operation,
                         scope = scope,
+                    )
+                },
+                revokedCompatRetry = RevokedCompatRetry(
+                    operationName = target.stableOperationName,
+                ) { permissionName ->
+                    transaction.applyRevokedCompat(
+                        packageName = target.packageName,
+                        uid = target.uid,
+                        operation = operation,
+                        permissionName = permissionName,
+                        requestedMode = target.requestedMode,
                     )
                 },
             ) { scope ->
@@ -322,7 +334,8 @@ class NewAppPolicyCoordinator(
             "operation=${target.stableOperationName}, " +
             "preferredScope=${target.preferredScope.name}, " +
             "resolvedScope=${appliedScope.name}, " +
-            "fallback=$fallbackAttempted, result=$resultSummary"
+            "fallback=$fallbackAttempted, " +
+            "permissionFlag=$permissionFlagApplied, result=$resultSummary"
     }
 
     private companion object {

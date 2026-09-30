@@ -194,6 +194,7 @@ internal fun ModeChangeDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     onDenyFallbackNoticeDismiss: (Boolean) -> Unit,
+    onPermissionFlagNoticeDismiss: (Boolean) -> Unit,
     onForegroundAlternativeRequested: () -> Unit,
 ) {
     when (state) {
@@ -276,6 +277,12 @@ internal fun ModeChangeDialog(
                 onDismiss = onDenyFallbackNoticeDismiss,
             )
 
+        is AppOpModeChangeUiState.PermissionFlagApplied ->
+            PermissionFlagAppliedDialog(
+                state = state,
+                onDismiss = onPermissionFlagNoticeDismiss,
+            )
+
         else -> Unit
     }
 }
@@ -318,6 +325,71 @@ private fun DenyFallbackAppliedDialog(
                         text = stringResource(
                             R.string
                                 .app_detail_mode_deny_fallback_dont_show,
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = dismiss) {
+                Text(text = stringResource(R.string.action_dismiss))
+            }
+        },
+    )
+}
+
+@Composable
+private fun PermissionFlagAppliedDialog(
+    state: AppOpModeChangeUiState.PermissionFlagApplied,
+    onDismiss: (Boolean) -> Unit,
+) {
+    var dontShowAgain by remember(state.request) {
+        mutableStateOf(false)
+    }
+    val dismiss = { onDismiss(dontShowAgain) }
+    AppBottomSheet(
+        onDismissRequest = dismiss,
+        title = {
+            Text(
+                text = stringResource(
+                    R.string.app_detail_mode_permission_flag_title,
+                ),
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (state.denyFallbackAttempted) {
+                    Text(
+                        text = stringResource(
+                            R.string.app_detail_mode_permission_flag_deny,
+                        ),
+                    )
+                }
+                Text(
+                    text = stringResource(
+                        R.string.app_detail_mode_permission_flag_applied,
+                    ),
+                )
+                Text(
+                    text = stringResource(
+                        R.string.app_detail_mode_permission_flag_settings,
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Checkbox(
+                        checked = dontShowAgain,
+                        onCheckedChange = { dontShowAgain = it },
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string
+                                .app_detail_mode_permission_flag_dont_show,
                         ),
                         style = MaterialTheme.typography.bodyMedium,
                     )
@@ -389,7 +461,15 @@ private fun ModeChangeFailureDialog(
                         ),
                     ),
                 )
-                if (
+                if (state.runtimePermissionManaged) {
+                    Text(
+                        text = stringResource(
+                            R.string.app_detail_mode_runtime_managed_hint,
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                } else if (
                     state.result.phase ==
                     AppOpModeChangePhase.VERIFY_REQUESTED
                 ) {
