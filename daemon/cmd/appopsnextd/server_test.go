@@ -185,3 +185,54 @@ func TestParseRejectsMalformedUidStateQuery(t *testing.T) {
 		}
 	}
 }
+
+func TestParsePackagePermissionsQuery(t *testing.T) {
+	actual, err := parseCommand("GET_PACKAGE_PERMISSIONS dev.izumi.appopsnext")
+	expected := []string{"/system/bin/dumpsys", "package", "dev.izumi.appopsnext"}
+	if err != nil || !reflect.DeepEqual(actual.arguments, expected) {
+		t.Fatalf("command = %#v, error = %v", actual, err)
+	}
+}
+
+func TestParseRevokedCompatRequests(t *testing.T) {
+	for verb, action := range map[string]string{
+		"SET_REVOKED_COMPAT":   "set-permission-flags",
+		"CLEAR_REVOKED_COMPAT": "clear-permission-flags",
+	} {
+		actual, err := parseCommand(
+			verb + " 0 dev.izumi.appopsnext android.permission.RECORD_AUDIO",
+		)
+		expected := []string{
+			"/system/bin/cmd",
+			"package",
+			action,
+			"--user",
+			"0",
+			"dev.izumi.appopsnext",
+			"android.permission.RECORD_AUDIO",
+			"revoked-compat",
+		}
+		if err != nil || !reflect.DeepEqual(actual.arguments, expected) {
+			t.Fatalf("%s command = %#v, error = %v", verb, actual, err)
+		}
+	}
+}
+
+func TestParseRejectsMalformedRevokedCompatRequests(t *testing.T) {
+	for _, request := range []string{
+		"SET_REVOKED_COMPAT 0 dev.izumi.appopsnext",
+		"SET_REVOKED_COMPAT -1 dev.izumi.appopsnext android.permission.CAMERA",
+		"SET_REVOKED_COMPAT 00 dev.izumi.appopsnext android.permission.CAMERA",
+		"SET_REVOKED_COMPAT all dev.izumi.appopsnext android.permission.CAMERA",
+		"SET_REVOKED_COMPAT 0 dev.izumi.appopsnext com.example.permission.CAMERA",
+		"SET_REVOKED_COMPAT 0 dev.izumi.appopsnext android.permission.CAMERA;id",
+		"SET_REVOKED_COMPAT 0 dev.izumi.appopsnext android.permission.CAMERA user-fixed",
+		"CLEAR_REVOKED_COMPAT 0 --user android.permission.CAMERA",
+		"GET_PACKAGE_PERMISSIONS",
+		"GET_PACKAGE_PERMISSIONS dev.izumi.appopsnext extra",
+	} {
+		if _, err := parseCommand(request); err == nil {
+			t.Fatalf("accepted malformed request %q", request)
+		}
+	}
+}

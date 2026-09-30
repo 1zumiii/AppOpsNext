@@ -4,6 +4,7 @@ import dev.izumi.appopsnext.appops.PrivilegedAppOpsGateway
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.command.OperationNameValidator
 import dev.izumi.appopsnext.appops.command.PackageNameValidator
+import dev.izumi.appopsnext.appops.command.PermissionNameValidator
 import dev.izumi.appopsnext.appops.model.ShellCommandResult
 import dev.izumi.appopsnext.history.AppOpsHistoryOutputExtractor
 
@@ -76,6 +77,45 @@ internal class NativeDaemonGateway(
             stdout = AppOpsHistoryOutputExtractor.extract(
                 commandOutput = result.stdout,
                 operationName = operationName,
+            ),
+        )
+    }
+
+    override suspend fun getPackagePermissions(
+        packageName: String,
+    ): ShellCommandResult {
+        requirePackageName(packageName)
+        return connection.execute(
+            NativeDaemonCommand(
+                verb = "GET_PACKAGE_PERMISSIONS",
+                arguments = listOf(packageName),
+            ),
+        )
+    }
+
+    override suspend fun setRevokedCompat(
+        userId: Int,
+        packageName: String,
+        permissionName: String,
+        revoked: Boolean,
+    ): ShellCommandResult {
+        require(userId >= 0) { "Invalid Android user" }
+        requirePackageName(packageName)
+        require(PermissionNameValidator.isValid(permissionName)) {
+            "Invalid Android permission name"
+        }
+        return connection.execute(
+            NativeDaemonCommand(
+                verb = if (revoked) {
+                    "SET_REVOKED_COMPAT"
+                } else {
+                    "CLEAR_REVOKED_COMPAT"
+                },
+                arguments = listOf(
+                    userId.toString(),
+                    packageName,
+                    permissionName,
+                ),
             ),
         )
     }

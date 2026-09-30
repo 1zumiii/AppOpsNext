@@ -25,6 +25,19 @@ interface PrivilegedAppOpsGateway {
     ): ShellCommandResult =
         error("AppOps history is not implemented by this gateway")
 
+    suspend fun getPackagePermissions(
+        packageName: String,
+    ): ShellCommandResult =
+        error("Permission state reads are not implemented by this gateway")
+
+    suspend fun setRevokedCompat(
+        userId: Int,
+        packageName: String,
+        permissionName: String,
+        revoked: Boolean,
+    ): ShellCommandResult =
+        error("Permission flag writes are not implemented by this gateway")
+
     suspend fun setPackageOpMode(
         packageName: String,
         operationName: String,

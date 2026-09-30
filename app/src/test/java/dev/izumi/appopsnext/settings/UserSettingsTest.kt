@@ -16,6 +16,11 @@ class UserSettingsTest {
     }
 
     @Test
+    fun `permission flag notice is shown by default`() {
+        assertFalse(UserSettings().suppressPermissionFlagNotice)
+    }
+
+    @Test
     fun `automatic new app policy is opt in`() {
         assertFalse(UserSettings().autoApplyNewAppTemplate)
     }

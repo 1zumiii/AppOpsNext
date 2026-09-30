@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeExecutor
+import dev.izumi.appopsnext.appops.RevokedCompatRetry
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
 import dev.izumi.appopsnext.appops.model.AppOpNames
@@ -33,6 +34,10 @@ class BatchOperationsViewModel(
             .orEmpty()
     }
     private val executor = BatchAppOpsExecutor { target ->
+        val operation = AppOpIdentifier(
+            stableName = target.stableOperationName,
+            shellName = AppOpNames.shellName(target.stableOperationName),
+        )
         repository.withWriteTransaction { transaction ->
             adaptiveScopeExecutor.execute(
                 packageName = target.packageName,
@@ -42,24 +47,25 @@ class BatchOperationsViewModel(
                 readMode = { scope ->
                     repository.readMode(
                         packageName = target.packageName,
-                        operation = AppOpIdentifier(
-                            stableName = target.stableOperationName,
-                            shellName = AppOpNames.shellName(
-                                target.stableOperationName,
-                            ),
-                        ),
+                        operation = operation,
                         scope = scope,
+                    )
+                },
+                revokedCompatRetry = RevokedCompatRetry(
+                    operationName = target.stableOperationName,
+                ) { permissionName ->
+                    transaction.applyRevokedCompat(
+                        packageName = target.packageName,
+                        uid = target.uid,
+                        operation = operation,
+                        permissionName = permissionName,
+                        requestedMode = target.requestedMode,
                     )
                 },
             ) { scope ->
                 transaction.applyMode(
                     packageName = target.packageName,
-                    operation = AppOpIdentifier(
-                        stableName = target.stableOperationName,
-                        shellName = AppOpNames.shellName(
-                            target.stableOperationName,
-                        ),
-                    ),
+                    operation = operation,
                     scope = scope,
                     requestedMode = target.requestedMode,
                 )
