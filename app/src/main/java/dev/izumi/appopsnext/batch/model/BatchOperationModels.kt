@@ -11,6 +11,7 @@ data class BatchOperationTarget(
     val stableOperationName: String,
     val preferredScope: AppOpScope,
     val requestedMode: AppOpMode,
+    val allowScopeFallback: Boolean = true,
 )
 
 data class BatchOperationItemResult(

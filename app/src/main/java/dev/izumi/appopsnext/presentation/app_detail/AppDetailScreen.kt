@@ -317,8 +317,12 @@ private fun ReadyContent(
             alternateLabelResolver = alternateContext::getString,
         )
     }
-    val selectedItems = remember(allDisplayItems, selectedBatchKeys) {
-        allDisplayItems.filter { it.batchSelectionKey() in selectedBatchKeys }
+    val selectedItems = remember(displayItems, selectedBatchKeys) {
+        displayItems.filter { it.batchSelectionKey() in selectedBatchKeys }
+    }
+    androidx.compose.runtime.LaunchedEffect(displayItems, selectedBatchKeys) {
+        val visibleKeys = displayItems.map { it.batchSelectionKey() }.toSet()
+        (selectedBatchKeys - visibleKeys).forEach { onBatchSelectionChange(it, false) }
     }
     val totalOperationCount = allDisplayItems.size
     Column(modifier = modifier.imePadding()) {
@@ -368,6 +372,17 @@ private fun ReadyContent(
                     )
                 }
             } else {
+                if (batchSelectionMode) {
+                    item {
+                        androidx.compose.material3.TextButton(onClick = {
+                            val select = !displayItems.all { it.batchSelectionKey() in selectedBatchKeys }
+                            displayItems.forEach { onBatchSelectionChange(it.batchSelectionKey(), select) }
+                        }) {
+                            Text(stringResource(if (displayItems.all { it.batchSelectionKey() in selectedBatchKeys })
+                                R.string.selection_clear_all else R.string.selection_select_all))
+                        }
+                    }
+                }
                 itemsIndexed(
                     items = displayItems,
                     key = { index, item ->

@@ -214,6 +214,7 @@ internal fun ModeChangeDialog(
                             state.request.operationName,
                         ),
                     )
+                    Text(text = state.request.packageName)
                     if (
                         state.request.scope == AppOpScope.UID &&
                         state.request.affectedPackages.size > 1

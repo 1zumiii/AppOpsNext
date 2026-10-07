@@ -42,10 +42,15 @@ class AdaptiveScopeModeChangeExecutor(
         requestedMode: AppOpMode,
         readMode: suspend (AppOpScope) -> AppOpMode?,
         revokedCompatRetry: RevokedCompatRetry? = null,
+        allowScopeFallback: Boolean = true,
         applyMode: suspend (AppOpScope) -> AppOpModeChangeResult,
     ): AdaptiveScopeModeChangeOutcome {
-        val scopeOutcome = executeScopes(
+        val scopeOutcome = if (allowScopeFallback) executeScopes(
             packageName, uid, preferredScope, requestedMode, readMode, applyMode,
+        ) else AdaptiveScopeModeChangeOutcome(
+            result = applyMode(preferredScope),
+            appliedScope = preferredScope,
+            fallbackAttempted = false,
         )
         revokedCompatRetry ?: return scopeOutcome
 

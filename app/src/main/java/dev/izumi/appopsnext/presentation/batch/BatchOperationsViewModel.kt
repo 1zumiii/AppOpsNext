@@ -44,6 +44,7 @@ class BatchOperationsViewModel(
                 uid = target.uid,
                 preferredScope = target.preferredScope,
                 requestedMode = target.requestedMode,
+                allowScopeFallback = target.allowScopeFallback,
                 readMode = { scope ->
                     repository.readMode(
                         packageName = target.packageName,
@@ -134,6 +135,28 @@ class BatchOperationsViewModel(
                 targetCount = 1,
                 operationCount = targets.size,
                 targets = targets,
+            ),
+        )
+    }
+
+    fun requestOperationBatch(title: String, targets: List<BatchOperationTarget>) {
+        if (targets.isEmpty() || mutableUiState.value !is BatchOperationUiState.Idle) return
+        val affectedPackages = targets.filter { it.preferredScope == AppOpScope.UID }
+            .flatMap { target ->
+                getApplication<Application>().packageManager.getPackagesForUid(target.uid)
+                    ?.toList().orEmpty()
+            }.distinct().sorted()
+        // A UID write already covers every selected sibling. Execute it once.
+        val distinctTargets = targets.distinctBy {
+            if (it.preferredScope == AppOpScope.UID) "uid:${it.uid}" else "pkg:${it.packageName}"
+        }
+        mutableUiState.value = BatchOperationUiState.Confirming(
+            BatchOperationRequest(
+                title = title,
+                targetCount = targets.size,
+                operationCount = distinctTargets.size,
+                targets = distinctTargets,
+                affectedPackages = affectedPackages,
             ),
         )
     }

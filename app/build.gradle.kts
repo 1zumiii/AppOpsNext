@@ -25,8 +25,8 @@ android {
         applicationId = "dev.izumi.appopsnext"
         minSdk = 35
         targetSdk = 35
-        versionCode = 38
-        versionName = "1.6.1-beta1"
+        versionCode = 39
+        versionName = "1.6.5-beta1"
         buildConfigField(
             "String",
             "SHIZUKU_API_VERSION",
@@ -157,6 +157,7 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.datastore.preferences)
     implementation(libs.lifecycle.runtime.compose)
+    implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)
 

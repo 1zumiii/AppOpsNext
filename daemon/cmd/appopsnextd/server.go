@@ -28,7 +28,7 @@ var (
 	operationNamePattern = regexp.MustCompile(`^[A-Za-z0-9_.:-]+$`)
 	// Only platform runtime permissions are backed by app ops.
 	permissionNamePattern = regexp.MustCompile(`^android\.permission\.[A-Z0-9_]+$`)
-	allowedModes         = map[string]struct{}{
+	allowedModes          = map[string]struct{}{
 		"allow":      {},
 		"ignore":     {},
 		"deny":       {},
@@ -148,6 +148,12 @@ func parseCommand(request string) (appOpsCommand, error) {
 			"get",
 			fields[1],
 		), nil
+
+	case "GET_OP_STATES":
+		if len(fields) != 2 || !validOperationName(fields[1]) {
+			return appOpsCommand{}, errors.New("invalid operation state query")
+		}
+		return command("/system/bin/dumpsys", "appops", "--op", fields[1]), nil
 
 	case "GET_UID_STATES":
 		if len(fields) != 2 || !validPackageName(fields[1]) {
