@@ -29,5 +29,6 @@ interface IPrivilegedAppOpsService {
         String permissionName,
         boolean revoked
     ) = 13;
+    ShellCommandResult getOpStates(String operationName) = 14;
     void destroy() = 16777114;
 }

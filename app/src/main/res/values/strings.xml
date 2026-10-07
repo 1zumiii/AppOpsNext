@@ -2,6 +2,20 @@
 <resources
     xmlns:tools="http://schemas.android.com/tools"
     tools:locale="en">
+    <string name="browse_by_app">By app</string>
+    <string name="browse_by_permission">By permission</string>
+    <string name="selection_select_all">Select all</string>
+    <string name="selection_clear_all">Deselect all</string>
+    <string name="permission_back">Back to permissions</string>
+    <string name="permission_info_title">About permission modes</string>
+    <string name="permission_info_body">A UID mode overrides the package mode. If neither is recorded, the list shows System default. Android runtime permissions can further restrict access.\n\nUID changes affect every app sharing that UID, including hidden apps. Package changes apply to that package. A rejected runtime permission write may use the compatibility permission flag when the UID scope is safe.\n\nSelect all applies to the filtered list. Apps removed by a filter are deselected.</string>
+    <string name="permission_scope_uid">UID</string>
+    <string name="permission_scope_package">Package</string>
+    <string name="permission_all_modes">All modes</string>
+    <string name="permission_refresh">Refresh</string>
+    <string name="permission_close">Close</string>
+    <string name="permission_load_failed">Unable to load permission modes. Check the privileged service connection and retry.</string>
+    <string name="permission_uid_affected">UID changes also apply to these packages:\n%1$s</string>
     <string name="app_name">AppOpsNext</string>
     <string name="status_device_title">Device</string>
     <string name="status_device_value">%1$s %2$s</string>

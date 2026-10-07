@@ -6,6 +6,14 @@ import org.junit.Test
 
 class AppOpsCommandsTest {
     @Test
+    fun `operation states use a single scoped dumpsys command`() {
+        assertEquals(listOf("/system/bin/dumpsys", "appops", "--op", "CAMERA"), AppOpsCommands.getOpStates("CAMERA"))
+        listOf("", "CAMERA;id", "CAMERA extra", "../bad", "X".repeat(129)).forEach { op ->
+            assertThrows(IllegalArgumentException::class.java) { AppOpsCommands.getOpStates(op) }
+        }
+    }
+
+    @Test
     fun `get package ops builds an argument list without shell concatenation`() {
         assertEquals(
             listOf("/system/bin/cmd", "appops", "get", "dev.izumi.appopsnext"),

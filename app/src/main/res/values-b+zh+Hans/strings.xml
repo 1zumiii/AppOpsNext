@@ -1,5 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="browse_by_app">按应用</string>
+    <string name="browse_by_permission">按权限</string>
+    <string name="selection_select_all">全选</string>
+    <string name="selection_clear_all">取消全选</string>
+    <string name="permission_back">返回权限列表</string>
+    <string name="permission_info_title">权限模式说明</string>
+    <string name="permission_info_body">UID 级模式优先于包级模式。两者都没有记录时，列表显示“系统默认”。Android 运行时权限仍可能限制实际访问。\n\n修改 UID 级模式会影响共享该 UID 的所有应用，包括已隐藏的应用。修改包级模式只作用于该应用。运行时权限写入遭到拒绝时，若 UID 作用范围安全，会尝试通过兼容性权限标志修改。\n\n全选只覆盖筛选后显示的应用。筛选后不再显示的应用会取消选中。</string>
+    <string name="permission_scope_uid">UID 级</string>
+    <string name="permission_scope_package">包级</string>
+    <string name="permission_all_modes">全部模式</string>
+    <string name="permission_refresh">刷新</string>
+    <string name="permission_close">关闭</string>
+    <string name="permission_load_failed">无法读取权限模式。请检查特权服务连接后重试。</string>
+    <string name="permission_uid_affected">修改 UID 级模式会影响以下应用：\n%1$s</string>
     <string name="app_name">AppOpsNext</string>
     <string name="status_device_title">设备</string>
     <string name="status_device_value">%1$s %2$s</string>

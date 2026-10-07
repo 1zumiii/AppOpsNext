@@ -22,6 +22,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -43,6 +47,7 @@ import dev.izumi.appopsnext.presentation.batch.TemplatePickerDialog
 import dev.izumi.appopsnext.presentation.components.AppIcon
 import dev.izumi.appopsnext.presentation.components.CompactSearchField
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
+import dev.izumi.appopsnext.presentation.permissions.PermissionBrowser
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,6 +67,11 @@ fun AppListScreen(
         mutableStateOf(emptySet<String>())
     }
     var showTemplatePicker by remember { mutableStateOf(false) }
+    var permissionTab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    val visiblePackages = uiState.visibleApps.map { it.packageName }.toSet()
+    LaunchedEffect(visiblePackages) {
+        selectedPackages = selectedPackages intersect visiblePackages
+    }
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -73,28 +83,24 @@ fun AppListScreen(
                     )
                 },
                 actions = {
-                    IconButton(
-                        onClick = {
-                            batchSelectionMode = !batchSelectionMode
-                            selectedPackages = emptySet()
-                        },
-                    ) {
-                        Icon(
-                            painter = painterResource(
-                                if (batchSelectionMode) {
-                                    R.drawable.ic_ph_x
-                                } else {
-                                    R.drawable.ic_ph_list_checks
-                                },
-                            ),
-                            contentDescription = stringResource(
-                                if (batchSelectionMode) {
-                                    R.string.batch_cancel_selection
-                                } else {
-                                    R.string.batch_action
-                                },
-                            ),
-                        )
+                    if (!permissionTab) {
+                        IconButton(
+                            onClick = {
+                                batchSelectionMode = !batchSelectionMode
+                                selectedPackages = emptySet()
+                            },
+                        ) {
+                            Icon(
+                                painter = painterResource(
+                                    if (batchSelectionMode) R.drawable.ic_ph_x
+                                    else R.drawable.ic_ph_list_checks,
+                                ),
+                                contentDescription = stringResource(
+                                    if (batchSelectionMode) R.string.batch_cancel_selection
+                                    else R.string.batch_action,
+                                ),
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -104,38 +110,55 @@ fun AppListScreen(
         },
         bottomBar = bottomBar,
     ) { contentPadding ->
-        when {
-            uiState.isLoading && uiState.visibleApps.isEmpty() -> LoadingContent(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(contentPadding),
-            )
-
-            uiState.loadFailed && uiState.visibleApps.isEmpty() -> LoadFailureContent(
-                onRefresh = onRefresh,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(contentPadding),
-            )
-
-            else -> AppListContent(
-                uiState = uiState,
-                onSearchQueryChange = onSearchQueryChange,
-                onAppSelected = onAppSelected,
-                batchSelectionMode = batchSelectionMode,
-                selectedPackages = selectedPackages,
-                onBatchSelectionChange = { packageName, selected ->
-                    selectedPackages = if (selected) {
-                        selectedPackages + packageName
-                    } else {
-                        selectedPackages - packageName
-                    }
-                },
-                onApplyTemplate = { showTemplatePicker = true },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(contentPadding),
-            )
+        Column(Modifier.fillMaxSize().padding(contentPadding)) {
+            TabRow(selectedTabIndex = if (permissionTab) 1 else 0) {
+                Tab(
+                    selected = !permissionTab,
+                    onClick = { permissionTab = false },
+                    text = { Text(stringResource(R.string.browse_by_app)) },
+                )
+                Tab(
+                    selected = permissionTab,
+                    onClick = { permissionTab = true },
+                    text = { Text(stringResource(R.string.browse_by_permission)) },
+                )
+            }
+            if (permissionTab) {
+                PermissionBrowser(
+                    apps = uiState.allApps,
+                    appsLoading = uiState.isLoading,
+                    appsFailed = uiState.loadFailed,
+                    onRefreshApps = onRefresh,
+                )
+            } else {
+                when {
+                    uiState.isLoading && uiState.visibleApps.isEmpty() -> LoadingContent(
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    uiState.loadFailed && uiState.visibleApps.isEmpty() -> LoadFailureContent(
+                        onRefresh = onRefresh,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    else -> AppListContent(
+                        uiState = uiState,
+                        onSearchQueryChange = onSearchQueryChange,
+                        onAppSelected = onAppSelected,
+                        batchSelectionMode = batchSelectionMode,
+                        selectedPackages = selectedPackages,
+                        onBatchSelectionChange = { packageName, selected ->
+                            selectedPackages = if (selected) selectedPackages + packageName
+                            else selectedPackages - packageName
+                        },
+                        onApplyTemplate = { showTemplatePicker = true },
+                        onToggleAll = {
+                            selectedPackages = if (visiblePackages.isNotEmpty() && selectedPackages.containsAll(visiblePackages)) {
+                                emptySet()
+                            } else visiblePackages
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
         }
     }
 
@@ -146,7 +169,7 @@ fun AppListScreen(
                 showTemplatePicker = false
                 onTemplateApplyRequested(
                     template,
-                    uiState.allApps.filter {
+                    uiState.visibleApps.filter {
                         it.packageName in selectedPackages
                     },
                 )
@@ -167,6 +190,7 @@ private fun AppListContent(
     selectedPackages: Set<String>,
     onBatchSelectionChange: (String, Boolean) -> Unit,
     onApplyTemplate: () -> Unit,
+    onToggleAll: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -206,6 +230,10 @@ private fun AppListContent(
                         selectedPackages.size,
                     ),
                 )
+                TextButton(onClick = onToggleAll, enabled = uiState.visibleApps.isNotEmpty()) {
+                    Text(stringResource(if (uiState.visibleApps.all { it.packageName in selectedPackages })
+                        R.string.selection_clear_all else R.string.selection_select_all))
+                }
                 FilledTonalButton(
                     onClick = onApplyTemplate,
                     enabled = selectedPackages.isNotEmpty(),

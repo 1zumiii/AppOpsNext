@@ -1,6 +1,11 @@
 package dev.izumi.appopsnext.appops.command
 
 object AppOpsCommands {
+    fun getOpStates(operationName: String): List<String> {
+        validateOperationName(operationName)
+        return listOf(DUMPSYS_BINARY, APP_OPS_SERVICE, OPERATION_OPTION, operationName)
+    }
+
     /** Ask the service to omit access history instead of truncating a full dump. */
     fun getWatchers(): List<String> =
         listOf(DUMPSYS_BINARY, APP_OPS_SERVICE, "--watchers")
