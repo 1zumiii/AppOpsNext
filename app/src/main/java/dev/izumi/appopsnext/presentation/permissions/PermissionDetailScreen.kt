@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation.permissions
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -74,6 +75,18 @@ fun PermissionDetailScreen(
     var batchMode by rememberSaveable { mutableStateOf(AppOpMode.IGNORE) }
     val busy = modeChangeState is AppOpModeChangeUiState.Applying ||
         batchState is BatchOperationUiState.Running
+    val exitSelection = {
+        if (!busy) {
+            selecting = false
+            selected = emptySet()
+        }
+    }
+    BackHandler(enabled = selecting) {
+        exitSelection()
+    }
+    val handleBack = {
+        if (selecting) exitSelection() else onBack()
+    }
     val canEdit = !busy && !uiState.loading && !uiState.failed &&
         !appListState.isLoading && !appListState.loadFailed && uiState.states != null
     val apps = appListState.allApps
@@ -113,7 +126,7 @@ fun PermissionDetailScreen(
             TopAppBar(
                 title = { Text(text = title) },
                 navigationIcon = {
-                    IconButton(onClick = onBack, enabled = !busy) {
+                    IconButton(onClick = handleBack, enabled = !busy) {
                         Icon(
                             painter = painterResource(R.drawable.ic_ph_arrow_left),
                             contentDescription = stringResource(R.string.permission_back),
@@ -221,8 +234,8 @@ fun PermissionDetailScreen(
             if (selecting) {
                 BatchSelectionControls(
                     selectedCount = targets.size,
-                    allVisibleSelected = visibleKeys.isNotEmpty() && selected.containsAll(visibleKeys),
-                    hasVisibleItems = visibleKeys.isNotEmpty(),
+                    visibleSelectedCount = visibleKeys.count { it in selected },
+                    visibleItemCount = visibleKeys.size,
                     onToggleAll = { selected = toggleVisibleSelection(selected, visibleKeys) },
                     enabled = canEdit,
                 ) {
