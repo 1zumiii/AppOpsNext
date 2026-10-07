@@ -1,6 +1,7 @@
 package dev.izumi.appopsnext.presentation.app_detail
 
 import android.content.res.Configuration
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
@@ -28,15 +29,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,7 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -53,6 +51,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.presentation.batch.BatchSelectionControls
+import dev.izumi.appopsnext.presentation.batch.toggleVisibleSelection
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpsReadFailureReason
 import dev.izumi.appopsnext.appops.model.AppOpScope
@@ -108,6 +108,16 @@ fun AppDetailScreen(
     var showTemplatePicker by remember(app?.packageName) {
         mutableStateOf(false)
     }
+    val exitBatchSelection = {
+        batchSelectionMode = false
+        selectedBatchKeys = emptySet()
+    }
+    BackHandler(enabled = batchSelectionMode && !showTemplatePicker) {
+        exitBatchSelection()
+    }
+    val handleBack = {
+        if (batchSelectionMode) exitBatchSelection() else onBack()
+    }
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -122,7 +132,7 @@ fun AppDetailScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = handleBack) {
                         Icon(
                             painter = painterResource(R.drawable.ic_ph_arrow_left),
                             contentDescription = stringResource(
@@ -320,6 +330,11 @@ private fun ReadyContent(
     val selectedItems = remember(allDisplayItems, selectedBatchKeys) {
         allDisplayItems.filter { it.batchSelectionKey() in selectedBatchKeys }
     }
+    val visibleKeys = displayItems.map { it.batchSelectionKey() }.toSet()
+    LaunchedEffect(allDisplayItems, selectedBatchKeys) {
+        val eligibleKeys = allDisplayItems.map { it.batchSelectionKey() }.toSet()
+        (selectedBatchKeys - eligibleKeys).forEach { onBatchSelectionChange(it, false) }
+    }
     val totalOperationCount = allDisplayItems.size
     Column(modifier = modifier.imePadding()) {
         LazyColumn(
@@ -403,9 +418,15 @@ private fun ReadyContent(
                 }
             }
         }
-        if (batchSelectionMode && selectedItems.isNotEmpty()) {
+        if (batchSelectionMode) {
             BatchPermissionControls(
                 selectedCount = selectedItems.size,
+                visibleSelectedCount = visibleKeys.count { it in selectedBatchKeys },
+                visibleItemCount = visibleKeys.size,
+                onToggleAll = {
+                    val updated = toggleVisibleSelection(selectedBatchKeys, visibleKeys)
+                    visibleKeys.forEach { onBatchSelectionChange(it, it in updated) }
+                },
                 selectedMode = selectedBatchMode,
                 onModeChange = onBatchModeChange,
                 onApply = {
@@ -426,89 +447,36 @@ private fun ReadyContent(
 @Composable
 private fun BatchPermissionControls(
     selectedCount: Int,
+    visibleSelectedCount: Int,
+    visibleItemCount: Int,
+    onToggleAll: () -> Unit,
     selectedMode: AppOpMode,
     onModeChange: (AppOpMode) -> Unit,
     onApply: () -> Unit,
 ) {
-    var modeMenuExpanded by remember { mutableStateOf(false) }
-    val modeDescription = stringResource(
-        R.string.batch_apply_mode_value,
-        batchModeLabel(selectedMode),
-    )
-    Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shadowElevation = 4.dp,
+    BatchSelectionControls(
+        selectedCount = selectedCount,
+        visibleSelectedCount = visibleSelectedCount,
+        visibleItemCount = visibleItemCount,
+        onToggleAll = onToggleAll,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.batch_selected_count, selectedCount),
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Box {
-                OutlinedButton(
-                    onClick = { modeMenuExpanded = true },
-                    modifier = Modifier.semantics { contentDescription = modeDescription },
-                    contentPadding = PaddingValues(horizontal = 12.dp),
-                ) {
-                    Text(
-                        text = batchModeLabel(selectedMode),
-                        maxLines = 1,
-                    )
-                    Icon(
-                        painter = painterResource(R.drawable.ic_ph_caret_right),
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp).rotate(90f),
-                    )
-                }
-                DropdownMenu(
-                    expanded = modeMenuExpanded,
-                    onDismissRequest = { modeMenuExpanded = false },
-                ) {
-                    AppOpMode.entries.forEach { mode ->
-                        DropdownMenuItem(
-                            text = { Text(text = batchModeLabel(mode)) },
-                            enabled = mode != selectedMode,
-                            onClick = {
-                                modeMenuExpanded = false
-                                onModeChange(mode)
-                            },
-                        )
-                    }
-                }
-            }
-            Button(
-                onClick = onApply,
-                contentPadding = PaddingValues(horizontal = 12.dp),
-            ) {
-                Text(text = stringResource(R.string.batch_apply_short))
-            }
+        EditableModeMenu(
+            currentMode = selectedMode,
+            enabled = true,
+            onModeSelected = { _, mode -> onModeChange(mode) },
+            contentDescription = stringResource(
+                R.string.batch_apply_mode_value,
+                modeLabel(selectedMode),
+            ),
+        )
+        Button(onClick = onApply, enabled = selectedCount > 0) {
+            Text(text = stringResource(R.string.batch_apply_short))
         }
     }
 }
 
 private fun AppOpDisplayItem.batchSelectionKey(): String =
     "${scope.name}:$operationName"
-
-@Composable
-private fun batchModeLabel(mode: AppOpMode): String =
-    stringResource(
-        when (mode) {
-            AppOpMode.ALLOW -> R.string.app_op_mode_allow
-            AppOpMode.IGNORE -> R.string.app_op_mode_ignore
-            AppOpMode.DENY -> R.string.app_op_mode_deny
-            AppOpMode.DEFAULT -> R.string.app_op_mode_default
-            AppOpMode.FOREGROUND -> R.string.app_op_mode_foreground
-        },
-    )
 
 @Composable
 private fun AppSummaryCard(

@@ -20,6 +20,7 @@ import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticsViewModel
 import dev.izumi.appopsnext.presentation.experimental.ExperimentalViewModel
 import dev.izumi.appopsnext.presentation.experimental.WatchersViewModel
 import dev.izumi.appopsnext.presentation.history.HistoryViewModel
+import dev.izumi.appopsnext.presentation.permissions.PermissionBrowserViewModel
 import dev.izumi.appopsnext.presentation.settings.SettingsViewModel
 import dev.izumi.appopsnext.presentation.templates.TemplatesViewModel
 import dev.izumi.appopsnext.ui.theme.AppOpsNextTheme
@@ -32,6 +33,7 @@ class MainActivity : ComponentActivity() {
     private val settingsViewModel: SettingsViewModel by viewModels()
     private val templatesViewModel: TemplatesViewModel by viewModels()
     private val batchOperationsViewModel: BatchOperationsViewModel by viewModels()
+    private val permissionBrowserViewModel: PermissionBrowserViewModel by viewModels()
     private val experimentalViewModel: ExperimentalViewModel by viewModels()
     private val watchersViewModel: WatchersViewModel by viewModels()
 
@@ -60,6 +62,10 @@ class MainActivity : ComponentActivity() {
                 batchOperationsViewModel.uiState.collectAsStateWithLifecycle()
             val appOpSearchQuery =
                 appDetailViewModel.searchQuery.collectAsStateWithLifecycle()
+            val permissionBrowserState =
+                permissionBrowserViewModel.state.collectAsStateWithLifecycle()
+            val permissionModeChangeState =
+                permissionBrowserViewModel.change.collectAsStateWithLifecycle()
             val experimentalUiState =
                 experimentalViewModel.uiState.collectAsStateWithLifecycle()
             val watchersUiState = watchersViewModel.uiState.collectAsStateWithLifecycle()
@@ -76,6 +82,17 @@ class MainActivity : ComponentActivity() {
                     templatesUiState = templatesUiState.value,
                     batchOperationUiState = batchOperationUiState.value,
                     appOpSearchQuery = appOpSearchQuery.value,
+                    permissionBrowserState = permissionBrowserState.value,
+                    permissionModeChangeState = permissionModeChangeState.value,
+                    onPermissionSelected = permissionBrowserViewModel::select,
+                    onRefreshPermission = permissionBrowserViewModel::refresh,
+                    onPermissionModeChangeRequested = permissionBrowserViewModel::request,
+                    onPermissionModeChangeConfirmed = permissionBrowserViewModel::confirm,
+                    onPermissionModeChangeDismissed = permissionBrowserViewModel::dismiss,
+                    onPermissionDenyNoticeDismissed = permissionBrowserViewModel::dismissDenyNotice,
+                    onPermissionFlagNoticeDismissedForBrowser = permissionBrowserViewModel::dismissFlagNotice,
+                    onPermissionForegroundRequested = permissionBrowserViewModel::requestForeground,
+                    onOperationBatchRequested = batchOperationsViewModel::requestOperationBatch,
                     experimentalUiState = experimentalUiState.value,
                     // Read only where the log is shown: it changes every couple of seconds
                     // while the monitor is busy, which must not recompose every other page.
@@ -172,7 +189,9 @@ class MainActivity : ComponentActivity() {
                         batchOperationsViewModel::confirm,
                     onBatchOperationDismiss = {
                         batchOperationsViewModel.dismiss()
-                        appDetailViewModel.refresh()
+                        if (permissionBrowserState.value.operation == null) {
+                            appDetailViewModel.refresh()
+                        }
                     },
                 )
             }

@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation.app_list
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -40,6 +44,8 @@ import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.ui.theme.mainPageHeadingWeight
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.presentation.batch.TemplatePickerDialog
+import dev.izumi.appopsnext.presentation.batch.BatchSelectionControls
+import dev.izumi.appopsnext.presentation.batch.toggleVisibleSelection
 import dev.izumi.appopsnext.presentation.components.AppIcon
 import dev.izumi.appopsnext.presentation.components.CompactSearchField
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
@@ -54,6 +60,10 @@ fun AppListScreen(
     templates: List<PermissionTemplate>,
     onTemplateApplyRequested:
         (PermissionTemplate, List<InstalledApp>) -> Unit,
+    permissionTab: Boolean,
+    onPermissionTabChange: (Boolean) -> Unit,
+    onPermissionInfo: () -> Unit,
+    permissionContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
 ) {
@@ -62,6 +72,15 @@ fun AppListScreen(
         mutableStateOf(emptySet<String>())
     }
     var showTemplatePicker by remember { mutableStateOf(false) }
+    BackHandler(enabled = batchSelectionMode && !permissionTab && !showTemplatePicker) {
+        batchSelectionMode = false
+        selectedPackages = emptySet()
+    }
+    val visiblePackages = uiState.visibleApps.map { it.packageName }.toSet()
+    val eligiblePackages = uiState.allApps.map { it.packageName }.toSet()
+    LaunchedEffect(eligiblePackages, uiState.isLoading) {
+        if (!uiState.isLoading) selectedPackages = selectedPackages intersect eligiblePackages
+    }
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -73,28 +92,31 @@ fun AppListScreen(
                     )
                 },
                 actions = {
-                    IconButton(
-                        onClick = {
-                            batchSelectionMode = !batchSelectionMode
-                            selectedPackages = emptySet()
-                        },
-                    ) {
-                        Icon(
-                            painter = painterResource(
-                                if (batchSelectionMode) {
-                                    R.drawable.ic_ph_x
-                                } else {
-                                    R.drawable.ic_ph_list_checks
-                                },
-                            ),
-                            contentDescription = stringResource(
-                                if (batchSelectionMode) {
-                                    R.string.batch_cancel_selection
-                                } else {
-                                    R.string.batch_action
-                                },
-                            ),
-                        )
+                    if (!permissionTab) {
+                        IconButton(
+                            onClick = {
+                                batchSelectionMode = !batchSelectionMode
+                                selectedPackages = emptySet()
+                            },
+                        ) {
+                            Icon(
+                                painter = painterResource(
+                                    if (batchSelectionMode) R.drawable.ic_ph_x
+                                    else R.drawable.ic_ph_list_checks,
+                                ),
+                                contentDescription = stringResource(
+                                    if (batchSelectionMode) R.string.batch_cancel_selection
+                                    else R.string.batch_action,
+                                ),
+                            )
+                        }
+                    } else {
+                        IconButton(onClick = onPermissionInfo) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_ph_info),
+                                contentDescription = stringResource(R.string.permission_info_title),
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -104,38 +126,50 @@ fun AppListScreen(
         },
         bottomBar = bottomBar,
     ) { contentPadding ->
-        when {
-            uiState.isLoading && uiState.visibleApps.isEmpty() -> LoadingContent(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(contentPadding),
-            )
-
-            uiState.loadFailed && uiState.visibleApps.isEmpty() -> LoadFailureContent(
-                onRefresh = onRefresh,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(contentPadding),
-            )
-
-            else -> AppListContent(
-                uiState = uiState,
-                onSearchQueryChange = onSearchQueryChange,
-                onAppSelected = onAppSelected,
-                batchSelectionMode = batchSelectionMode,
-                selectedPackages = selectedPackages,
-                onBatchSelectionChange = { packageName, selected ->
-                    selectedPackages = if (selected) {
-                        selectedPackages + packageName
-                    } else {
-                        selectedPackages - packageName
-                    }
-                },
-                onApplyTemplate = { showTemplatePicker = true },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(contentPadding),
-            )
+        Column(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
+            TabRow(selectedTabIndex = if (permissionTab) 1 else 0) {
+                Tab(
+                    selected = !permissionTab,
+                    onClick = { onPermissionTabChange(false) },
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = { Text(stringResource(R.string.browse_by_app)) },
+                )
+                Tab(
+                    selected = permissionTab,
+                    onClick = { onPermissionTabChange(true) },
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = { Text(stringResource(R.string.browse_by_permission)) },
+                )
+            }
+            if (permissionTab) {
+                permissionContent()
+            } else {
+                when {
+                    uiState.isLoading && uiState.visibleApps.isEmpty() -> LoadingContent(
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    uiState.loadFailed && uiState.visibleApps.isEmpty() -> LoadFailureContent(
+                        onRefresh = onRefresh,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    else -> AppListContent(
+                        uiState = uiState,
+                        onSearchQueryChange = onSearchQueryChange,
+                        onAppSelected = onAppSelected,
+                        batchSelectionMode = batchSelectionMode,
+                        selectedPackages = selectedPackages,
+                        onBatchSelectionChange = { packageName, selected ->
+                            selectedPackages = if (selected) selectedPackages + packageName
+                            else selectedPackages - packageName
+                        },
+                        onApplyTemplate = { showTemplatePicker = true },
+                        onToggleAll = {
+                            selectedPackages = toggleVisibleSelection(selectedPackages, visiblePackages)
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
         }
     }
 
@@ -167,6 +201,7 @@ private fun AppListContent(
     selectedPackages: Set<String>,
     onBatchSelectionChange: (String, Boolean) -> Unit,
     onApplyTemplate: () -> Unit,
+    onToggleAll: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -191,32 +226,6 @@ private fun AppListContent(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
-        if (batchSelectionMode) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(
-                        R.string.batch_selected_count,
-                        selectedPackages.size,
-                    ),
-                )
-                FilledTonalButton(
-                    onClick = onApplyTemplate,
-                    enabled = selectedPackages.isNotEmpty(),
-                ) {
-                    Text(
-                        text = stringResource(
-                            R.string.batch_apply_template,
-                        ),
-                    )
-                }
-            }
         }
         if (uiState.visibleApps.isEmpty()) {
             EmptySearchContent(
@@ -263,6 +272,23 @@ private fun AppListContent(
                             )
                         },
                     )
+                }
+            }
+        }
+        if (batchSelectionMode) {
+            BatchSelectionControls(
+                selectedCount = selectedPackages.size,
+                visibleSelectedCount = uiState.visibleApps.count {
+                    it.packageName in selectedPackages
+                },
+                visibleItemCount = uiState.visibleApps.size,
+                onToggleAll = onToggleAll,
+            ) {
+                FilledTonalButton(
+                    onClick = onApplyTemplate,
+                    enabled = selectedPackages.isNotEmpty(),
+                ) {
+                    Text(text = stringResource(R.string.batch_apply_template))
                 }
             }
         }
