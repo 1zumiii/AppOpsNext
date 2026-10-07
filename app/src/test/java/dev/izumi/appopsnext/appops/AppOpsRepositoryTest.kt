@@ -22,26 +22,9 @@ class AppOpsRepositoryTest {
     @Test
     fun `package load returns a parsed snapshot`() =
         runBlocking {
-            val gateway = object : PrivilegedAppOpsGateway {
+            val gateway = object : ReadOnlyGateway() {
                 override suspend fun getPackageOps(packageName: String) =
                     success("RUN_IN_BACKGROUND: ignore\n")
-
-                override suspend fun getPackageOp(
-                    packageName: String,
-                    operationName: String,
-                ): ShellCommandResult = error("Not used")
-
-                override suspend fun setPackageOpMode(
-                    packageName: String,
-                    operationName: String,
-                    mode: AppOpMode,
-                ): ShellCommandResult = error("Not used")
-
-                override suspend fun setUidOpMode(
-                    packageName: String,
-                    operationName: String,
-                    mode: AppOpMode,
-                ): ShellCommandResult = error("Not used")
             }
 
             val result = AppOpsRepository(gateway).loadPackageOps(TEST_PACKAGE)
@@ -56,7 +39,7 @@ class AppOpsRepositoryTest {
     @Test
     fun `package load resolves multiline uid block with single-op reads`() =
         runBlocking {
-            val gateway = object : PrivilegedAppOpsGateway {
+            val gateway = object : ReadOnlyGateway() {
                 override suspend fun getPackageOps(packageName: String) =
                     success(
                         """
@@ -94,18 +77,6 @@ class AppOpsRepositoryTest {
 
                         else -> error("Unexpected operation")
                     }
-
-                override suspend fun setPackageOpMode(
-                    packageName: String,
-                    operationName: String,
-                    mode: AppOpMode,
-                ): ShellCommandResult = error("Not used")
-
-                override suspend fun setUidOpMode(
-                    packageName: String,
-                    operationName: String,
-                    mode: AppOpMode,
-                ): ShellCommandResult = error("Not used")
             }
 
             val result = AppOpsRepository(gateway).loadPackageOps(TEST_PACKAGE)
@@ -126,7 +97,7 @@ class AppOpsRepositoryTest {
     fun `package load resolves scopes with one uid snapshot`() =
         runBlocking {
             var singleOperationReadCount = 0
-            val gateway = object : PrivilegedAppOpsGateway {
+            val gateway = object : ReadOnlyGateway() {
                 override suspend fun getPackageOps(packageName: String) =
                     success(
                         """
@@ -154,18 +125,6 @@ class AppOpsRepositoryTest {
                     singleOperationReadCount += 1
                     return error("Fast UID resolution should avoid this call")
                 }
-
-                override suspend fun setPackageOpMode(
-                    packageName: String,
-                    operationName: String,
-                    mode: AppOpMode,
-                ): ShellCommandResult = error("Not used")
-
-                override suspend fun setUidOpMode(
-                    packageName: String,
-                    operationName: String,
-                    mode: AppOpMode,
-                ): ShellCommandResult = error("Not used")
             }
 
             val result = AppOpsRepository(gateway).loadPackageOps(
@@ -196,7 +155,7 @@ class AppOpsRepositoryTest {
     fun `uid snapshot mismatch falls back to single-operation reads`() =
         runBlocking {
             var singleOperationReadCount = 0
-            val gateway = object : PrivilegedAppOpsGateway {
+            val gateway = object : ReadOnlyGateway() {
                 override suspend fun getPackageOps(packageName: String) =
                     success(
                         """
@@ -220,18 +179,6 @@ class AppOpsRepositoryTest {
                         """.trimIndent(),
                     )
                 }
-
-                override suspend fun setPackageOpMode(
-                    packageName: String,
-                    operationName: String,
-                    mode: AppOpMode,
-                ): ShellCommandResult = error("Not used")
-
-                override suspend fun setUidOpMode(
-                    packageName: String,
-                    operationName: String,
-                    mode: AppOpMode,
-                ): ShellCommandResult = error("Not used")
             }
 
             val result = AppOpsRepository(gateway).loadPackageOps(
@@ -472,6 +419,25 @@ class AppOpsRepositoryTest {
                 gateway.requestedModes,
             )
         }
+
+    private abstract class ReadOnlyGateway : PrivilegedAppOpsGateway {
+        override suspend fun getPackageOp(
+            packageName: String,
+            operationName: String,
+        ): ShellCommandResult = error("Unexpected single-operation read")
+
+        override suspend fun setPackageOpMode(
+            packageName: String,
+            operationName: String,
+            mode: AppOpMode,
+        ): ShellCommandResult = error("Unexpected package write in a load test")
+
+        override suspend fun setUidOpMode(
+            packageName: String,
+            operationName: String,
+            mode: AppOpMode,
+        ): ShellCommandResult = error("Unexpected UID write in a load test")
+    }
 
     private class FakeGateway(
         private val getResults: ArrayDeque<ShellCommandResult>,

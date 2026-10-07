@@ -8,7 +8,7 @@ import org.junit.Test
 
 class PermissionTemplateDefaultsTest {
     @Test
-    fun `common rules use stable names and neutral modes`() {
+    fun `common rules use stable names neutral modes and package scope`() {
         assertTrue(PermissionTemplateDefaults.commonRules.isNotEmpty())
         assertTrue(
             PermissionTemplateDefaults.commonRules.all {
@@ -16,10 +16,6 @@ class PermissionTemplateDefaultsTest {
                     it.mode == AppOpMode.DEFAULT
             },
         )
-    }
-
-    @Test
-    fun `template operations default to package scope`() {
         assertEquals(
             AppOpScope.PACKAGE,
             PermissionTemplateDefaults.suggestedScope(),
