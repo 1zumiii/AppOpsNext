@@ -22,7 +22,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.runtime.LaunchedEffect
@@ -44,10 +43,11 @@ import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.ui.theme.mainPageHeadingWeight
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.presentation.batch.TemplatePickerDialog
+import dev.izumi.appopsnext.presentation.batch.BatchSelectionControls
+import dev.izumi.appopsnext.presentation.batch.toggleVisibleSelection
 import dev.izumi.appopsnext.presentation.components.AppIcon
 import dev.izumi.appopsnext.presentation.components.CompactSearchField
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
-import dev.izumi.appopsnext.presentation.permissions.PermissionBrowser
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,6 +59,10 @@ fun AppListScreen(
     templates: List<PermissionTemplate>,
     onTemplateApplyRequested:
         (PermissionTemplate, List<InstalledApp>) -> Unit,
+    permissionTab: Boolean,
+    onPermissionTabChange: (Boolean) -> Unit,
+    onPermissionInfo: () -> Unit,
+    permissionContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
 ) {
@@ -67,10 +71,10 @@ fun AppListScreen(
         mutableStateOf(emptySet<String>())
     }
     var showTemplatePicker by remember { mutableStateOf(false) }
-    var permissionTab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     val visiblePackages = uiState.visibleApps.map { it.packageName }.toSet()
-    LaunchedEffect(visiblePackages) {
-        selectedPackages = selectedPackages intersect visiblePackages
+    val eligiblePackages = uiState.allApps.map { it.packageName }.toSet()
+    LaunchedEffect(eligiblePackages, uiState.isLoading) {
+        if (!uiState.isLoading) selectedPackages = selectedPackages intersect eligiblePackages
     }
     Scaffold(
         modifier = modifier,
@@ -101,6 +105,13 @@ fun AppListScreen(
                                 ),
                             )
                         }
+                    } else {
+                        IconButton(onClick = onPermissionInfo) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_ph_info),
+                                contentDescription = stringResource(R.string.permission_info_title),
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -110,26 +121,23 @@ fun AppListScreen(
         },
         bottomBar = bottomBar,
     ) { contentPadding ->
-        Column(Modifier.fillMaxSize().padding(contentPadding)) {
+        Column(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
             TabRow(selectedTabIndex = if (permissionTab) 1 else 0) {
                 Tab(
                     selected = !permissionTab,
-                    onClick = { permissionTab = false },
+                    onClick = { onPermissionTabChange(false) },
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     text = { Text(stringResource(R.string.browse_by_app)) },
                 )
                 Tab(
                     selected = permissionTab,
-                    onClick = { permissionTab = true },
+                    onClick = { onPermissionTabChange(true) },
+                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     text = { Text(stringResource(R.string.browse_by_permission)) },
                 )
             }
             if (permissionTab) {
-                PermissionBrowser(
-                    apps = uiState.allApps,
-                    appsLoading = uiState.isLoading,
-                    appsFailed = uiState.loadFailed,
-                    onRefreshApps = onRefresh,
-                )
+                permissionContent()
             } else {
                 when {
                     uiState.isLoading && uiState.visibleApps.isEmpty() -> LoadingContent(
@@ -151,9 +159,7 @@ fun AppListScreen(
                         },
                         onApplyTemplate = { showTemplatePicker = true },
                         onToggleAll = {
-                            selectedPackages = if (visiblePackages.isNotEmpty() && selectedPackages.containsAll(visiblePackages)) {
-                                emptySet()
-                            } else visiblePackages
+                            selectedPackages = toggleVisibleSelection(selectedPackages, visiblePackages)
                         },
                         modifier = Modifier.fillMaxSize(),
                     )
@@ -169,7 +175,7 @@ fun AppListScreen(
                 showTemplatePicker = false
                 onTemplateApplyRequested(
                     template,
-                    uiState.visibleApps.filter {
+                    uiState.allApps.filter {
                         it.packageName in selectedPackages
                     },
                 )
@@ -216,36 +222,6 @@ private fun AppListContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        if (batchSelectionMode) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(
-                        R.string.batch_selected_count,
-                        selectedPackages.size,
-                    ),
-                )
-                TextButton(onClick = onToggleAll, enabled = uiState.visibleApps.isNotEmpty()) {
-                    Text(stringResource(if (uiState.visibleApps.all { it.packageName in selectedPackages })
-                        R.string.selection_clear_all else R.string.selection_select_all))
-                }
-                FilledTonalButton(
-                    onClick = onApplyTemplate,
-                    enabled = selectedPackages.isNotEmpty(),
-                ) {
-                    Text(
-                        text = stringResource(
-                            R.string.batch_apply_template,
-                        ),
-                    )
-                }
-            }
-        }
         if (uiState.visibleApps.isEmpty()) {
             EmptySearchContent(
                 modifier = Modifier
@@ -291,6 +267,22 @@ private fun AppListContent(
                             )
                         },
                     )
+                }
+            }
+        }
+        if (batchSelectionMode) {
+            BatchSelectionControls(
+                selectedCount = selectedPackages.size,
+                allVisibleSelected = uiState.visibleApps.isNotEmpty() &&
+                    uiState.visibleApps.all { it.packageName in selectedPackages },
+                hasVisibleItems = uiState.visibleApps.isNotEmpty(),
+                onToggleAll = onToggleAll,
+            ) {
+                FilledTonalButton(
+                    onClick = onApplyTemplate,
+                    enabled = selectedPackages.isNotEmpty(),
+                ) {
+                    Text(text = stringResource(R.string.batch_apply_template))
                 }
             }
         }

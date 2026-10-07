@@ -18,6 +18,12 @@ import dev.izumi.appopsnext.monitor.MonitorOutcomes
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpScope
+import dev.izumi.appopsnext.batch.model.BatchOperationTarget
+import dev.izumi.appopsnext.presentation.app_detail.ModeChangeDialog
+import dev.izumi.appopsnext.presentation.permissions.PermissionBrowserState
+import dev.izumi.appopsnext.presentation.permissions.PermissionDetailScreen
+import dev.izumi.appopsnext.presentation.permissions.PermissionInfoDialog
+import dev.izumi.appopsnext.presentation.permissions.PermissionListContent
 import dev.izumi.appopsnext.presentation.app_detail.AppDetailScreen
 import dev.izumi.appopsnext.presentation.app_detail.AppDetailUiState
 import dev.izumi.appopsnext.presentation.app_detail.AppOpModeChangeUiState
@@ -70,6 +76,17 @@ fun AppOpsRootScreen(
     templatesUiState: TemplatesUiState,
     batchOperationUiState: BatchOperationUiState,
     appOpSearchQuery: String,
+    permissionBrowserState: PermissionBrowserState,
+    permissionModeChangeState: AppOpModeChangeUiState,
+    onPermissionSelected: (String?) -> Unit,
+    onRefreshPermission: () -> Unit,
+    onPermissionModeChangeRequested: (InstalledApp, AppOpMode) -> Unit,
+    onPermissionModeChangeConfirmed: () -> Unit,
+    onPermissionModeChangeDismissed: () -> Unit,
+    onPermissionDenyNoticeDismissed: (Boolean) -> Unit,
+    onPermissionFlagNoticeDismissedForBrowser: (Boolean) -> Unit,
+    onPermissionForegroundRequested: () -> Unit,
+    onOperationBatchRequested: (String, List<BatchOperationTarget>) -> Unit,
     onShizukuAction: () -> Unit,
     onPrivilegedServiceRetry: () -> Unit,
     onClearDiagnosticLog: () -> Unit,
@@ -141,6 +158,16 @@ fun AppOpsRootScreen(
     }
     var selectedApp by rememberSaveable(stateSaver = InstalledAppStateSaver) {
         mutableStateOf<InstalledApp?>(null)
+    }
+    var permissionTab by rememberSaveable { mutableStateOf(false) }
+    var permissionSearchQuery by rememberSaveable { mutableStateOf("") }
+    var showPermissionInfo by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(batchOperationUiState) {
+        if (batchOperationUiState is BatchOperationUiState.Finished &&
+            permissionBrowserState.operation != null
+        ) {
+            onRefreshPermission()
+        }
     }
     var selectedHistoryPermissionName by rememberSaveable {
         mutableStateOf<String?>(null)
@@ -401,7 +428,34 @@ fun AppOpsRootScreen(
         return
     }
 
-    if (selectedApp != null) {
+    val permissionBusy = permissionModeChangeState is AppOpModeChangeUiState.Applying ||
+        batchOperationUiState is BatchOperationUiState.Running
+    val closePermissionDetail = {
+        if (!permissionBusy) {
+            focusManager.clearFocus()
+            keyboardController?.hide()
+            onPermissionSelected(null)
+        }
+    }
+    BackHandler(enabled = permissionBrowserState.operation != null) {
+        closePermissionDetail()
+    }
+    if (permissionBrowserState.operation != null) {
+        MainPageTypography {
+            PermissionDetailScreen(
+                uiState = permissionBrowserState,
+                appListState = appListUiState,
+                modeChangeState = permissionModeChangeState,
+                batchState = batchOperationUiState,
+                onBack = closePermissionDetail,
+                onRefresh = onRefreshPermission,
+                onRefreshApps = onRefreshApps,
+                onShowInfo = { showPermissionInfo = true },
+                onModeChangeRequested = onPermissionModeChangeRequested,
+                onBatchRequested = onOperationBatchRequested,
+            )
+        }
+    } else if (selectedApp != null) {
         MainPageTypography {
             AppDetailScreen(
                 uiState = appDetailUiState,
@@ -431,6 +485,20 @@ fun AppOpsRootScreen(
             when (selectedDestination) {
                 MainDestination.APPS -> AppListScreen(
                     uiState = appListUiState,
+                    permissionTab = permissionTab,
+                    onPermissionTabChange = { permissionTab = it },
+                    onPermissionInfo = { showPermissionInfo = true },
+                    permissionContent = {
+                        PermissionListContent(
+                            searchQuery = permissionSearchQuery,
+                            onSearchQueryChange = { permissionSearchQuery = it },
+                            onPermissionSelected = { operation ->
+                                focusManager.clearFocus()
+                                keyboardController?.hide()
+                                onPermissionSelected(operation)
+                            },
+                        )
+                    },
                     onSearchQueryChange = onAppSearchQueryChange,
                     onRefresh = onRefreshApps,
                     onAppSelected = { app ->
@@ -551,6 +619,17 @@ fun AppOpsRootScreen(
         }
     }
 
+    if (showPermissionInfo) {
+        PermissionInfoDialog(onDismiss = { showPermissionInfo = false })
+    }
+    ModeChangeDialog(
+        state = permissionModeChangeState,
+        onConfirm = onPermissionModeChangeConfirmed,
+        onDismiss = onPermissionModeChangeDismissed,
+        onDenyFallbackNoticeDismiss = onPermissionDenyNoticeDismissed,
+        onPermissionFlagNoticeDismiss = onPermissionFlagNoticeDismissedForBrowser,
+        onForegroundAlternativeRequested = onPermissionForegroundRequested,
+    )
     BatchOperationDialog(
         state = batchOperationUiState,
         onConfirm = onBatchOperationConfirm,

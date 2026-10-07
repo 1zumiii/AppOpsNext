@@ -6,12 +6,14 @@
     <string name="selection_clear_all">取消全选</string>
     <string name="permission_back">返回权限列表</string>
     <string name="permission_info_title">权限模式说明</string>
-    <string name="permission_info_body">UID 级模式优先于包级模式。两者都没有记录时，列表显示“系统默认”。Android 运行时权限仍可能限制实际访问。\n\n修改 UID 级模式会影响共享该 UID 的所有应用，包括已隐藏的应用。修改包级模式只作用于该应用。运行时权限写入遭到拒绝时，若 UID 作用范围安全，会尝试通过兼容性权限标志修改。\n\n全选只覆盖筛选后显示的应用。筛选后不再显示的应用会取消选中。</string>
+    <string name="permission_info_modes">UID 级模式优先于包级模式。两者都没有记录时，列表显示“系统默认”。Android 运行时权限仍可能限制实际访问。</string>
+    <string name="permission_info_scope">修改 UID 级模式会影响共享该 UID 的所有应用，包括已隐藏的应用。确认时会列出受影响的应用。</string>
+    <string name="permission_info_fallback">包级写入遭到拒绝时，若没有其他应用共享该 UID，会尝试改写 UID 级模式。运行时权限写入还可能通过兼容性权限标志重试。</string>
+    <string name="permission_info_selection">搜索或按模式筛选后，已选应用仍会保留。全选只加入当前显示的应用，取消全选只移除当前显示的应用。开启“隐藏系统应用”会取消选中的系统应用。</string>
+    <string name="permission_info_unknown">无法识别的模式会按 Android 返回的原值显示。这些应用不能修改模式，也不能加入批量选择。</string>
     <string name="permission_scope_uid">UID 级</string>
     <string name="permission_scope_package">包级</string>
     <string name="permission_all_modes">全部模式</string>
-    <string name="permission_refresh">刷新</string>
-    <string name="permission_close">关闭</string>
     <string name="permission_load_failed">无法读取权限模式。请检查特权服务连接后重试。</string>
     <string name="permission_uid_affected">修改 UID 级模式会影响以下应用：\n%1$s</string>
     <string name="app_name">AppOpsNext</string>

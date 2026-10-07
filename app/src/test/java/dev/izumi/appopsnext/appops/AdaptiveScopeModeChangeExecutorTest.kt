@@ -13,46 +13,6 @@ import org.junit.Test
 
 class AdaptiveScopeModeChangeExecutorTest {
     @Test
-    fun `fixed row scope does not retry alternate scope but keeps permission flag retry`() = runBlocking {
-        for (scope in AppOpScope.entries) {
-            val scopes = mutableListOf<AppOpScope>()
-            var flagCalls = 0
-            val outcome = executorFor("example.app").execute(
-                packageName = "example.app",
-                uid = 10_123,
-                preferredScope = scope,
-                requestedMode = AppOpMode.IGNORE,
-                readMode = { error("Fixed scope must not probe an alternate scope") },
-                allowScopeFallback = false,
-                revokedCompatRetry = RevokedCompatRetry("CAMERA") {
-                    flagCalls++
-                    success()
-                },
-            ) {
-                scopes += it
-                rejected()
-            }
-            assertEquals(listOf(scope), scopes)
-            assertEquals(1, flagCalls)
-            assertTrue(outcome.permissionFlagApplied)
-            assertFalse(outcome.fallbackAttempted)
-        }
-    }
-
-    @Test
-    fun `fixed package row cannot change shared UID permission flags`() = runBlocking {
-        var flagCalls = 0
-        val outcome = AdaptiveScopeModeChangeExecutor { listOf("example.app", "sibling.app") }.execute(
-            packageName = "example.app", uid = 10_123,
-            preferredScope = AppOpScope.PACKAGE, requestedMode = AppOpMode.IGNORE,
-            readMode = { error("Unexpected alternate read") }, allowScopeFallback = false,
-            revokedCompatRetry = RevokedCompatRetry("CAMERA") { flagCalls++; success() },
-        ) { rejected() }
-        assertEquals(0, flagCalls)
-        assertFalse(outcome.permissionFlagApplied)
-    }
-
-    @Test
     fun `successful preferred scope is not retried`() = runBlocking {
         val scopes = mutableListOf<AppOpScope>()
         val executor = executorFor("example.app")

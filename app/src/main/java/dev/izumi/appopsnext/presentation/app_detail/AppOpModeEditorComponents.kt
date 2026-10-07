@@ -150,7 +150,7 @@ internal fun AppOpListItem(
 }
 
 @Composable
-private fun EditableModeMenu(
+internal fun EditableModeMenu(
     currentMode: AppOpMode,
     enabled: Boolean,
     onModeSelected: (AppOpMode, AppOpMode) -> Unit,
@@ -585,7 +585,7 @@ private fun RuntimePermissionRequiredDialog(
 }
 
 @Composable
-private fun modeLabel(mode: AppOpMode): String =
+internal fun modeLabel(mode: AppOpMode): String =
     stringResource(
         when (mode) {
             AppOpMode.ALLOW -> R.string.app_op_mode_allow

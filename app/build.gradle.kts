@@ -157,7 +157,6 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.datastore.preferences)
     implementation(libs.lifecycle.runtime.compose)
-    implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)
 

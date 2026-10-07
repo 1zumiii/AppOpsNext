@@ -4,18 +4,28 @@ import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpNames
 import dev.izumi.appopsnext.appops.model.AppOpScope
 
-data class EffectiveOpState(val mode: AppOpMode, val scope: AppOpScope)
+data class EffectiveOpState(
+    val mode: AppOpMode?,
+    val scope: AppOpScope,
+    val rawMode: String = mode?.shellValue.orEmpty(),
+)
 
 data class OpStates(
-    val uidModes: Map<Int, AppOpMode>,
-    val packageModes: Map<Pair<Int, String>, AppOpMode>,
+    val uidModes: Map<Int, String>,
+    val packageModes: Map<Pair<Int, String>, String>,
 ) {
     fun effective(uid: Int, packageName: String): EffectiveOpState =
-        uidModes[uid]?.let { EffectiveOpState(it, AppOpScope.UID) }
-            ?: EffectiveOpState(
-                packageModes[uid to packageName] ?: AppOpMode.DEFAULT,
+        uidModes[uid]?.let { effective(it, AppOpScope.UID) }
+            ?: effective(
+                packageModes[uid to packageName] ?: AppOpMode.DEFAULT.shellValue,
                 AppOpScope.PACKAGE,
             )
+
+    private fun effective(rawMode: String, scope: AppOpScope) = EffectiveOpState(
+        mode = AppOpMode.fromShellValue(rawMode),
+        scope = scope,
+        rawMode = rawMode,
+    )
 }
 
 /** Parses only top-level UID records, never watcher or access-history records. */
@@ -23,8 +33,8 @@ object OpStatesParser {
     fun parse(output: String, operationName: String, userId: Int): OpStates {
         require(userId >= 0)
         val operation = AppOpNames.shellName(operationName)
-        val uidModes = mutableMapOf<Int, AppOpMode>()
-        val packageModes = mutableMapOf<Pair<Int, String>, AppOpMode>()
+        val uidModes = mutableMapOf<Int, String>()
+        val packageModes = mutableMapOf<Pair<Int, String>, String>()
         var uid: Int? = null
         var packageName: String? = null
         output.lineSequence().forEach { line ->
@@ -43,23 +53,20 @@ object OpStatesParser {
                 }
                 uidMode.matchEntire(line)?.let {
                     if (packageName == null && it.groupValues[1] == operation) {
-                        uidModes[currentUid] = parseMode(it.groupValues[2])
+                        uidModes[currentUid] = it.groupValues[2]
                     }
                     return@forEach
                 }
                 packageMode.matchEntire(line)?.let {
                     val pkg = packageName ?: return@forEach
                     if (it.groupValues[1] == operation) {
-                        packageModes[currentUid to pkg] = parseMode(it.groupValues[2])
+                        packageModes[currentUid to pkg] = it.groupValues[2]
                     }
                 }
             }
         }
         return OpStates(uidModes, packageModes)
     }
-
-    private fun parseMode(value: String): AppOpMode =
-        requireNotNull(AppOpMode.fromShellValue(value)) { "Unknown AppOps mode: $value" }
 
     private fun parseUid(value: String): Int? {
         value.toIntOrNull()?.let { return it.takeIf { uid -> uid >= 0 } }
@@ -73,6 +80,6 @@ object OpStatesParser {
     private val uidHeader = Regex("""  Uid (\S+):\s*""")
     private val appUid = Regex("""u(\d+)a(\d+)""")
     private val packageHeader = Regex("""    Package ([\w.]+):\s*""")
-    private val uidMode = Regex("""      ([A-Z0-9_]+): mode=(\w+)\s*""")
-    private val packageMode = Regex("""      ([A-Z0-9_]+) \((\w+)\):.*""")
+    private val uidMode = Regex("""      ([A-Z0-9_]+): mode=(\S+)\s*""")
+    private val packageMode = Regex("""      ([A-Z0-9_]+) \(([^\s/)]+)(?:\s*/\s*switch\s+[^)]+)?\):.*""")
 }

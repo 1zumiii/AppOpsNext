@@ -44,7 +44,6 @@ class BatchOperationsViewModel(
                 uid = target.uid,
                 preferredScope = target.preferredScope,
                 requestedMode = target.requestedMode,
-                allowScopeFallback = target.allowScopeFallback,
                 readMode = { scope ->
                     repository.readMode(
                         packageName = target.packageName,
