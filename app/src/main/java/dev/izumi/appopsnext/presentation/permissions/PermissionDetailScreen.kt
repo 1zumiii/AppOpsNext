@@ -243,6 +243,10 @@ fun PermissionDetailScreen(
                         currentMode = batchMode,
                         enabled = canEdit,
                         onModeSelected = { _, mode -> batchMode = mode },
+                        contentDescription = stringResource(
+                            R.string.batch_apply_mode_value,
+                            modeLabel(batchMode),
+                        ),
                     )
                     Button(
                         onClick = { onBatchRequested(title, targets) },

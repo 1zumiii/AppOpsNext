@@ -464,6 +464,10 @@ private fun BatchPermissionControls(
             currentMode = selectedMode,
             enabled = true,
             onModeSelected = { _, mode -> onModeChange(mode) },
+            contentDescription = stringResource(
+                R.string.batch_apply_mode_value,
+                modeLabel(selectedMode),
+            ),
         )
         Button(onClick = onApply, enabled = selectedCount > 0) {
             Text(text = stringResource(R.string.batch_apply_short))
