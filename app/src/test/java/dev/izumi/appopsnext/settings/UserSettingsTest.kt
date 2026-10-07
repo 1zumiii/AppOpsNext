@@ -1,27 +1,17 @@
 package dev.izumi.appopsnext.settings
 
-import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class UserSettingsTest {
     @Test
-    fun `system applications are hidden by default`() {
-        assertTrue(UserSettings().hideSystemApps)
-    }
+    fun `defaults hide system apps show fallback notices and keep automatic policy opt in`() {
+        val settings = UserSettings()
 
-    @Test
-    fun `deny fallback success notice is shown by default`() {
-        assertFalse(UserSettings().suppressDenyFallbackNotice)
-    }
-
-    @Test
-    fun `permission flag notice is shown by default`() {
-        assertFalse(UserSettings().suppressPermissionFlagNotice)
-    }
-
-    @Test
-    fun `automatic new app policy is opt in`() {
-        assertFalse(UserSettings().autoApplyNewAppTemplate)
+        assertTrue(settings.hideSystemApps)
+        assertFalse(settings.suppressDenyFallbackNotice)
+        assertFalse(settings.suppressPermissionFlagNotice)
+        assertFalse(settings.autoApplyNewAppTemplate)
     }
 }
