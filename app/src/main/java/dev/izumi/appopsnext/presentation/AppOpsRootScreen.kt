@@ -629,6 +629,7 @@ fun AppOpsRootScreen(
         onDenyFallbackNoticeDismiss = onPermissionDenyNoticeDismissed,
         onPermissionFlagNoticeDismiss = onPermissionFlagNoticeDismissedForBrowser,
         onForegroundAlternativeRequested = onPermissionForegroundRequested,
+        showPackageName = true,
     )
     BatchOperationDialog(
         state = batchOperationUiState,

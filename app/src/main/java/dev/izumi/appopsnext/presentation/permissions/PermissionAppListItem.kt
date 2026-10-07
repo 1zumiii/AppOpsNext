@@ -38,7 +38,11 @@ internal fun PermissionAppListItem(
     onSelectionChange: (Boolean) -> Unit,
     onModeSelected: (AppOpMode) -> Unit,
 ) {
+    val selectable = selectedForBatch != null && editEnabled && state.mode != null
+    // Like the app list, the whole row toggles selection while selecting.
     Surface(
+        onClick = { onSelectionChange(selectedForBatch != true) },
+        enabled = selectable,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -52,7 +56,7 @@ internal fun PermissionAppListItem(
                 Checkbox(
                     checked = selectedForBatch && state.mode != null,
                     onCheckedChange = onSelectionChange,
-                    enabled = editEnabled && state.mode != null,
+                    enabled = selectable,
                 )
             } else {
                 AppIcon(packageName = app.packageName, appLabel = app.label, size = 40.dp)

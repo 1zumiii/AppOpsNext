@@ -140,11 +140,12 @@ class BatchOperationsViewModel(
 
     fun requestOperationBatch(title: String, targets: List<BatchOperationTarget>) {
         if (targets.isEmpty() || mutableUiState.value !is BatchOperationUiState.Idle) return
-        val affectedPackages = targets.filter { it.preferredScope == AppOpScope.UID }
-            .flatMap { target ->
-                getApplication<Application>().packageManager.getPackagesForUid(target.uid)
-                    ?.toList().orEmpty()
-            }.distinct().sorted()
+        val affectedPackages = unselectedSharedUidPackages(targets) { uid ->
+            getApplication<Application>().packageManager
+                .getPackagesForUid(uid)
+                ?.toList()
+                .orEmpty()
+        }
         // A UID write already covers every selected sibling. Execute it once.
         val distinctTargets = targets.distinctBy {
             if (it.preferredScope == AppOpScope.UID) "uid:${it.uid}" else "pkg:${it.packageName}"

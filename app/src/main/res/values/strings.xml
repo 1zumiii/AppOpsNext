@@ -16,7 +16,7 @@
     <string name="permission_scope_package">Package</string>
     <string name="permission_all_modes">All modes</string>
     <string name="permission_load_failed">Unable to load permission modes. Check the privileged service connection and retry.</string>
-    <string name="permission_uid_affected">UID changes also apply to these packages:\n%1$s</string>
+    <string name="permission_uid_affected">These apps share a UID with the selection and will change too:\n%1$s</string>
     <string name="app_name">AppOpsNext</string>
     <string name="status_device_title">Device</string>
     <string name="status_device_value">%1$s %2$s</string>
@@ -92,6 +92,7 @@
     <string name="app_detail_mode_button">%1$s ▾</string>
     <string name="app_detail_mode_confirm_title">Confirm AppOp change</string>
     <string name="app_detail_mode_confirm_operation">Operation: %1$s</string>
+    <string name="app_detail_mode_confirm_package">Package: %1$s</string>
     <string name="app_detail_mode_shared_uid_warning">This app shares its UID with other apps, so the change also affects:\n%1$s</string>
     <string name="app_detail_mode_transition">%1$s → %2$s</string>
     <string name="app_detail_mode_confirm_warning">This change may immediately affect the target app. AppOpsNext reads the value back after writing and attempts to restore the original value if verification fails.</string>
