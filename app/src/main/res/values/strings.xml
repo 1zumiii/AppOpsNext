@@ -2,6 +2,21 @@
 <resources
     xmlns:tools="http://schemas.android.com/tools"
     tools:locale="en">
+    <string name="browse_by_app">By app</string>
+    <string name="browse_by_permission">By permission</string>
+    <string name="selection_select_all">Select all</string>
+    <string name="permission_back">Back to permissions</string>
+    <string name="permission_info_title">About permission modes</string>
+    <string name="permission_info_modes">A UID mode overrides the package mode. If neither is recorded, the list shows System default. Android runtime permissions can further restrict access.</string>
+    <string name="permission_info_scope">UID changes affect every app sharing that UID, including hidden apps. The confirmation lists affected packages.</string>
+    <string name="permission_info_fallback">A rejected package write may retry at UID level if no other app shares that UID. Runtime permission writes may also retry through the compatibility permission flag.</string>
+    <string name="permission_info_selection">Selections remain when you search or filter by mode. Select all adds the visible apps. Deselect all removes only the visible apps. Hiding system apps removes them from the selection.</string>
+    <string name="permission_info_unknown">Unrecognized modes are shown as reported by Android. These rows cannot be edited or selected for batch changes.</string>
+    <string name="permission_scope_uid">UID</string>
+    <string name="permission_scope_package">Package</string>
+    <string name="permission_all_modes">All modes</string>
+    <string name="permission_load_failed">Unable to load permission modes. Check the privileged service connection and retry.</string>
+    <string name="permission_uid_affected">These apps share a UID with the selection and will change too:\n%1$s</string>
     <string name="app_name">AppOpsNext</string>
     <string name="status_device_title">Device</string>
     <string name="status_device_value">%1$s %2$s</string>
@@ -77,6 +92,7 @@
     <string name="app_detail_mode_button">%1$s ▾</string>
     <string name="app_detail_mode_confirm_title">Confirm AppOp change</string>
     <string name="app_detail_mode_confirm_operation">Operation: %1$s</string>
+    <string name="app_detail_mode_confirm_package">Package: %1$s</string>
     <string name="app_detail_mode_shared_uid_warning">This app shares its UID with other apps, so the change also affects:\n%1$s</string>
     <string name="app_detail_mode_transition">%1$s → %2$s</string>
     <string name="app_detail_mode_confirm_warning">This change may immediately affect the target app. AppOpsNext reads the value back after writing and attempts to restore the original value if verification fails.</string>

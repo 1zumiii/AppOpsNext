@@ -157,6 +157,19 @@ func TestReadRequestWrapsReaderFailures(t *testing.T) {
 
 // The unfiltered dump runs to tens of thousands of lines, so the query the
 // monitor uses to read process state has to stay scoped to one package.
+func TestParseOpStatesQuery(t *testing.T) {
+	actual, err := parseCommand("GET_OP_STATES CAMERA")
+	expected := []string{"/system/bin/dumpsys", "appops", "--op", "CAMERA"}
+	if err != nil || !reflect.DeepEqual(actual.arguments, expected) {
+		t.Fatalf("command = %#v, error = %v", actual, err)
+	}
+	for _, request := range []string{"GET_OP_STATES", "GET_OP_STATES CAMERA extra", "GET_OP_STATES CAMERA;id", "GET_OP_STATES ../../bad"} {
+		if _, err := parseCommand(request); err == nil {
+			t.Fatalf("expected %q to be rejected", request)
+		}
+	}
+}
+
 func TestParseUidStateQueryIsScopedToOnePackage(t *testing.T) {
 	actual, err := parseCommand("GET_UID_STATES dev.izumi.appopsnext")
 	if err != nil {

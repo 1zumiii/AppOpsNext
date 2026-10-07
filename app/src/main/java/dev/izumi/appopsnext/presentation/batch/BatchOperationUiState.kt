@@ -8,6 +8,7 @@ data class BatchOperationRequest(
     val targetCount: Int,
     val operationCount: Int,
     val targets: List<BatchOperationTarget>,
+    val affectedPackages: List<String> = emptyList(),
 )
 
 sealed interface BatchOperationUiState {

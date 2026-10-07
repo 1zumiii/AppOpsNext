@@ -33,6 +33,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -150,16 +152,23 @@ internal fun AppOpListItem(
 }
 
 @Composable
-private fun EditableModeMenu(
+internal fun EditableModeMenu(
     currentMode: AppOpMode,
     enabled: Boolean,
     onModeSelected: (AppOpMode, AppOpMode) -> Unit,
+    /** Replaces the spoken mode where the button picks a target, not a current value. */
+    contentDescription: String? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box {
         TextButton(
             onClick = { expanded = true },
             enabled = enabled,
+            modifier = if (contentDescription != null) {
+                Modifier.semantics { this.contentDescription = contentDescription }
+            } else {
+                Modifier
+            },
             contentPadding = PaddingValues(0.dp),
         ) {
             Text(
@@ -196,6 +205,8 @@ internal fun ModeChangeDialog(
     onDenyFallbackNoticeDismiss: (Boolean) -> Unit,
     onPermissionFlagNoticeDismiss: (Boolean) -> Unit,
     onForegroundAlternativeRequested: () -> Unit,
+    /** The permission page lists many apps, so its confirmation names the package. */
+    showPackageName: Boolean = false,
 ) {
     when (state) {
         is AppOpModeChangeUiState.Confirming -> AppBottomSheet(
@@ -214,6 +225,14 @@ internal fun ModeChangeDialog(
                             state.request.operationName,
                         ),
                     )
+                    if (showPackageName) {
+                        Text(
+                            text = stringResource(
+                                R.string.app_detail_mode_confirm_package,
+                                state.request.packageName,
+                            ),
+                        )
+                    }
                     if (
                         state.request.scope == AppOpScope.UID &&
                         state.request.affectedPackages.size > 1
@@ -584,7 +603,7 @@ private fun RuntimePermissionRequiredDialog(
 }
 
 @Composable
-private fun modeLabel(mode: AppOpMode): String =
+internal fun modeLabel(mode: AppOpMode): String =
     stringResource(
         when (mode) {
             AppOpMode.ALLOW -> R.string.app_op_mode_allow
