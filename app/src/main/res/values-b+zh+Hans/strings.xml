@@ -3,7 +3,6 @@
     <string name="browse_by_app">按应用</string>
     <string name="browse_by_permission">按权限</string>
     <string name="selection_select_all">全选</string>
-    <string name="selection_clear_all">取消全选</string>
     <string name="permission_back">返回权限列表</string>
     <string name="permission_info_title">权限模式说明</string>
     <string name="permission_info_modes">UID 级模式优先于包级模式。两者都没有记录时，列表显示“系统默认”。Android 运行时权限仍可能限制实际访问。</string>

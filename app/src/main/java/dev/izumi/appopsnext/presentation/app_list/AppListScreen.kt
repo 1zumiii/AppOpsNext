@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation.app_list
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -71,6 +72,10 @@ fun AppListScreen(
         mutableStateOf(emptySet<String>())
     }
     var showTemplatePicker by remember { mutableStateOf(false) }
+    BackHandler(enabled = batchSelectionMode && !permissionTab && !showTemplatePicker) {
+        batchSelectionMode = false
+        selectedPackages = emptySet()
+    }
     val visiblePackages = uiState.visibleApps.map { it.packageName }.toSet()
     val eligiblePackages = uiState.allApps.map { it.packageName }.toSet()
     LaunchedEffect(eligiblePackages, uiState.isLoading) {
@@ -273,9 +278,10 @@ private fun AppListContent(
         if (batchSelectionMode) {
             BatchSelectionControls(
                 selectedCount = selectedPackages.size,
-                allVisibleSelected = uiState.visibleApps.isNotEmpty() &&
-                    uiState.visibleApps.all { it.packageName in selectedPackages },
-                hasVisibleItems = uiState.visibleApps.isNotEmpty(),
+                visibleSelectedCount = uiState.visibleApps.count {
+                    it.packageName in selectedPackages
+                },
+                visibleItemCount = uiState.visibleApps.size,
                 onToggleAll = onToggleAll,
             ) {
                 FilledTonalButton(

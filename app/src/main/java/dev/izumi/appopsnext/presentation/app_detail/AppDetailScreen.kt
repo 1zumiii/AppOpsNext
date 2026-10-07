@@ -1,6 +1,7 @@
 package dev.izumi.appopsnext.presentation.app_detail
 
 import android.content.res.Configuration
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
@@ -107,6 +108,16 @@ fun AppDetailScreen(
     var showTemplatePicker by remember(app?.packageName) {
         mutableStateOf(false)
     }
+    val exitBatchSelection = {
+        batchSelectionMode = false
+        selectedBatchKeys = emptySet()
+    }
+    BackHandler(enabled = batchSelectionMode && !showTemplatePicker) {
+        exitBatchSelection()
+    }
+    val handleBack = {
+        if (batchSelectionMode) exitBatchSelection() else onBack()
+    }
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -121,7 +132,7 @@ fun AppDetailScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = handleBack) {
                         Icon(
                             painter = painterResource(R.drawable.ic_ph_arrow_left),
                             contentDescription = stringResource(
@@ -410,8 +421,8 @@ private fun ReadyContent(
         if (batchSelectionMode) {
             BatchPermissionControls(
                 selectedCount = selectedItems.size,
-                allVisibleSelected = visibleKeys.isNotEmpty() && selectedBatchKeys.containsAll(visibleKeys),
-                hasVisibleItems = visibleKeys.isNotEmpty(),
+                visibleSelectedCount = visibleKeys.count { it in selectedBatchKeys },
+                visibleItemCount = visibleKeys.size,
                 onToggleAll = {
                     val updated = toggleVisibleSelection(selectedBatchKeys, visibleKeys)
                     visibleKeys.forEach { onBatchSelectionChange(it, it in updated) }
@@ -436,8 +447,8 @@ private fun ReadyContent(
 @Composable
 private fun BatchPermissionControls(
     selectedCount: Int,
-    allVisibleSelected: Boolean,
-    hasVisibleItems: Boolean,
+    visibleSelectedCount: Int,
+    visibleItemCount: Int,
     onToggleAll: () -> Unit,
     selectedMode: AppOpMode,
     onModeChange: (AppOpMode) -> Unit,
@@ -445,8 +456,8 @@ private fun BatchPermissionControls(
 ) {
     BatchSelectionControls(
         selectedCount = selectedCount,
-        allVisibleSelected = allVisibleSelected,
-        hasVisibleItems = hasVisibleItems,
+        visibleSelectedCount = visibleSelectedCount,
+        visibleItemCount = visibleItemCount,
         onToggleAll = onToggleAll,
     ) {
         EditableModeMenu(
