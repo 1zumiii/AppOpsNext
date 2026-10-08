@@ -15,6 +15,9 @@ class RevokedCompatWriteMemory {
         targets.add(Target(packageName, uid, AppOpNames.shellName(operation)))
     }
 
+    // Target is a data class, so a new instance with the same fields removes
+    // the stored entry. Lint flags any freshly built argument to remove().
+    @Suppress("ImplicitSamInstance")
     fun forget(packageName: String, uid: Int, operation: String) {
         targets.remove(Target(packageName, uid, AppOpNames.shellName(operation)))
     }

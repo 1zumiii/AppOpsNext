@@ -552,9 +552,9 @@
     <string name="batch_no_failures">No failed changes</string>
     <string name="batch_failure_details">Details</string>
     <string name="batch_failure_read">Could not read the current mode.</string>
-    <string name="batch_failure_changed">The current mode could not be confirmed. Refresh and try again.</string>
+    <string name="batch_failure_changed">The current mode changed before the write. Refresh and try again.</string>
     <string name="batch_failure_write">The change could not be applied.</string>
-    <string name="batch_failure_verify">The requested mode could not be verified.</string>
+    <string name="batch_failure_verify">The system did not retain the requested mode.</string>
     <string name="action_clear_search">Clear search</string>
     <string name="filter_no_matches">No matching items</string>
     <string name="filter_all_permissions">All permissions</string>

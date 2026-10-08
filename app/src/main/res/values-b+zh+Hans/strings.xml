@@ -548,9 +548,9 @@
     <string name="batch_no_failures">没有失败项</string>
     <string name="batch_failure_details">详情</string>
     <string name="batch_failure_read">无法读取当前模式。</string>
-    <string name="batch_failure_changed">无法确认当前模式，请刷新后重试。</string>
+    <string name="batch_failure_changed">当前模式已发生变化，请刷新后重试。</string>
     <string name="batch_failure_write">未能应用修改。</string>
-    <string name="batch_failure_verify">未能验证目标模式是否生效。</string>
+    <string name="batch_failure_verify">系统未接受请求的模式。</string>
     <string name="action_clear_search">清空搜索</string>
     <string name="filter_no_matches">没有匹配项</string>
     <string name="filter_all_permissions">全部权限</string>
