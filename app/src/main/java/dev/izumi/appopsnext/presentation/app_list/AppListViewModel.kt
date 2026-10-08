@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class AppListViewModel(
@@ -58,14 +59,14 @@ class AppListViewModel(
     )
 
     init {
-        refresh()
+        load(forceRefresh = true, holdIndicator = false)
     }
 
     fun updateSearchQuery(query: String) {
         searchQuery.value = query
     }
 
-    fun refresh() = load(forceRefresh = true)
+    fun refresh() = load(forceRefresh = true, holdIndicator = true)
 
     /**
      * Installed packages rarely change while the user is away, so a resume reuses
@@ -73,11 +74,16 @@ class AppListViewModel(
      */
     fun refreshAfterResume() {
         if (installedApps.value.isNotEmpty()) {
-            load(forceRefresh = false)
+            load(forceRefresh = false, holdIndicator = false)
         }
     }
 
-    private fun load(forceRefresh: Boolean) {
+    /**
+     * A pull-to-refresh indicator hides only when it sees loading change. A
+     * cached reload can finish within one frame, so a user refresh keeps the
+     * loading state visible for a moment.
+     */
+    private fun load(forceRefresh: Boolean, holdIndicator: Boolean) {
         if (loadJob?.isActive == true) return
 
         loadJob = viewModelScope.launch {
@@ -109,11 +115,16 @@ class AppListViewModel(
                     error = error,
                 )
             }
+            if (holdIndicator) {
+                val elapsed = SystemClock.elapsedRealtime() - startedAt
+                delay((MIN_REFRESH_INDICATOR_MILLIS - elapsed).coerceAtLeast(0))
+            }
             isLoading.value = false
         }
     }
 
     private companion object {
         const val LOG_SOURCE = "AppList"
+        const val MIN_REFRESH_INDICATOR_MILLIS = 400L
     }
 }
