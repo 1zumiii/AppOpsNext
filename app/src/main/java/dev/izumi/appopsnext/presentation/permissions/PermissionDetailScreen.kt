@@ -39,7 +39,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.apps.model.InstalledApp
@@ -79,9 +80,10 @@ fun PermissionDetailScreen(
     var batchMode by rememberSaveable(operation) { mutableStateOf(AppOpMode.IGNORE) }
     val busy = modeChangeState is AppOpModeChangeUiState.Applying ||
         batchState is BatchOperationUiState.Running
-    LifecycleResumeEffect(operation) {
+    // LifecycleEventEffect reads the latest busy and loading state on each
+    // resume. LifecycleResumeEffect would keep the values from first composition.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         if (!busy && !uiState.loading) onRefresh()
-        onPauseOrDispose { }
     }
     val exitSelection = {
         if (!busy) {
