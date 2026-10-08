@@ -50,21 +50,27 @@ fun TemplatePickerDialog(
                         key = PermissionTemplate::id,
                     ) { template ->
                         ListItem(
-                            modifier = Modifier.clickable {
+                            modifier = Modifier.clickable(enabled = template.rules.isNotEmpty()) {
                                 onSelect(template)
                             },
                             headlineContent = {
                                 Text(
                                     text = templateDisplayName(template),
                                     fontWeight = FontWeight.Medium,
+                                    color = if (template.rules.isEmpty()) {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    },
                                 )
                             },
                             supportingContent = {
                                 Text(
-                                    text = stringResource(
-                                        R.string.template_rule_count,
-                                        template.rules.size,
-                                    ),
+                                    text = if (template.rules.isEmpty()) {
+                                        stringResource(R.string.template_no_permissions)
+                                    } else {
+                                        stringResource(R.string.template_rule_count, template.rules.size)
+                                    },
                                 )
                             },
                             colors = ListItemDefaults.colors(

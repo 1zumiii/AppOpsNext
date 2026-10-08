@@ -31,6 +31,7 @@ class RevokedCompatRetry(
  * same rule because the flag also covers the whole UID.
  */
 class AdaptiveScopeModeChangeExecutor(
+    private val writeMemory: RevokedCompatWriteMemory = RevokedCompatWriteMemory(),
     private val packagesForUid: (Int) -> List<String>,
 ) {
     private val revokedCompatExecutor = RevokedCompatFallbackExecutor()
@@ -44,6 +45,37 @@ class AdaptiveScopeModeChangeExecutor(
         revokedCompatRetry: RevokedCompatRetry? = null,
         applyMode: suspend (AppOpScope) -> AppOpModeChangeResult,
     ): AdaptiveScopeModeChangeOutcome {
+        val canAffectUid = preferredScope == AppOpScope.UID ||
+            canUseScope(packageName, uid, AppOpScope.UID)
+        val retry = revokedCompatRetry
+        val permission = retry?.let {
+            AppOpRuntimePermissionCatalog.requiredPermission(it.operationName)
+        }
+        if (retry != null && permission != null && canAffectUid &&
+            requestedMode in FlagModes &&
+            writeMemory.contains(packageName, uid, retry.operationName)
+        ) {
+            if (readMode(AppOpScope.UID) == requestedMode) {
+                return alreadySatisfied(requestedMode, AppOpScope.UID)
+            }
+            // This callback retains the repository's readback and restoration checks.
+            val directResult = retry.apply(permission)
+            if (directResult != null) {
+                if (directResult is AppOpModeChangeResult.Failure) {
+                    writeMemory.forget(packageName, uid, retry.operationName)
+                }
+                // Never start another write after a flag failure, especially failed recovery.
+                return AdaptiveScopeModeChangeOutcome(
+                    result = directResult,
+                    appliedScope = AppOpScope.UID,
+                    fallbackAttempted = false,
+                    permissionFlagApplied = directResult is AppOpModeChangeResult.Success,
+                    restrictionBlocked = true,
+                )
+            }
+            // Grant or flag state changed. Re-evaluate the normal write path.
+            writeMemory.forget(packageName, uid, retry.operationName)
+        }
         val scopeOutcome = executeScopes(
             packageName, uid, preferredScope, requestedMode, readMode, applyMode,
         )
@@ -52,11 +84,18 @@ class AdaptiveScopeModeChangeExecutor(
         val flagOutcome = revokedCompatExecutor.execute(
             operationName = revokedCompatRetry.operationName,
             requestedMode = requestedMode,
-            canAffectUid = preferredScope == AppOpScope.UID ||
-                canUseScope(packageName, uid, AppOpScope.UID),
+            canAffectUid = canAffectUid,
             appOpsResult = scopeOutcome.result,
             applyFlag = revokedCompatRetry.apply,
         )
+        val failure = scopeOutcome.result as? AppOpModeChangeResult.Failure
+        if (requestedMode == AppOpMode.IGNORE && flagOutcome.flagApplied &&
+            failure?.phase == AppOpModeChangePhase.VERIFY_REQUESTED &&
+            failure.observedMode in setOf(AppOpMode.ALLOW, AppOpMode.FOREGROUND) &&
+            failure.restorationStatus == AppOpsRestorationStatus.SUCCEEDED
+        ) {
+            writeMemory.record(packageName, uid, revokedCompatRetry.operationName)
+        }
         return scopeOutcome.copy(
             result = flagOutcome.result,
             appliedScope = if (flagOutcome.flagApplied) {
@@ -167,6 +206,7 @@ class AdaptiveScopeModeChangeExecutor(
             restorationStatus == AppOpsRestorationStatus.SUCCEEDED
 
     private companion object {
+        val FlagModes = setOf(AppOpMode.IGNORE, AppOpMode.ALLOW, AppOpMode.FOREGROUND)
         val ScopeRejectionPhases = setOf(
             AppOpModeChangePhase.APPLY_REQUESTED,
             AppOpModeChangePhase.VERIFY_REQUESTED,

@@ -2,6 +2,7 @@ package dev.izumi.appopsnext
 
 import android.app.Application
 import dev.izumi.appopsnext.appops.AppOpsRepository
+import dev.izumi.appopsnext.appops.RevokedCompatWriteMemory
 import dev.izumi.appopsnext.apps.InstalledAppsRepository
 import dev.izumi.appopsnext.diagnostics.DiagnosticEnvironmentCollector
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
@@ -24,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
 class AppOpsNextApplication : Application() {
+    val revokedCompatWriteMemory = RevokedCompatWriteMemory()
     private val applicationScope =
         CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val diagnosticLogRepository: DiagnosticLogRepository by lazy {
@@ -92,6 +94,7 @@ class AppOpsNextApplication : Application() {
             privilegedServiceClient = privilegedServiceClient,
             diagnosticLog = diagnosticLogRepository,
             appOpsRepository = appOpsRepository,
+            writeMemory = revokedCompatWriteMemory,
         )
     }
 

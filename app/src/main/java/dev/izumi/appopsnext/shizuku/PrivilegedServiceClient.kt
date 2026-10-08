@@ -8,6 +8,7 @@ import android.os.IBinder
 import android.util.Log
 import dev.izumi.appopsnext.BuildConfig
 import dev.izumi.appopsnext.appops.PrivilegedAppOpsGateway
+import dev.izumi.appopsnext.appops.WatcherResponseCodec
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.ShellCommandResult
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
@@ -344,9 +345,10 @@ class PrivilegedServiceClient(
 
     override suspend fun getWatchers(): ShellCommandResult =
         withContext(Dispatchers.IO) {
-            executeNative { it.getWatchers() }
+            val result = executeNative { it.getWatchers() }
                 ?: service?.getWatchers()
                 ?: throw IllegalStateException("Privileged service is unavailable")
+            result.copy(stdout = WatcherResponseCodec.decode(result.stdout))
         }
 
     override suspend fun getHistory(

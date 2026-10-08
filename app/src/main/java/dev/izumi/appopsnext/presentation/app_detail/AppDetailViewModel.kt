@@ -32,7 +32,10 @@ class AppDetailViewModel(
         getApplication<AppOpsNextApplication>().userSettingsRepository
     private val repository = getApplication<AppOpsNextApplication>().appOpsRepository
     private val adaptiveScopeExecutor =
-        AdaptiveScopeModeChangeExecutor(::packagesForUid)
+        AdaptiveScopeModeChangeExecutor(
+            writeMemory = getApplication<AppOpsNextApplication>().revokedCompatWriteMemory,
+            packagesForUid = ::packagesForUid,
+        )
     private val selectedApp = MutableStateFlow<InstalledApp?>(null)
     private val mutableUiState =
         MutableStateFlow<AppDetailUiState>(AppDetailUiState.Idle)

@@ -5,6 +5,7 @@
     <string name="browse_by_app">By app</string>
     <string name="browse_by_permission">By permission</string>
     <string name="selection_select_all">Select all</string>
+    <string name="template_no_permissions">No permissions added</string>
     <string name="permission_back">Back to permissions</string>
     <string name="permission_info_title">About permission modes</string>
     <string name="permission_info_modes">A UID mode overrides the package mode. If neither is recorded, the list shows System default. Android runtime permissions can further restrict access.</string>
@@ -415,9 +416,9 @@
     <string name="monitor_log_clear">Clear monitor log</string>
     <string name="monitor_log_clear_confirm">This deletes all %1$d entries. It cannot be undone.</string>
     <string name="watchers_title">Permission change listeners</string>
-    <string name="watchers_summary">See which processes currently register for AppOps mode changes.</string>
-    <string name="watchers_refresh">Refresh</string>
-    <string name="watchers_explainer">This snapshot shows registrations for permission mode changes, such as allow or deny. It does not show access history or prove that a process received a change. Operation and package registrations are separate, additive scopes, and an unrestricted UID alone does not mean every permission is watched. Android may further filter delivery. Tap a process to see its registrations.</string>
+    <string name="watchers_information">About watcher registrations</string>
+    <string name="watchers_summary">View processes registered for permission mode changes.</string>
+    <string name="watchers_explainer">This snapshot shows registrations for permission mode changes. It does not show access history or confirm that a process received a callback.\n\nOperation and package registrations apply independently. An unrestricted UID does not mean that every permission is watched. Android may further filter callbacks.\n\nTap a process to view its registrations.</string>
     <string name="watchers_unavailable">Unable to read the registry. Check the privileged connection. This device may also use an unsupported format.</string>
     <string name="watchers_incomplete">Some registrations could not be parsed. This list may be incomplete.</string>
     <string name="watchers_snapshot_time">Snapshot taken: %1$s</string>
@@ -544,4 +545,21 @@
     <string name="monitor_battery_title">Battery optimization is on</string>
     <string name="monitor_battery_summary">Vendor battery management can end this app and stop the monitor without notice. Tap to open system settings. Some ROMs keep this control elsewhere, so dismiss this notice once you have handled it.</string>
     <string name="monitor_battery_dismiss">Dismiss this notice</string>
+    <string name="batch_requested_mode">Set to %1$s</string>
+    <string name="batch_show_targets">Show changes</string>
+    <string name="batch_hide_targets">Hide changes</string>
+    <string name="batch_failures_only">Failures only</string>
+    <string name="batch_no_failures">No failed changes</string>
+    <string name="batch_failure_details">Details</string>
+    <string name="batch_failure_read">Could not read the current mode.</string>
+    <string name="batch_failure_changed">The current mode changed before the write. Refresh and try again.</string>
+    <string name="batch_failure_write">The change could not be applied.</string>
+    <string name="batch_failure_verify">The system did not retain the requested mode.</string>
+    <string name="action_clear_search">Clear search</string>
+    <string name="filter_no_matches">No matching items</string>
+    <string name="filter_all_permissions">All permissions</string>
+    <string name="filter_permission_title">Filter by permission</string>
+    <string name="permission_runtime_granted">Runtime permission granted</string>
+    <string name="permission_runtime_denied">Runtime permission not granted</string>
+    <string name="permission_info_grants">For ignored permissions, the extra label shows the current Android grant status. The mode alone cannot identify a manual change or a compatibility revocation.</string>
 </resources>

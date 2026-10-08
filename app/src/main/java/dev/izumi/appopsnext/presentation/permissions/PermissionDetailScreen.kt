@@ -39,6 +39,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.apps.model.InstalledApp
@@ -50,6 +52,7 @@ import dev.izumi.appopsnext.presentation.app_list.AppListUiState
 import dev.izumi.appopsnext.presentation.batch.BatchOperationUiState
 import dev.izumi.appopsnext.presentation.batch.BatchSelectionControls
 import dev.izumi.appopsnext.presentation.batch.toggleVisibleSelection
+import dev.izumi.appopsnext.presentation.batch.StringSelectionSaver
 import dev.izumi.appopsnext.presentation.components.CompactSearchField
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,10 +74,17 @@ fun PermissionDetailScreen(
     var search by rememberSaveable(operation) { mutableStateOf("") }
     var filter by rememberSaveable(operation) { mutableStateOf<AppOpMode?>(null) }
     var selecting by rememberSaveable(operation) { mutableStateOf(false) }
-    var selected by remember(operation) { mutableStateOf(emptySet<String>()) }
-    var batchMode by rememberSaveable { mutableStateOf(AppOpMode.IGNORE) }
+    var selected by rememberSaveable(operation, stateSaver = StringSelectionSaver) {
+        mutableStateOf(emptySet<String>())
+    }
+    var batchMode by rememberSaveable(operation) { mutableStateOf(AppOpMode.IGNORE) }
     val busy = modeChangeState is AppOpModeChangeUiState.Applying ||
         batchState is BatchOperationUiState.Running
+    // LifecycleEventEffect reads the latest busy and loading state on each
+    // resume. LifecycleResumeEffect would keep the values from first composition.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (!busy && !uiState.loading) onRefresh()
+    }
     val exitSelection = {
         if (!busy) {
             selecting = false
@@ -176,7 +186,7 @@ fun PermissionDetailScreen(
                 onRefresh = {
                     if (!busy) {
                         onRefresh()
-                        if (appListState.loadFailed) onRefreshApps()
+                        onRefreshApps()
                     }
                 },
                 modifier = Modifier.weight(1f),
@@ -217,6 +227,7 @@ fun PermissionDetailScreen(
                             PermissionAppListItem(
                                 app = app,
                                 state = uiState.states.effective(app.uid, app.packageName),
+                                runtimeGranted = uiState.runtimeGrants[app.packageName],
                                 editEnabled = canEdit,
                                 isApplying = (modeChangeState as? AppOpModeChangeUiState.Applying)
                                     ?.request?.packageName == app.packageName,

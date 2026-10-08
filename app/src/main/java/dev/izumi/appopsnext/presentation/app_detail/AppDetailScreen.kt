@@ -52,6 +52,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.presentation.batch.BatchSelectionControls
+import dev.izumi.appopsnext.presentation.batch.BatchOperationUiState
+import androidx.compose.runtime.saveable.rememberSaveable
+import dev.izumi.appopsnext.presentation.batch.StringSelectionSaver
 import dev.izumi.appopsnext.presentation.batch.toggleVisibleSelection
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpsReadFailureReason
@@ -69,6 +72,7 @@ import java.util.Locale
 @Composable
 fun AppDetailScreen(
     uiState: AppDetailUiState,
+    batchState: BatchOperationUiState,
     modeChangeState: AppOpModeChangeUiState,
     searchQuery: String,
     onBack: () -> Unit,
@@ -96,17 +100,27 @@ fun AppDetailScreen(
     modifier: Modifier = Modifier,
 ) {
     val app = uiState.appOrNull()
-    var batchSelectionMode by remember(app?.packageName) {
+    var batchSelectionMode by rememberSaveable(app?.packageName) {
         mutableStateOf(false)
     }
-    var selectedBatchKeys by remember(app?.packageName) {
+    var selectedBatchKeys by rememberSaveable(app?.packageName, stateSaver = StringSelectionSaver) {
         mutableStateOf(emptySet<String>())
     }
-    var selectedBatchMode by remember(app?.packageName) {
+    var selectedBatchMode by rememberSaveable(app?.packageName) {
         mutableStateOf(AppOpMode.IGNORE)
     }
-    var showTemplatePicker by remember(app?.packageName) {
+    var showTemplatePicker by rememberSaveable(app?.packageName) {
         mutableStateOf(false)
+    }
+    var awaitingBatchResult by rememberSaveable(app?.packageName) { mutableStateOf(false) }
+    LaunchedEffect(batchState) {
+        if (awaitingBatchResult && batchState is BatchOperationUiState.Finished) {
+            batchSelectionMode = false
+            selectedBatchKeys = emptySet()
+            awaitingBatchResult = false
+        } else if (batchState is BatchOperationUiState.Idle) {
+            awaitingBatchResult = false
+        }
     }
     val exitBatchSelection = {
         batchSelectionMode = false
@@ -223,13 +237,12 @@ fun AppDetailScreen(
                 },
                 onBatchModeChange = { selectedBatchMode = it },
                 onApplyPermissionBatch = { selections ->
+                    awaitingBatchResult = true
                     onPermissionBatchRequested(
                         uiState.app,
                         selections,
                         selectedBatchMode,
                     )
-                    batchSelectionMode = false
-                    selectedBatchKeys = emptySet()
                 },
                 onModeChangeRequested = onModeChangeRequested,
                 modifier = Modifier

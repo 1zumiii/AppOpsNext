@@ -5,6 +5,7 @@ import android.os.Build
 import android.system.Os
 import androidx.annotation.Keep
 import dev.izumi.appopsnext.appops.command.AppOpMode
+import dev.izumi.appopsnext.appops.WatcherResponseCodec
 import dev.izumi.appopsnext.appops.command.AppOpsCommands
 import dev.izumi.appopsnext.appops.command.CommandExecutor
 import dev.izumi.appopsnext.appops.model.ShellCommandResult
@@ -48,8 +49,10 @@ class AppOpsUserService : IPrivilegedAppOpsService.Stub {
     override fun getUidStates(packageName: String): ShellCommandResult =
         commandExecutor.execute(AppOpsCommands.getUidStates(packageName))
 
-    override fun getWatchers(): ShellCommandResult =
-        commandExecutor.execute(AppOpsCommands.getWatchers())
+    override fun getWatchers(): ShellCommandResult {
+        val result = commandExecutor.execute(AppOpsCommands.getWatchers())
+        return result.copy(stdout = WatcherResponseCodec.encode(result.stdout))
+    }
 
     override fun getHistory(
         operationName: String,

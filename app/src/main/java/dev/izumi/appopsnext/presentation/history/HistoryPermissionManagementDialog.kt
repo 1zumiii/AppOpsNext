@@ -17,6 +17,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import dev.izumi.appopsnext.presentation.batch.StringSelectionSaver
+import dev.izumi.appopsnext.presentation.batch.selectedFirstOrdering
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,12 +38,18 @@ fun HistoryPermissionManagementDialog(
     onApply: (List<String>) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var query by remember { mutableStateOf("") }
-    var draftSelection by remember(selectedPermissions) {
+    var query by rememberSaveable { mutableStateOf("") }
+    var draftSelection by rememberSaveable(selectedPermissions, stateSaver = StringSelectionSaver) {
         mutableStateOf(selectedPermissions)
     }
+    val initialSelection by rememberSaveable(stateSaver = StringSelectionSaver) {
+        mutableStateOf(selectedPermissions)
+    }
+    val orderedPermissions = remember(availablePermissions, initialSelection) {
+        selectedFirstOrdering(availablePermissions, initialSelection, HistoryPermission::shellOperationName)
+    }
     val context = LocalContext.current
-    val options = availablePermissions.filter { permission ->
+    val options = orderedPermissions.filter { permission ->
         val localizedName = permission.labelResource()
             ?.let(context::getString)
             ?: permission.systemOperationName()
