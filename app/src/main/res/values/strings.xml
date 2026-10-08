@@ -416,9 +416,9 @@
     <string name="monitor_log_clear">Clear monitor log</string>
     <string name="monitor_log_clear_confirm">This deletes all %1$d entries. It cannot be undone.</string>
     <string name="watchers_title">Permission change listeners</string>
-    <string name="watchers_summary">See which processes currently register for AppOps mode changes.</string>
-    <string name="watchers_refresh">Refresh</string>
-    <string name="watchers_explainer">This snapshot shows registrations for permission mode changes, such as allow or deny. It does not show access history or prove that a process received a change. Operation and package registrations are separate, additive scopes, and an unrestricted UID alone does not mean every permission is watched. Android may further filter delivery. Tap a process to see its registrations.</string>
+    <string name="watchers_information">About watcher registrations</string>
+    <string name="watchers_summary">View processes registered for permission mode changes.</string>
+    <string name="watchers_explainer">This snapshot shows registrations for permission mode changes. It does not show access history or confirm that a process received a callback.\n\nOperation and package registrations apply independently. An unrestricted UID does not mean that every permission is watched. Android may further filter callbacks.\n\nTap a process to view its registrations.</string>
     <string name="watchers_unavailable">Unable to read the registry. Check the privileged connection. This device may also use an unsupported format.</string>
     <string name="watchers_incomplete">Some registrations could not be parsed. This list may be incomplete.</string>
     <string name="watchers_snapshot_time">Snapshot taken: %1$s</string>

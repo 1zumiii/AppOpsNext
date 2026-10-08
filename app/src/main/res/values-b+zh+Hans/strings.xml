@@ -412,9 +412,9 @@
     <string name="monitor_log_clear">清空监测记录</string>
     <string name="monitor_log_clear_confirm">将删除全部 %1$d 条记录，删除后无法恢复。</string>
     <string name="watchers_title">权限变更监听者</string>
-    <string name="watchers_summary">查看当前注册了 AppOps 模式变更监听的进程。</string>
-    <string name="watchers_refresh">刷新</string>
-    <string name="watchers_explainer">此快照显示权限模式变更的监听注册，不是访问历史，也不能证明进程收到了回调。按操作和按包名注册的范围分别生效；UID 不受限也不代表监听所有权限。Android 可能继续过滤回调。点击进程查看注册详情。</string>
+    <string name="watchers_information">监听注册说明</string>
+    <string name="watchers_summary">查看已注册权限模式变更监听的进程。</string>
+    <string name="watchers_explainer">快照显示权限模式变更的监听注册。监听注册不表示权限访问，也不能证明进程收到了回调。\n\n按操作和按包名注册的范围分别生效。UID 不受限不代表监听所有权限，Android 仍可能过滤回调。\n\n点击进程可查看注册详情。</string>
     <string name="watchers_unavailable">无法读取监听表。请检查特权连接，此设备也可能使用了不支持的格式。</string>
     <string name="watchers_incomplete">部分注册无法解析，列表可能不完整。</string>
     <string name="watchers_snapshot_time">快照采集于：%1$s</string>
