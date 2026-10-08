@@ -73,6 +73,7 @@ class PermissionBrowserViewModel(
                 mutableState.value = PermissionBrowserState(
                     operation = operation,
                     states = states,
+                    runtimeGrants = readRuntimeGrants(operation),
                 )
             } catch (error: CancellationException) {
                 throw error
@@ -255,4 +256,23 @@ class PermissionBrowserViewModel(
         return app.packageManager.checkPermission(permission, target.packageName) !=
             PackageManager.PERMISSION_GRANTED
     }
+
+    private suspend fun readRuntimeGrants(operation: String): Map<String, Boolean> =
+        withContext(Dispatchers.IO) {
+            val permission = AppOpRuntimePermissionCatalog.requiredPermission(operation)
+                ?: return@withContext emptyMap()
+            // PackageManager reads do not issue one AppOps shell command per app.
+            val installed = app.installedAppsRepository.loadInstalledApps()
+            buildMap {
+                installed.forEach { target ->
+                    try {
+                        put(target.packageName, app.packageManager.checkPermission(
+                            permission, target.packageName,
+                        ) == PackageManager.PERMISSION_GRANTED)
+                    } catch (_: RuntimeException) {
+                        // An unavailable grant must not be presented as denied.
+                    }
+                }
+            }
+        }
 }

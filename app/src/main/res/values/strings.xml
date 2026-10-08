@@ -559,4 +559,7 @@
     <string name="filter_no_matches">No matching items</string>
     <string name="filter_all_permissions">All permissions</string>
     <string name="filter_permission_title">Filter by permission</string>
+    <string name="permission_runtime_granted">Runtime permission granted</string>
+    <string name="permission_runtime_denied">Runtime permission not granted</string>
+    <string name="permission_info_grants">For ignored permissions, the extra label shows the current Android grant status. The mode alone cannot identify a manual change or a compatibility revocation.</string>
 </resources>

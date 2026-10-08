@@ -130,6 +130,7 @@ fun PermissionInfoDialog(onDismiss: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(text = stringResource(R.string.permission_info_modes))
+                Text(text = stringResource(R.string.permission_info_grants))
                 Text(text = stringResource(R.string.permission_info_scope))
                 Text(text = stringResource(R.string.permission_info_fallback))
                 Text(text = stringResource(R.string.permission_info_selection))

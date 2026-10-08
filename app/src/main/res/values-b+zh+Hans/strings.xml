@@ -555,4 +555,7 @@
     <string name="filter_no_matches">没有匹配项</string>
     <string name="filter_all_permissions">全部权限</string>
     <string name="filter_permission_title">按权限筛选</string>
+    <string name="permission_runtime_granted">运行时权限已授权</string>
+    <string name="permission_runtime_denied">运行时权限未授权</string>
+    <string name="permission_info_grants">模式为“忽略”时，附加文字显示 Android 当前的授权状态。仅凭模式无法判断是否经过手动修改，或是否设置了兼容撤销标记。</string>
 </resources>

@@ -227,6 +227,7 @@ fun PermissionDetailScreen(
                             PermissionAppListItem(
                                 app = app,
                                 state = uiState.states.effective(app.uid, app.packageName),
+                                runtimeGranted = uiState.runtimeGrants[app.packageName],
                                 editEnabled = canEdit,
                                 isApplying = (modeChangeState as? AppOpModeChangeUiState.Applying)
                                     ?.request?.packageName == app.packageName,
