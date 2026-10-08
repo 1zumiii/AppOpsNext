@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
@@ -29,6 +30,7 @@ import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpModeChangePhase
 import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
+import dev.izumi.appopsnext.appops.model.AppOpsRestorationStatus
 import dev.izumi.appopsnext.batch.model.BatchOperationItemResult
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 
@@ -160,6 +162,7 @@ fun BatchOperationDialog(
                 Text(text = stringResource(R.string.batch_result_title))
             },
             text = {
+                var failuresOnly by rememberSaveable(state.report) { mutableStateOf(false) }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = stringResource(
@@ -176,13 +179,20 @@ fun BatchOperationDialog(
                         ),
                         fontWeight = FontWeight.SemiBold,
                     )
+                    FilterChip(
+                        selected = failuresOnly,
+                        onClick = { failuresOnly = !failuresOnly },
+                        label = { Text(stringResource(R.string.batch_failures_only)) },
+                    )
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(max = 420.dp),
                     ) {
                         items(
-                            items = state.report.results,
+                            items = state.report.results.filter {
+                                !failuresOnly || it.result is AppOpModeChangeResult.Failure
+                            },
                             key = { item ->
                                 listOf(
                                     item.target.packageName,
@@ -192,6 +202,9 @@ fun BatchOperationDialog(
                             },
                         ) { item ->
                             BatchResultItem(item)
+                        }
+                        if (failuresOnly && state.report.failureCount == 0) {
+                            item { Text(stringResource(R.string.batch_no_failures)) }
                         }
                     }
                 }
@@ -212,6 +225,7 @@ private fun operationLabel(operation: String): String =
 @Composable
 private fun BatchResultItem(item: BatchOperationItemResult) {
     val result = item.result
+    var details by rememberSaveable(item.target) { mutableStateOf(false) }
     ListItem(
         headlineContent = {
             Text(
@@ -221,7 +235,7 @@ private fun BatchResultItem(item: BatchOperationItemResult) {
         },
         supportingContent = {
             Column {
-                Text(text = item.target.stableOperationName)
+                Text(text = operationLabel(item.target.stableOperationName))
                 Text(
                     text = when (result) {
                         is AppOpModeChangeResult.Success ->
@@ -231,14 +245,26 @@ private fun BatchResultItem(item: BatchOperationItemResult) {
                             )
 
                         is AppOpModeChangeResult.Failure ->
-                            stringResource(
-                                R.string.batch_result_failed_phase,
-                                phaseLabel(result.phase),
-                            )
+                            failureExplanation(result)
                     },
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                 )
+                if (result is AppOpModeChangeResult.Failure) {
+                    TextButton(onClick = { details = !details }) {
+                        Text(stringResource(R.string.batch_failure_details))
+                    }
+                    if (details) {
+                        Text(item.target.packageName)
+                        Text(item.target.stableOperationName)
+                        Text(stringResource(R.string.batch_result_failed_phase, phaseLabel(result.phase)))
+                        Text(stringResource(when (result.restorationStatus) {
+                            AppOpsRestorationStatus.NOT_REQUIRED -> R.string.app_detail_mode_restore_not_required
+                            AppOpsRestorationStatus.SUCCEEDED -> R.string.app_detail_mode_restored
+                            AppOpsRestorationStatus.FAILED -> R.string.app_detail_mode_restore_failed
+                        }))
+                    }
+                }
             }
         },
         trailingContent = {
@@ -263,6 +289,20 @@ private fun BatchResultItem(item: BatchOperationItemResult) {
         ),
     )
 }
+
+@Composable
+private fun failureExplanation(result: AppOpModeChangeResult.Failure): String = stringResource(
+    if (result.restorationStatus == AppOpsRestorationStatus.FAILED) {
+        R.string.app_detail_mode_restore_failed
+    } else when (result.phase) {
+        AppOpModeChangePhase.READ_ORIGINAL -> R.string.batch_failure_read
+        AppOpModeChangePhase.CHECK_ORIGINAL -> R.string.batch_failure_changed
+        AppOpModeChangePhase.APPLY_REQUESTED -> R.string.batch_failure_write
+        AppOpModeChangePhase.VERIFY_REQUESTED -> R.string.batch_failure_verify
+        AppOpModeChangePhase.RESTORE_ORIGINAL,
+        AppOpModeChangePhase.VERIFY_RESTORED -> R.string.app_detail_mode_restore_failed
+    },
+)
 
 @Composable
 private fun modeLabel(mode: AppOpMode): String =

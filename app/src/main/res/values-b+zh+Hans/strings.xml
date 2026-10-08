@@ -544,4 +544,11 @@
     <string name="batch_requested_mode">设为%1$s</string>
     <string name="batch_show_targets">展开修改清单</string>
     <string name="batch_hide_targets">收起修改清单</string>
+    <string name="batch_failures_only">仅失败</string>
+    <string name="batch_no_failures">没有失败项</string>
+    <string name="batch_failure_details">详情</string>
+    <string name="batch_failure_read">无法读取当前模式。</string>
+    <string name="batch_failure_changed">无法确认当前模式，请刷新后重试。</string>
+    <string name="batch_failure_write">未能应用修改。</string>
+    <string name="batch_failure_verify">未能验证目标模式是否生效。</string>
 </resources>
