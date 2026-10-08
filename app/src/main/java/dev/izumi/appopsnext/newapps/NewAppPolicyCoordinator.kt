@@ -8,6 +8,7 @@ import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeOutcome
 import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeExecutor
 import dev.izumi.appopsnext.appops.AppOpsRepository
 import dev.izumi.appopsnext.appops.RevokedCompatRetry
+import dev.izumi.appopsnext.appops.RevokedCompatWriteMemory
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
 import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
 import dev.izumi.appopsnext.appops.model.AppOpNames
@@ -42,13 +43,14 @@ class NewAppPolicyCoordinator(
     private val privilegedServiceClient: PrivilegedServiceClient,
     private val diagnosticLog: DiagnosticLogRepository,
     private val appOpsRepository: AppOpsRepository,
+    writeMemory: RevokedCompatWriteMemory = RevokedCompatWriteMemory(),
     private val scanner: InstalledPackageScanner =
         InstalledPackageScanner(context),
     private val notifier: NewAppPolicyNotifier =
         NewAppPolicyNotifier(context),
 ) {
     private val workMutex = Mutex()
-    private val adaptiveScopeExecutor = AdaptiveScopeModeChangeExecutor { uid ->
+    private val adaptiveScopeExecutor = AdaptiveScopeModeChangeExecutor(writeMemory) { uid ->
         context.packageManager.getPackagesForUid(uid)?.toList().orEmpty()
     }
     private val executor = BatchAppOpsExecutor { target ->

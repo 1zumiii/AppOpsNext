@@ -27,7 +27,9 @@ class BatchOperationsViewModel(
 ) : AndroidViewModel(application) {
     private val repository =
         getApplication<AppOpsNextApplication>().appOpsRepository
-    private val adaptiveScopeExecutor = AdaptiveScopeModeChangeExecutor { uid ->
+    private val adaptiveScopeExecutor = AdaptiveScopeModeChangeExecutor(
+        writeMemory = getApplication<AppOpsNextApplication>().revokedCompatWriteMemory,
+    ) { uid ->
         getApplication<Application>().packageManager
             .getPackagesForUid(uid)
             ?.toList()

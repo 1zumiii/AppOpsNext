@@ -33,7 +33,10 @@ class PermissionBrowserViewModel(
 ) : AndroidViewModel(application) {
     private val app = getApplication<AppOpsNextApplication>()
     private val repository = app.appOpsRepository
-    private val executor = AdaptiveScopeModeChangeExecutor(::packagesForUid)
+    private val executor = AdaptiveScopeModeChangeExecutor(
+        writeMemory = app.revokedCompatWriteMemory,
+        packagesForUid = ::packagesForUid,
+    )
     private val mutableState = MutableStateFlow(PermissionBrowserState())
     val state = mutableState.asStateFlow()
     private val mutableChange =
