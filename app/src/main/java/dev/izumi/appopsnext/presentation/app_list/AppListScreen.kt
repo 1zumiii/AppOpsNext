@@ -50,6 +50,8 @@ import dev.izumi.appopsnext.presentation.components.AppIcon
 import dev.izumi.appopsnext.presentation.components.CompactSearchField
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
 import dev.izumi.appopsnext.presentation.batch.BatchOperationUiState
+import androidx.compose.runtime.saveable.rememberSaveable
+import dev.izumi.appopsnext.presentation.batch.StringSelectionSaver
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,12 +71,12 @@ fun AppListScreen(
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
 ) {
-    var batchSelectionMode by remember { mutableStateOf(false) }
-    var selectedPackages by remember {
+    var batchSelectionMode by rememberSaveable { mutableStateOf(false) }
+    var selectedPackages by rememberSaveable(stateSaver = StringSelectionSaver) {
         mutableStateOf(emptySet<String>())
     }
-    var showTemplatePicker by remember { mutableStateOf(false) }
-    var awaitingBatchResult by remember { mutableStateOf(false) }
+    var showTemplatePicker by rememberSaveable { mutableStateOf(false) }
+    var awaitingBatchResult by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(batchState) {
         if (awaitingBatchResult && batchState is BatchOperationUiState.Finished) {
             batchSelectionMode = false

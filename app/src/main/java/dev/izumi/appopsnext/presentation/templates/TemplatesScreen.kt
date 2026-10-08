@@ -52,6 +52,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import dev.izumi.appopsnext.presentation.batch.StringSelectionSaver
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -585,7 +587,7 @@ private fun TemplateEditor(
     onRuleOrderChange: (List<String>) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var showPermissionManager by remember(template.id) {
+    var showPermissionManager by rememberSaveable(template.id) {
         mutableStateOf(false)
     }
     var displayedRules by remember(template.id) {
@@ -949,7 +951,7 @@ private fun PermissionManagerDialog(
     onConfirm: (List<String>) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var query by remember { mutableStateOf("") }
+    var query by rememberSaveable { mutableStateOf("") }
     val context = LocalContext.current
     val options = remember(operations, currentRules) {
         val knownNames = operations.mapTo(mutableSetOf()) {
@@ -977,7 +979,7 @@ private fun PermissionManagerDialog(
             }
         }
     }
-    var selectedNames by remember(currentRules) {
+    var selectedNames by rememberSaveable(currentRules, stateSaver = StringSelectionSaver) {
         mutableStateOf(
             currentRules
                 .map(PermissionTemplateRule::stableOperationName)

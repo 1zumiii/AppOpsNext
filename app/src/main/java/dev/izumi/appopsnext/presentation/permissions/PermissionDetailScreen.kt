@@ -51,6 +51,7 @@ import dev.izumi.appopsnext.presentation.app_list.AppListUiState
 import dev.izumi.appopsnext.presentation.batch.BatchOperationUiState
 import dev.izumi.appopsnext.presentation.batch.BatchSelectionControls
 import dev.izumi.appopsnext.presentation.batch.toggleVisibleSelection
+import dev.izumi.appopsnext.presentation.batch.StringSelectionSaver
 import dev.izumi.appopsnext.presentation.components.CompactSearchField
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,8 +73,10 @@ fun PermissionDetailScreen(
     var search by rememberSaveable(operation) { mutableStateOf("") }
     var filter by rememberSaveable(operation) { mutableStateOf<AppOpMode?>(null) }
     var selecting by rememberSaveable(operation) { mutableStateOf(false) }
-    var selected by remember(operation) { mutableStateOf(emptySet<String>()) }
-    var batchMode by rememberSaveable { mutableStateOf(AppOpMode.IGNORE) }
+    var selected by rememberSaveable(operation, stateSaver = StringSelectionSaver) {
+        mutableStateOf(emptySet<String>())
+    }
+    var batchMode by rememberSaveable(operation) { mutableStateOf(AppOpMode.IGNORE) }
     val busy = modeChangeState is AppOpModeChangeUiState.Applying ||
         batchState is BatchOperationUiState.Running
     LifecycleResumeEffect(operation) {
