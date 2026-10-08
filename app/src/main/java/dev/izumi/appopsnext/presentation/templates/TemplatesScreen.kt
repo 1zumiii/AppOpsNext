@@ -715,6 +715,14 @@ private fun TemplateEditor(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item {
+            FilledTonalButton(
+                onClick = { showPermissionManager = true },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = stringResource(R.string.template_manage_permissions))
+            }
+        }
+        item {
             MainPageSectionTitle(
                 text = stringResource(R.string.template_rule_count, displayedRules.size),
                 horizontalPadding = 0.dp,
@@ -746,20 +754,6 @@ private fun TemplateEditor(
                         }
                     },
             )
-        }
-        item {
-            FilledTonalButton(
-                onClick = { showPermissionManager = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp),
-            ) {
-                Text(
-                    text = stringResource(
-                        R.string.template_manage_permissions,
-                    ),
-                )
-            }
         }
     }
 
@@ -1018,10 +1012,11 @@ private fun PermissionManagerDialog(
         },
         text = {
             Column {
+                Text(text = stringResource(R.string.history_management_selected_count, selectedNames.size))
                 CompactSearchField(
                     value = query,
                     onValueChange = { query = it },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     label = stringResource(R.string.template_permission_search),
                 )
                 LazyColumn(
@@ -1030,6 +1025,14 @@ private fun PermissionManagerDialog(
                         .heightIn(max = 420.dp)
                         .padding(top = 8.dp),
                 ) {
+                    if (filteredOperations.isEmpty()) {
+                        item {
+                            Text(
+                                text = stringResource(R.string.history_no_matching_permissions),
+                                modifier = Modifier.padding(16.dp),
+                            )
+                        }
+                    }
                     items(
                         filteredOperations,
                         key = TemplatePermissionOption::stableName,
