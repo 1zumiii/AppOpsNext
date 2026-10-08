@@ -49,11 +49,13 @@ import dev.izumi.appopsnext.presentation.batch.toggleVisibleSelection
 import dev.izumi.appopsnext.presentation.components.AppIcon
 import dev.izumi.appopsnext.presentation.components.CompactSearchField
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
+import dev.izumi.appopsnext.presentation.batch.BatchOperationUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppListScreen(
     uiState: AppListUiState,
+    batchState: BatchOperationUiState,
     onSearchQueryChange: (String) -> Unit,
     onRefresh: () -> Unit,
     onAppSelected: (InstalledApp) -> Unit,
@@ -72,6 +74,16 @@ fun AppListScreen(
         mutableStateOf(emptySet<String>())
     }
     var showTemplatePicker by remember { mutableStateOf(false) }
+    var awaitingBatchResult by remember { mutableStateOf(false) }
+    LaunchedEffect(batchState) {
+        if (awaitingBatchResult && batchState is BatchOperationUiState.Finished) {
+            batchSelectionMode = false
+            selectedPackages = emptySet()
+            awaitingBatchResult = false
+        } else if (batchState is BatchOperationUiState.Idle) {
+            awaitingBatchResult = false
+        }
+    }
     BackHandler(enabled = batchSelectionMode && !permissionTab && !showTemplatePicker) {
         batchSelectionMode = false
         selectedPackages = emptySet()
@@ -178,14 +190,13 @@ fun AppListScreen(
             templates = templates,
             onSelect = { template ->
                 showTemplatePicker = false
+                awaitingBatchResult = true
                 onTemplateApplyRequested(
                     template,
                     uiState.allApps.filter {
                         it.packageName in selectedPackages
                     },
                 )
-                batchSelectionMode = false
-                selectedPackages = emptySet()
             },
             onDismiss = { showTemplatePicker = false },
         )
