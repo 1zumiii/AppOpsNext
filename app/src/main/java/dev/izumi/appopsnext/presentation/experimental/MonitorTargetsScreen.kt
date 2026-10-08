@@ -113,6 +113,15 @@ fun MonitorTargetsScreen(
                     label = stringResource(R.string.monitor_targets_search),
                 )
             }
+            if (watched.isEmpty() && others.isEmpty()) {
+                item {
+                    Text(
+                        text = stringResource(R.string.app_list_empty_search),
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             if (watched.isNotEmpty()) {
                 item {
                     TargetsSectionHeader(
