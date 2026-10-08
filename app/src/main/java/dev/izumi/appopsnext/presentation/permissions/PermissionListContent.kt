@@ -12,13 +12,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -121,7 +121,7 @@ private fun rememberPermissionItems(query: String): List<AppOpDisplayItem> {
 
 @Composable
 fun PermissionInfoDialog(onDismiss: () -> Unit) {
-    AlertDialog(
+    AppBottomSheet(
         onDismissRequest = onDismiss,
         title = { Text(text = stringResource(R.string.permission_info_title)) },
         text = {
@@ -130,6 +130,7 @@ fun PermissionInfoDialog(onDismiss: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(text = stringResource(R.string.permission_info_modes))
+                Text(text = stringResource(R.string.permission_info_grants))
                 Text(text = stringResource(R.string.permission_info_scope))
                 Text(text = stringResource(R.string.permission_info_fallback))
                 Text(text = stringResource(R.string.permission_info_selection))
@@ -137,7 +138,7 @@ fun PermissionInfoDialog(onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
+            Button(onClick = onDismiss) {
                 Text(text = stringResource(R.string.action_dismiss))
             }
         },

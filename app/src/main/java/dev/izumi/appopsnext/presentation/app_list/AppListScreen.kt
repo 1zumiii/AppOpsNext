@@ -28,6 +28,7 @@ import androidx.compose.material3.TabRow
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,11 +50,15 @@ import dev.izumi.appopsnext.presentation.batch.toggleVisibleSelection
 import dev.izumi.appopsnext.presentation.components.AppIcon
 import dev.izumi.appopsnext.presentation.components.CompactSearchField
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
+import dev.izumi.appopsnext.presentation.batch.BatchOperationUiState
+import androidx.compose.runtime.saveable.rememberSaveable
+import dev.izumi.appopsnext.presentation.batch.StringSelectionSaver
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppListScreen(
     uiState: AppListUiState,
+    batchState: BatchOperationUiState,
     onSearchQueryChange: (String) -> Unit,
     onRefresh: () -> Unit,
     onAppSelected: (InstalledApp) -> Unit,
@@ -67,11 +72,21 @@ fun AppListScreen(
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
 ) {
-    var batchSelectionMode by remember { mutableStateOf(false) }
-    var selectedPackages by remember {
+    var batchSelectionMode by rememberSaveable { mutableStateOf(false) }
+    var selectedPackages by rememberSaveable(stateSaver = StringSelectionSaver) {
         mutableStateOf(emptySet<String>())
     }
-    var showTemplatePicker by remember { mutableStateOf(false) }
+    var showTemplatePicker by rememberSaveable { mutableStateOf(false) }
+    var awaitingBatchResult by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(batchState) {
+        if (awaitingBatchResult && batchState is BatchOperationUiState.Finished) {
+            batchSelectionMode = false
+            selectedPackages = emptySet()
+            awaitingBatchResult = false
+        } else if (batchState is BatchOperationUiState.Idle) {
+            awaitingBatchResult = false
+        }
+    }
     BackHandler(enabled = batchSelectionMode && !permissionTab && !showTemplatePicker) {
         batchSelectionMode = false
         selectedPackages = emptySet()
@@ -154,6 +169,7 @@ fun AppListScreen(
                     )
                     else -> AppListContent(
                         uiState = uiState,
+                        onRefresh = onRefresh,
                         onSearchQueryChange = onSearchQueryChange,
                         onAppSelected = onAppSelected,
                         batchSelectionMode = batchSelectionMode,
@@ -178,14 +194,13 @@ fun AppListScreen(
             templates = templates,
             onSelect = { template ->
                 showTemplatePicker = false
+                awaitingBatchResult = true
                 onTemplateApplyRequested(
                     template,
                     uiState.allApps.filter {
                         it.packageName in selectedPackages
                     },
                 )
-                batchSelectionMode = false
-                selectedPackages = emptySet()
             },
             onDismiss = { showTemplatePicker = false },
         )
@@ -193,8 +208,10 @@ fun AppListScreen(
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun AppListContent(
     uiState: AppListUiState,
+    onRefresh: () -> Unit,
     onSearchQueryChange: (String) -> Unit,
     onAppSelected: (InstalledApp) -> Unit,
     batchSelectionMode: Boolean,
@@ -227,15 +244,13 @@ private fun AppListContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        if (uiState.visibleApps.isEmpty()) {
-            EmptySearchContent(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-            )
-        } else {
+        PullToRefreshBox(
+            isRefreshing = uiState.isLoading,
+            onRefresh = { if (!uiState.isLoading) onRefresh() },
+            modifier = Modifier.weight(1f),
+        ) {
             LazyColumn(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
                     start = 20.dp,
                     end = 20.dp,
@@ -244,6 +259,11 @@ private fun AppListContent(
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                if (uiState.visibleApps.isEmpty()) {
+                    item {
+                        EmptySearchContent(modifier = Modifier.fillParentMaxSize())
+                    }
+                }
                 items(
                     items = uiState.visibleApps,
                     key = InstalledApp::packageName,

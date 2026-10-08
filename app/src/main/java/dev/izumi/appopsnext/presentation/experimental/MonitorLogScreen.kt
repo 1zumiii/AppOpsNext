@@ -64,13 +64,20 @@ fun MonitorLogScreen(
     onClear: () -> Unit,
 ) {
     var outcome by rememberSaveable { mutableStateOf(MonitorOutcomes.ALL) }
+    var packageFilter by rememberSaveable { mutableStateOf<String?>(null) }
+    var operationFilter by rememberSaveable { mutableStateOf<String?>(null) }
+    var filterDialog by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmingClear by remember { mutableStateOf(false) }
     val appsByPackage = remember(apps) { apps.associateBy(InstalledApp::packageName) }
     val zoneId = remember { ZoneId.systemDefault() }
     // Up to fifty thousand entries are sorted into days, which is not work for the main thread.
-    val rows by produceState<List<LogRow>?>(null, entries, outcome, zoneId) {
+    val rows by produceState<List<LogRow>?>(null, entries, outcome, zoneId, packageFilter, operationFilter) {
         value = withContext(Dispatchers.Default) {
-            logRows(entries.asReversed().filter { outcome.reports(it.allowed) }, zoneId)
+            logRows(entries.asReversed().filter {
+                outcome.reports(it.allowed) &&
+                    (packageFilter == null || it.packageName == packageFilter) &&
+                    (operationFilter == null || it.operationName == operationFilter)
+            }, zoneId)
         }
     }
 
@@ -112,6 +119,19 @@ fun MonitorLogScreen(
                         .padding(horizontal = 16.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                    FilterChip(
+                        selected = packageFilter != null,
+                        onClick = { filterDialog = "app" },
+                        label = { Text(packageFilter?.let { appsByPackage[it]?.label ?: it }
+                            ?: stringResource(R.string.history_filter_all_apps)) },
+                    )
+                    FilterChip(
+                        selected = operationFilter != null,
+                        onClick = { filterDialog = "permission" },
+                        label = { Text(operationFilter?.let { operation ->
+                            AppOpDisplayCatalog.labelResOf(operation)?.let { stringResource(it) } ?: operation
+                        } ?: stringResource(R.string.filter_all_permissions)) },
+                    )
                     MonitorOutcomes.entries.forEach { option ->
                         FilterChip(
                             selected = option == outcome,
@@ -147,6 +167,31 @@ fun MonitorLogScreen(
         }
     }
 
+    if (filterDialog != null) {
+        val filteringApps = filterDialog == "app"
+        val keys = remember(entries, filteringApps) {
+            entries.map { if (filteringApps) it.packageName else it.operationName }.distinct()
+        }
+        val options = keys.map { key ->
+            MonitorFilterOption(
+                key = key,
+                label = if (filteringApps) appsByPackage[key]?.label ?: key
+                    else AppOpDisplayCatalog.labelResOf(key)?.let { stringResource(it) } ?: key,
+            )
+        }.sortedBy { it.label.lowercase() }
+        MonitorLogFilterDialog(
+            title = stringResource(if (filteringApps) R.string.history_filter_app_title else R.string.filter_permission_title),
+            searchLabel = stringResource(if (filteringApps) R.string.app_list_search_label else R.string.history_permission_search),
+            allLabel = stringResource(if (filteringApps) R.string.history_filter_all_apps else R.string.filter_all_permissions),
+            options = options,
+            selected = if (filteringApps) packageFilter else operationFilter,
+            onSelect = {
+                if (filteringApps) packageFilter = it else operationFilter = it
+                filterDialog = null
+            },
+            onDismiss = { filterDialog = null },
+        )
+    }
     if (confirmingClear) {
         AppBottomSheet(
             onDismissRequest = { confirmingClear = false },

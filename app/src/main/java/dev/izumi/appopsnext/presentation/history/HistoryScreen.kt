@@ -48,6 +48,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -99,7 +100,7 @@ fun HistoryOverviewScreen(
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
 ) {
-    var showPermissionManagement by remember { mutableStateOf(false) }
+    var showPermissionManagement by rememberSaveable { mutableStateOf(false) }
     var showInformation by remember { mutableStateOf(false) }
     Scaffold(
         modifier = modifier,

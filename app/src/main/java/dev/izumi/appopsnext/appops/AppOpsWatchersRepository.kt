@@ -12,7 +12,9 @@ class AppOpsWatchersRepository(private val gateway: PrivilegedAppOpsGateway) {
         check(!result.timedOut) { "Watcher query timed out" }
         check(result.exitCode == 0 && result.stderr.isBlank()) { "Watcher query failed (${result.exitCode})" }
         // Never treat a clipped or unexpectedly large response as a complete registry.
-        check(result.stdout.length < 512 * 1024) { "Watcher response exceeds the supported size" }
+        check(result.stdout.toByteArray(Charsets.UTF_8).size <= WatcherResponseCodec.MAX_OUTPUT_BYTES) {
+            "Watcher response exceeds the supported size"
+        }
         AppOpsWatchersParser.parse(result.stdout)
     }
 }

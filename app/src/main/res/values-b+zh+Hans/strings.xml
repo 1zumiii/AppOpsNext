@@ -3,6 +3,7 @@
     <string name="browse_by_app">按应用</string>
     <string name="browse_by_permission">按权限</string>
     <string name="selection_select_all">全选</string>
+    <string name="template_no_permissions">尚未添加权限</string>
     <string name="permission_back">返回权限列表</string>
     <string name="permission_info_title">权限模式说明</string>
     <string name="permission_info_modes">UID 级模式优先于包级模式。两者都没有记录时，列表显示“系统默认”。Android 运行时权限仍可能限制实际访问。</string>
@@ -411,9 +412,9 @@
     <string name="monitor_log_clear">清空监测记录</string>
     <string name="monitor_log_clear_confirm">将删除全部 %1$d 条记录，删除后无法恢复。</string>
     <string name="watchers_title">权限变更监听者</string>
-    <string name="watchers_summary">查看当前注册了 AppOps 模式变更监听的进程。</string>
-    <string name="watchers_refresh">刷新</string>
-    <string name="watchers_explainer">此快照显示权限模式变更的监听注册，不是访问历史，也不能证明进程收到了回调。按操作和按包名注册的范围分别生效；UID 不受限也不代表监听所有权限。Android 可能继续过滤回调。点击进程查看注册详情。</string>
+    <string name="watchers_information">监听注册说明</string>
+    <string name="watchers_summary">查看已注册权限模式变更监听的进程。</string>
+    <string name="watchers_explainer">快照显示权限模式变更的监听注册。监听注册不表示权限访问，也不能证明进程收到了回调。\n\n按操作和按包名注册的范围分别生效。UID 不受限不代表监听所有权限，Android 仍可能过滤回调。\n\n点击进程可查看注册详情。</string>
     <string name="watchers_unavailable">无法读取监听表。请检查特权连接，此设备也可能使用了不支持的格式。</string>
     <string name="watchers_incomplete">部分注册无法解析，列表可能不完整。</string>
     <string name="watchers_snapshot_time">快照采集于：%1$s</string>
@@ -540,4 +541,21 @@
     <string name="monitor_battery_title">未排除电池优化</string>
     <string name="monitor_battery_summary">设备的后台管理可能在不提示的情况下结束 AppOpsNext，导致监测停止。点击前往系统设置。不同设备的开关位置可能不同，完成设置后可关闭此提示。</string>
     <string name="monitor_battery_dismiss">不再提示</string>
+    <string name="batch_requested_mode">设为%1$s</string>
+    <string name="batch_show_targets">展开修改清单</string>
+    <string name="batch_hide_targets">收起修改清单</string>
+    <string name="batch_failures_only">仅失败</string>
+    <string name="batch_no_failures">没有失败项</string>
+    <string name="batch_failure_details">详情</string>
+    <string name="batch_failure_read">无法读取当前模式。</string>
+    <string name="batch_failure_changed">当前模式已发生变化，请刷新后重试。</string>
+    <string name="batch_failure_write">未能应用修改。</string>
+    <string name="batch_failure_verify">系统未接受请求的模式。</string>
+    <string name="action_clear_search">清空搜索</string>
+    <string name="filter_no_matches">没有匹配项</string>
+    <string name="filter_all_permissions">全部权限</string>
+    <string name="filter_permission_title">按权限筛选</string>
+    <string name="permission_runtime_granted">运行时权限已授权</string>
+    <string name="permission_runtime_denied">运行时权限未授权</string>
+    <string name="permission_info_grants">模式为“忽略”时，附加文字显示 Android 当前的授权状态。仅凭模式无法判断是否经过手动修改，或是否设置了兼容撤销标记。</string>
 </resources>

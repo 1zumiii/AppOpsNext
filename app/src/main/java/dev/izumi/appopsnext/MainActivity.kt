@@ -15,6 +15,7 @@ import dev.izumi.appopsnext.development.DevelopmentWindowPolicy
 import dev.izumi.appopsnext.presentation.AppOpsRootScreen
 import dev.izumi.appopsnext.presentation.app_detail.AppDetailViewModel
 import dev.izumi.appopsnext.presentation.app_list.AppListViewModel
+import dev.izumi.appopsnext.presentation.batch.BatchOperationUiState
 import dev.izumi.appopsnext.presentation.batch.BatchOperationsViewModel
 import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticsViewModel
 import dev.izumi.appopsnext.presentation.experimental.ExperimentalViewModel
@@ -188,8 +189,12 @@ class MainActivity : ComponentActivity() {
                     onBatchOperationConfirm =
                         batchOperationsViewModel::confirm,
                     onBatchOperationDismiss = {
+                        // Cancelling a confirmation changed nothing, so only
+                        // closing a finished report needs a reload.
+                        val finished = batchOperationsViewModel.uiState.value is
+                            BatchOperationUiState.Finished
                         batchOperationsViewModel.dismiss()
-                        if (permissionBrowserState.value.operation == null) {
+                        if (finished && permissionBrowserState.value.operation == null) {
                             appDetailViewModel.refresh()
                         }
                     },

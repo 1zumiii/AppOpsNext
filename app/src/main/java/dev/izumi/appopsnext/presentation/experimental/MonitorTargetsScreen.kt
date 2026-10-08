@@ -30,6 +30,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import dev.izumi.appopsnext.presentation.batch.StringSelectionSaver
+import dev.izumi.appopsnext.presentation.batch.selectedFirstOrdering
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -109,6 +112,15 @@ fun MonitorTargetsScreen(
                         .padding(horizontal = 16.dp, vertical = 4.dp),
                     label = stringResource(R.string.monitor_targets_search),
                 )
+            }
+            if (watched.isEmpty() && others.isEmpty()) {
+                item {
+                    Text(
+                        text = stringResource(R.string.app_list_empty_search),
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             if (watched.isNotEmpty()) {
                 item {
@@ -221,15 +233,18 @@ fun MonitorOperationsScreen(
 ) {
     val context = LocalContext.current
     var query by remember(app.packageName) { mutableStateOf("") }
+    val initialSelection by rememberSaveable(app.packageName, stateSaver = StringSelectionSaver) {
+        mutableStateOf(selected.toSet())
+    }
     // The shortlist is a judgement about what usually matters, not a limit of
     // the watch, so everything the operation table knows can be offered instead.
     // An operation that is already picked stays on the list either way, so
     // turning the shortlist back on cannot hide a live selection.
-    val options = remember(showAll, selected, context) {
+    val options = remember(showAll, selected, initialSelection, context) {
         val names = if (showAll) {
             AppOpCodes.ALL_NAMES
         } else {
-            (AppOpCodes.MONITORED_NAMES + selected).distinct()
+            (AppOpCodes.MONITORED_NAMES + initialSelection + selected).distinct()
         }
         names.map { name ->
             name to (
@@ -239,8 +254,12 @@ fun MonitorOperationsScreen(
                 )
         }.sortedBy { it.second }
     }
-    val visibleOptions = remember(options, query, showAll) {
-        if (!showAll || query.isBlank()) options else options.filter { (name, label) ->
+    val orderedOptions = remember(options, initialSelection) {
+        val selectedInNameOrder = options.map { it.first }.filter { it in initialSelection }.toSet()
+        selectedFirstOrdering(options, selectedInNameOrder) { it.first }
+    }
+    val visibleOptions = remember(orderedOptions, query, showAll) {
+        if (!showAll || query.isBlank()) orderedOptions else orderedOptions.filter { (name, label) ->
             name.contains(query, ignoreCase = true) || label.contains(query, ignoreCase = true)
         }
     }

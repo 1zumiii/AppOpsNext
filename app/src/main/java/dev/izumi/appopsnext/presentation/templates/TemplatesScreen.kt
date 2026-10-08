@@ -52,6 +52,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import dev.izumi.appopsnext.presentation.batch.StringSelectionSaver
+import dev.izumi.appopsnext.presentation.batch.selectedFirstOrdering
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -585,7 +588,7 @@ private fun TemplateEditor(
     onRuleOrderChange: (List<String>) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var showPermissionManager by remember(template.id) {
+    var showPermissionManager by rememberSaveable(template.id) {
         mutableStateOf(false)
     }
     var displayedRules by remember(template.id) {
@@ -712,6 +715,14 @@ private fun TemplateEditor(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item {
+            FilledTonalButton(
+                onClick = { showPermissionManager = true },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = stringResource(R.string.template_manage_permissions))
+            }
+        }
+        item {
             MainPageSectionTitle(
                 text = stringResource(R.string.template_rule_count, displayedRules.size),
                 horizontalPadding = 0.dp,
@@ -743,20 +754,6 @@ private fun TemplateEditor(
                         }
                     },
             )
-        }
-        item {
-            FilledTonalButton(
-                onClick = { showPermissionManager = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp),
-            ) {
-                Text(
-                    text = stringResource(
-                        R.string.template_manage_permissions,
-                    ),
-                )
-            }
         }
     }
 
@@ -949,7 +946,7 @@ private fun PermissionManagerDialog(
     onConfirm: (List<String>) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var query by remember { mutableStateOf("") }
+    var query by rememberSaveable { mutableStateOf("") }
     val context = LocalContext.current
     val options = remember(operations, currentRules) {
         val knownNames = operations.mapTo(mutableSetOf()) {
@@ -977,14 +974,20 @@ private fun PermissionManagerDialog(
             }
         }
     }
-    var selectedNames by remember(currentRules) {
+    var selectedNames by rememberSaveable(currentRules, stateSaver = StringSelectionSaver) {
         mutableStateOf(
             currentRules
                 .map(PermissionTemplateRule::stableOperationName)
                 .toSet(),
         )
     }
-    val filteredOperations = options.filter { option ->
+    val initialSelection by rememberSaveable(stateSaver = StringSelectionSaver) {
+        mutableStateOf(currentRules.map(PermissionTemplateRule::stableOperationName).toSet())
+    }
+    val orderedOptions = remember(options, initialSelection) {
+        selectedFirstOrdering(options, initialSelection, TemplatePermissionOption::stableName)
+    }
+    val filteredOperations = orderedOptions.filter { option ->
         query.isBlank() ||
             option.stableName.contains(query, ignoreCase = true) ||
             option.knownOperation?.let { operation ->
@@ -1009,10 +1012,11 @@ private fun PermissionManagerDialog(
         },
         text = {
             Column {
+                Text(text = stringResource(R.string.history_management_selected_count, selectedNames.size))
                 CompactSearchField(
                     value = query,
                     onValueChange = { query = it },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     label = stringResource(R.string.template_permission_search),
                 )
                 LazyColumn(
@@ -1021,6 +1025,14 @@ private fun PermissionManagerDialog(
                         .heightIn(max = 420.dp)
                         .padding(top = 8.dp),
                 ) {
+                    if (filteredOperations.isEmpty()) {
+                        item {
+                            Text(
+                                text = stringResource(R.string.history_no_matching_permissions),
+                                modifier = Modifier.padding(16.dp),
+                            )
+                        }
+                    }
                     items(
                         filteredOperations,
                         key = TemplatePermissionOption::stableName,

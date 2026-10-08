@@ -459,6 +459,7 @@ fun AppOpsRootScreen(
         MainPageTypography {
             AppDetailScreen(
                 uiState = appDetailUiState,
+                batchState = batchOperationUiState,
                 modeChangeState = appOpModeChangeUiState,
                 searchQuery = appOpSearchQuery,
                 onBack = navigateBackFromDetail,
@@ -485,6 +486,7 @@ fun AppOpsRootScreen(
             when (selectedDestination) {
                 MainDestination.APPS -> AppListScreen(
                     uiState = appListUiState,
+                    batchState = batchOperationUiState,
                     permissionTab = permissionTab,
                     onPermissionTabChange = { permissionTab = it },
                     onPermissionInfo = { showPermissionInfo = true },

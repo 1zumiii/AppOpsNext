@@ -32,6 +32,7 @@ import dev.izumi.appopsnext.presentation.components.AppIcon
 internal fun PermissionAppListItem(
     app: InstalledApp,
     state: EffectiveOpState,
+    runtimeGranted: Boolean?,
     editEnabled: Boolean,
     isApplying: Boolean,
     selectedForBatch: Boolean?,
@@ -85,6 +86,16 @@ internal fun PermissionAppListItem(
                         ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+                if (runtimeGranted != null && state.mode == AppOpMode.IGNORE) {
+                    Text(
+                        text = stringResource(
+                            if (runtimeGranted) R.string.permission_runtime_granted
+                            else R.string.permission_runtime_denied,
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
