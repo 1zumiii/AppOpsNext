@@ -541,4 +541,7 @@
     <string name="monitor_battery_title">未排除电池优化</string>
     <string name="monitor_battery_summary">设备的后台管理可能在不提示的情况下结束 AppOpsNext，导致监测停止。点击前往系统设置。不同设备的开关位置可能不同，完成设置后可关闭此提示。</string>
     <string name="monitor_battery_dismiss">不再提示</string>
+    <string name="batch_requested_mode">设为%1$s</string>
+    <string name="batch_show_targets">展开修改清单</string>
+    <string name="batch_hide_targets">收起修改清单</string>
 </resources>

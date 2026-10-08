@@ -156,6 +156,7 @@ class BatchOperationsViewModel(
                 targetCount = targets.size,
                 operationCount = distinctTargets.size,
                 targets = distinctTargets,
+                previewTargets = targets,
                 affectedPackages = affectedPackages,
             ),
         )

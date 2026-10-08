@@ -545,4 +545,7 @@
     <string name="monitor_battery_title">Battery optimization is on</string>
     <string name="monitor_battery_summary">Vendor battery management can end this app and stop the monitor without notice. Tap to open system settings. Some ROMs keep this control elsewhere, so dismiss this notice once you have handled it.</string>
     <string name="monitor_battery_dismiss">Dismiss this notice</string>
+    <string name="batch_requested_mode">Set to %1$s</string>
+    <string name="batch_show_targets">Show changes</string>
+    <string name="batch_hide_targets">Hide changes</string>
 </resources>

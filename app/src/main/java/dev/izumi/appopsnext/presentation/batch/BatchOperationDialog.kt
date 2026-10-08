@@ -6,8 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
@@ -16,6 +15,10 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -27,6 +30,7 @@ import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpModeChangePhase
 import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
 import dev.izumi.appopsnext.batch.model.BatchOperationItemResult
+import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 
 @Composable
 fun BatchOperationDialog(
@@ -43,37 +47,66 @@ fun BatchOperationDialog(
                 Text(text = stringResource(R.string.batch_confirm_title))
             },
             text = {
-                Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                var expanded by rememberSaveable(state.request) {
+                    mutableStateOf(state.request.previewTargets.size <= 5)
+                }
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 420.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Text(
-                        text = stringResource(
-                            R.string.batch_confirm_template,
-                            state.request.title,
-                        ),
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.batch_confirm_summary,
-                            state.request.targetCount,
-                            state.request.operationCount,
-                        ),
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.batch_confirm_warning,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (state.request.affectedPackages.isNotEmpty()) {
+                    item {
                         Text(
                             text = stringResource(
-                                R.string.permission_uid_affected,
-                                state.request.affectedPackages.joinToString("\n"),
+                                R.string.batch_confirm_template,
+                                state.request.title,
                             ),
-                            color = MaterialTheme.colorScheme.error,
                         )
+                        Text(
+                            text = stringResource(
+                                R.string.batch_confirm_summary,
+                                state.request.targetCount,
+                                state.request.operationCount,
+                            ),
+                        )
+                        Text(
+                            text = stringResource(
+                                R.string.batch_confirm_warning,
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        if (state.request.affectedPackages.isNotEmpty()) {
+                            Text(
+                                text = stringResource(
+                                    R.string.permission_uid_affected,
+                                    state.request.affectedPackages.joinToString("\n"),
+                                ),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+                    item {
+                        state.request.previewTargets.map { it.requestedMode }.distinct()
+                            .singleOrNull()?.let { mode ->
+                                Text(stringResource(R.string.batch_requested_mode, modeLabel(mode)))
+                            }
+                        TextButton(onClick = { expanded = !expanded }) {
+                            Text(stringResource(if (expanded) R.string.batch_hide_targets else R.string.batch_show_targets))
+                        }
+                    }
+                    if (expanded) {
+                        items(state.request.previewTargets) { target ->
+                            ListItem(
+                                headlineContent = { Text(target.appLabel) },
+                                supportingContent = {
+                                    Column {
+                                        Text(target.packageName)
+                                        Text(operationLabel(target.stableOperationName))
+                                    }
+                                },
+                                trailingContent = { Text(modeLabel(target.requestedMode)) },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                        }
                     }
                 }
             },
@@ -171,6 +204,10 @@ fun BatchOperationDialog(
         )
     }
 }
+
+@Composable
+private fun operationLabel(operation: String): String =
+    AppOpDisplayCatalog.labelResOf(operation)?.let { stringResource(it) } ?: operation
 
 @Composable
 private fun BatchResultItem(item: BatchOperationItemResult) {
