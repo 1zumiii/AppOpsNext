@@ -19,6 +19,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
@@ -29,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.presentation.components.AppIcon
+import dev.izumi.appopsnext.presentation.components.CompactSearchField
 
 @Composable
 fun HistoryFilterBar(
@@ -85,56 +91,72 @@ fun HistoryAppFilterDialog(
     onSelect: (String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    var query by rememberSaveable { mutableStateOf("") }
+    val shown = summaries.filter {
+        it.app.label.contains(query.trim(), ignoreCase = true) ||
+            it.app.packageName.contains(query.trim(), ignoreCase = true)
+    }
     AppBottomSheet(
         onDismissRequest = onDismiss,
         title = { Text(text = stringResource(R.string.history_filter_app_title)) },
         text = {
-            LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp)) {
-                item {
-                    Text(
-                        text = stringResource(R.string.history_filter_app_hint),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                item {
-                    ListItem(
-                        modifier = Modifier.clickable { onSelect(null) },
-                        headlineContent = {
-                            Text(text = stringResource(R.string.history_filter_all_apps))
-                        },
-                        trailingContent = {
-                            RadioButton(selected = selectedPackage == null, onClick = { onSelect(null) })
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    )
-                }
-                items(items = summaries, key = { it.app.packageName }) { summary ->
-                    val packageName = summary.app.packageName
-                    ListItem(
-                        modifier = Modifier.clickable { onSelect(packageName) },
-                        leadingContent = {
-                            AppIcon(
-                                packageName = packageName,
-                                appLabel = summary.app.label,
-                                size = 32.dp,
-                            )
-                        },
-                        headlineContent = {
-                            Text(
-                                text = summary.app.label,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        },
-                        trailingContent = {
-                            RadioButton(
-                                selected = selectedPackage == packageName,
-                                onClick = { onSelect(packageName) },
-                            )
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    )
+            Column {
+                CompactSearchField(
+                    value = query,
+                    onValueChange = { query = it },
+                    label = stringResource(R.string.app_list_search_label),
+                )
+                LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp)) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.history_filter_app_hint),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    item {
+                        ListItem(
+                            modifier = Modifier.clickable { onSelect(null) },
+                            headlineContent = {
+                                Text(text = stringResource(R.string.history_filter_all_apps))
+                            },
+                            trailingContent = {
+                                RadioButton(selected = selectedPackage == null, onClick = { onSelect(null) })
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        )
+                    }
+                    if (shown.isEmpty()) {
+                        item { Text(stringResource(R.string.app_list_empty_search)) }
+                    }
+                    items(items = shown, key = { it.app.packageName }) { summary ->
+                        val packageName = summary.app.packageName
+                        ListItem(
+                            modifier = Modifier.clickable { onSelect(packageName) },
+                            leadingContent = {
+                                AppIcon(
+                                    packageName = packageName,
+                                    appLabel = summary.app.label,
+                                    size = 32.dp,
+                                )
+                            },
+                            headlineContent = {
+                                Text(
+                                    text = summary.app.label,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            },
+                            supportingContent = { Text(packageName) },
+                            trailingContent = {
+                                RadioButton(
+                                    selected = selectedPackage == packageName,
+                                    onClick = { onSelect(packageName) },
+                                )
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        )
+                    }
                 }
             }
         },

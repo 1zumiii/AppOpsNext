@@ -551,4 +551,8 @@
     <string name="batch_failure_changed">无法确认当前模式，请刷新后重试。</string>
     <string name="batch_failure_write">未能应用修改。</string>
     <string name="batch_failure_verify">未能验证目标模式是否生效。</string>
+    <string name="action_clear_search">清空搜索</string>
+    <string name="filter_no_matches">没有匹配项</string>
+    <string name="filter_all_permissions">全部权限</string>
+    <string name="filter_permission_title">按权限筛选</string>
 </resources>
