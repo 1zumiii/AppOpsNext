@@ -5,6 +5,7 @@
     <string name="browse_by_app">By app</string>
     <string name="browse_by_permission">By permission</string>
     <string name="selection_select_all">Select all</string>
+    <string name="template_no_permissions">No permissions added</string>
     <string name="permission_back">Back to permissions</string>
     <string name="permission_info_title">About permission modes</string>
     <string name="permission_info_modes">A UID mode overrides the package mode. If neither is recorded, the list shows System default. Android runtime permissions can further restrict access.</string>
