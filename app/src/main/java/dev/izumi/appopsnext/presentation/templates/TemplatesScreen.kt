@@ -54,6 +54,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import dev.izumi.appopsnext.presentation.batch.StringSelectionSaver
+import dev.izumi.appopsnext.presentation.batch.selectedFirstOrdering
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -986,7 +987,13 @@ private fun PermissionManagerDialog(
                 .toSet(),
         )
     }
-    val filteredOperations = options.filter { option ->
+    val initialSelection by rememberSaveable(stateSaver = StringSelectionSaver) {
+        mutableStateOf(currentRules.map(PermissionTemplateRule::stableOperationName).toSet())
+    }
+    val orderedOptions = remember(options, initialSelection) {
+        selectedFirstOrdering(options, initialSelection, TemplatePermissionOption::stableName)
+    }
+    val filteredOperations = orderedOptions.filter { option ->
         query.isBlank() ||
             option.stableName.contains(query, ignoreCase = true) ||
             option.knownOperation?.let { operation ->
