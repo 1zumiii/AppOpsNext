@@ -184,7 +184,7 @@ fun PermissionDetailScreen(
                 onRefresh = {
                     if (!busy) {
                         onRefresh()
-                        if (appListState.loadFailed) onRefreshApps()
+                        onRefreshApps()
                     }
                 },
                 modifier = Modifier.weight(1f),

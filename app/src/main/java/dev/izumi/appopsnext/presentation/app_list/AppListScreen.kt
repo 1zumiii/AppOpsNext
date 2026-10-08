@@ -28,6 +28,7 @@ import androidx.compose.material3.TabRow
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -168,6 +169,7 @@ fun AppListScreen(
                     )
                     else -> AppListContent(
                         uiState = uiState,
+                        onRefresh = onRefresh,
                         onSearchQueryChange = onSearchQueryChange,
                         onAppSelected = onAppSelected,
                         batchSelectionMode = batchSelectionMode,
@@ -206,8 +208,10 @@ fun AppListScreen(
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun AppListContent(
     uiState: AppListUiState,
+    onRefresh: () -> Unit,
     onSearchQueryChange: (String) -> Unit,
     onAppSelected: (InstalledApp) -> Unit,
     batchSelectionMode: Boolean,
@@ -240,15 +244,13 @@ private fun AppListContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        if (uiState.visibleApps.isEmpty()) {
-            EmptySearchContent(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-            )
-        } else {
+        PullToRefreshBox(
+            isRefreshing = uiState.isLoading,
+            onRefresh = { if (!uiState.isLoading) onRefresh() },
+            modifier = Modifier.weight(1f),
+        ) {
             LazyColumn(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
                     start = 20.dp,
                     end = 20.dp,
@@ -257,6 +259,11 @@ private fun AppListContent(
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                if (uiState.visibleApps.isEmpty()) {
+                    item {
+                        EmptySearchContent(modifier = Modifier.fillParentMaxSize())
+                    }
+                }
                 items(
                     items = uiState.visibleApps,
                     key = InstalledApp::packageName,
