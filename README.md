@@ -32,7 +32,7 @@ Official APKs are published **ONLY** on GitHub Releases. No guarantee is made fo
   of allowed and denied accesses, and review them in a log.
 - **Permission change listeners (experimental).** See which processes are
   registered to watch for permission-setting changes.
-- **Limited privileged access.** Use a fixed set of AppOps commands and interfaces,
+- **Limited privileged access.** Use a fixed set of AppOps and permission-flag commands,
   with no arbitrary shell execution. Records stay on the device; only the update
   check uses the network.
 
@@ -40,9 +40,9 @@ Official APKs are published **ONLY** on GitHub Releases. No guarantee is made fo
 
 | Area | Features |
 | --- | --- |
-| Applications | Browse current-user apps, search names and packages, and choose whether to show system apps. |
+| Applications | Browse current-user apps, search names and packages, and choose whether to show system apps. Switch to By permission to see the mode of every app for one operation and change it there. |
 | AppOps | Inspect package and UID modes, search operations by localized or system name, and verify changes by reading them back. |
-| Templates and batches | Create reusable rules, reorder them, apply a template to multiple apps, or change several operations in one app. |
+| Templates and batches | Create reusable rules, reorder them, apply a template to multiple apps, or change several operations in one app. Multi-select lists offer Select all for the items shown. Batch confirmations list the target mode and the items to change. |
 | Newly installed apps | Opt in to automatic template application, catch up on pending installations, and inspect saved per-rule results. |
 | History | Explore permission distribution, app statistics, and timelines by day range and app; choose and reorder the operations you follow. Optionally keep individual records past the seven days Android retains. |
 | Settings and diagnostics | Switch between English, Simplified Chinese, or the system language, inspect connection status and diagnostic reports, and see quietly whether a newer release exists. |
@@ -82,6 +82,7 @@ remains viewable without that connection.
 | --- | --- | --- |
 | ASUS AI2302 | Android 15 / API 35 | Primary development and physical-device test environment. |
 | Xiaomi 24117RN76G | HyperOS 3 / Android 16 / API 36 | Independent user verification of the native backend, reads/writes, history, and camera enforcement. |
+| realme RMX3370 | Android 16 / API 36 | Independent user verification that Ignore takes effect through the compatibility revocation flag. |
 
 These results describe the tested environments, not compatibility with every
 OEM ROM. See [backend compatibility notes](docs/PRIVILEGED_BACKENDS.md) for the
@@ -145,6 +146,13 @@ AppOp to Allow cannot grant a missing runtime permission. Android or an OEM
 policy may also normalize or reject a requested mode. AppOpsNext explains
 runtime-permission failures and provides a route to the app's system settings.
 
+Some Android 16 devices restrict AppOps changes for runtime permissions such as
+camera, microphone and location. When these restrictions apply, AppOpsNext uses
+the compatibility revocation flag (REVOKED_COMPAT) to enforce Ignore. This keeps
+the app's granted permission and does not stop its process. The system permission
+settings can still show the permission as allowed. On these devices, Deny is not
+available for the affected permissions. If you select Deny, AppOpsNext uses Ignore.
+
 Changes use a verified transaction:
 
 ```text
@@ -189,7 +197,8 @@ entirely your decision.
   bundled native backend first and Shizuku UserService if native startup fails.
 - **A mode will not apply:** check the Android runtime permission and the
   reported verification result. Some system restrictions cannot be overridden
-  through AppOps.
+  through AppOps. On some Android 16 devices, you can set runtime permissions only
+  to Ignore. See **What an AppOps change means**.
 - **History looks old or incomplete:** check the saved update time, refresh
   manually, and verify the connection. Android controls which records exist.
 - **The access monitor reports nothing:** it is experimental and depends

@@ -23,19 +23,23 @@ kept as a functional fallback.
 ## Command surface
 
 Both backends expose the same fixed set of commands; neither runs an arbitrary
-shell string. Each one is built as an argument list with the package and
-operation names validated first, on the app side and again in the daemon.
+shell string. Each command is an argument list. The app validates the package,
+operation and permission names first, and the daemon validates them again.
 
 | Command | Runs |
 | --- | --- |
 | `GET_PACKAGE_OPS` | `cmd appops get <package>` |
 | `GET_PACKAGE_OP` | `cmd appops get <package> <op>` |
 | `GET_UID_OPS` | `cmd appops get <uid>` |
+| `GET_OP_STATES` | `dumpsys appops --op <op>` |
 | `GET_UID_STATES` | `dumpsys appops --package <package>` |
 | `GET_WATCHERS` | `dumpsys appops --watchers` (no arguments) |
 | `GET_HISTORY` | `dumpsys appops --history --include-discrete 0 --op <op>` |
 | `SET_PACKAGE` | `cmd appops set <package> <op> <mode>` |
 | `SET_UID` | `cmd appops set --uid <package> <op> <mode>` |
+| `GET_PACKAGE_PERMISSIONS` | `dumpsys package <package>` |
+| `SET_REVOKED_COMPAT` | `cmd package set-permission-flags --user <user> <package> <permission> revoked-compat` |
+| `CLEAR_REVOKED_COMPAT` | `cmd package clear-permission-flags --user <user> <package> <permission> revoked-compat` |
 
 `GET_UID_STATES` exists for the monitor's off-screen filter and returns the
 process state AppOps keeps for each UID carrying that package. It is scoped to
@@ -44,6 +48,13 @@ lines on an ordinary device, which is not something to run while callbacks are
 arriving. A ROM that does not support `--package`, or prints the block in a
 different shape, yields no usable state; the monitor then reports the access
 rather than dropping it.
+
+`GET_OP_STATES` supplies the by-permission view. It lists every UID and package
+mode for one operation in one call.
+
+`GET_PACKAGE_PERMISSIONS` and the two `REVOKED_COMPAT` commands are for Android 16
+builds that block AppOps writes to runtime-permission ops. For details, see
+[device findings](DEVICE_FINDINGS.md#runtime-permission-app-op-mapping-on-android-16).
 
 `GET_WATCHERS` uses the platform's watcher-only option, avoiding a full history
 dump or a fixed line cutoff. It is exposed as appended AIDL method 11; existing
@@ -57,6 +68,7 @@ also supplies the experimental mode-listener snapshot and diagnostic report.
 | --- | --- | --- |
 | ASUS AI2302 | Android 15 / API 35 | Project reference device; native connection, reads, writes, history, templates, and permission enforcement manually tested. |
 | Xiaomi 24117RN76G | HyperOS 3 / Android 16 / API 36 | Independent issue reporter confirmed a shell-UID native connection, successful self-check, app listing, permission history, AppOps reads and writes, and camera enforcement. |
+| realme RMX3370 | Android 16 QPR2 / API 36 | Independent issue reporter confirmed that this build blocks runtime-permission AppOps writes. Ignore takes effect through the `REVOKED_COMPAT` permission flag. |
 
 This evidence establishes working compatibility for the tested devices. It is
 not a general claim for every Android 16 device or OEM ROM.
