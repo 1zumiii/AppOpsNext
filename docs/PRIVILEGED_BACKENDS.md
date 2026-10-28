@@ -106,6 +106,48 @@ that reorders the interface; the probe catches that for reads.
 This evidence establishes working compatibility for the tested devices. It is
 not a general claim for every Android 16 device or OEM ROM.
 
+## Output format check on emulators
+
+The `Device output formats` workflow (`.github/workflows/device-formats.yml`)
+catches AOSP changes to the text that the parsers read. It runs weekly, on
+demand, and on pull requests that change the check itself. For each Google
+APIs x86_64 emulator image in its matrix (API 35, 36, 36.1 and 37.0), it does
+these steps:
+
+1. `scripts/capture-device-dumps.sh` connects through `adb shell`, which has
+   the same shell identity as the daemon. It sets a package mode
+   (`RUN_IN_BACKGROUND`), a UID mode (`RUN_ANY_IN_BACKGROUND`) and the
+   `REVOKED_COMPAT` flag on `CAMERA`, and starts and stops `CAMERA` once to
+   create history. It reads the history right away, then runs the other read
+   commands in the table above.
+2. `DeviceDumpCompatibilityTest` runs the production parsers over the
+   captured files. It checks that each dump header is recognized and that the
+   parsers find the states from step 1. When `APPOPSNEXT_DEVICE_DUMPS` is not
+   set, the test is skipped, so ordinary unit test runs do not change.
+3. The workflow uploads the dumps, the device logcat and the test report as
+   an artifact, also when a step fails. If a dump fails because
+   system_server died, the script waits for the system to come back and
+   tries once more. The test fails if the second attempt also fails.
+
+To check a real device, connect it and run:
+
+```sh
+scripts/capture-device-dumps.sh build/device-dumps/my-device
+APPOPSNEXT_DEVICE_DUMPS=$PWD/build/device-dumps/my-device \
+  ./gradlew :app:testDebugUnitTest --tests '*DeviceDumpCompatibilityTest'
+```
+
+The script restores the changed modes and the flag when it exits.
+
+Limits:
+
+- The check covers AOSP emulator images only. OEM ROMs, such as the ColorOS
+  build in issue #13, can print other formats, so device reports are still
+  necessary.
+- It covers the shell text path only. A structured Binder read runs through
+  Shizuku and cannot be exercised by `adb shell`.
+- Writes are applied with the shell `cmd` tools, not through either backend.
+
 ## Known Android 16 / HyperOS failure boundary
 
 On the reported Xiaomi device, Shizuku's Binder was available as UID 2000 and
