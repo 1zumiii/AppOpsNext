@@ -39,10 +39,14 @@ class DeviceDumpCompatibilityTest {
 
     @Test
     fun `every command succeeded`() {
-        val failed = File(dir, "commands.tsv").readLines().drop(1)
-            .map { it.split('\t') }
-            .filter { it[1] != "0" }
+        val commands = File(dir, "commands.tsv").readLines().drop(1).map { it.split('\t') }
+        val failed = commands.filter { it[1] != "0" }
         assertTrue("non-zero exit (name, exit, command): $failed", failed.isEmpty())
+        // dumpsys exits 0 when the service dies during the dump.
+        val lost = commands.map { it[0] }.filter { name ->
+            File(dir, "$name.stderr").takeIf(File::exists)?.readText()?.let(SERVICE_LOST::containsMatchIn) == true
+        }
+        assertTrue("service lost during: $lost", lost.isEmpty())
     }
 
     @Test
@@ -132,5 +136,8 @@ class DeviceDumpCompatibilityTest {
 
     private companion object {
         const val DUMPS_ENV = "APPOPSNEXT_DEVICE_DUMPS"
+
+        /** Same pattern as SERVICE_LOST in scripts/capture-device-dumps.sh. */
+        val SERVICE_LOST = Regex("DEAD_OBJECT|Can't find service")
     }
 }

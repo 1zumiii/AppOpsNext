@@ -123,8 +123,10 @@ these steps:
    captured files. It checks that each dump header is recognized and that the
    parsers find the states from step 1. When `APPOPSNEXT_DEVICE_DUMPS` is not
    set, the test is skipped, so ordinary unit test runs do not change.
-3. The workflow uploads the dumps and the test report as an artifact, also
-   when a step fails.
+3. The workflow uploads the dumps, the device logcat and the test report as
+   an artifact, also when a step fails. If a dump fails because
+   system_server died, the script waits for the system to come back and
+   tries once more. The test fails if the second attempt also fails.
 
 To check a real device, connect it and run:
 

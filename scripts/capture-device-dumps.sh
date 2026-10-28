@@ -27,6 +27,8 @@ readonly PERMISSION=android.permission.CAMERA
 readonly PACKAGE_OP=RUN_IN_BACKGROUND
 readonly UID_OP=RUN_ANY_IN_BACKGROUND
 readonly HISTORY_OP=CAMERA
+# Also matched by DeviceDumpCompatibilityTest.
+readonly SERVICE_LOST="DEAD_OBJECT|Can't find service"
 
 log() { echo "$*" | tee -a "$out/setup.log" >&2; }
 
@@ -37,8 +39,17 @@ setup() {
     adb shell "$@" >>"$out/setup.log" 2>&1 || log "  exit $?"
 }
 
-adb wait-for-device
-until [[ $(adb shell getprop sys.boot_completed | tr -d '\r') == 1 ]]; do sleep 2; done
+# After a system_server restart the services come back one by one, so wait
+# for the two that every command needs rather than for the boot property alone.
+wait_for_system() {
+    adb wait-for-device
+    until [[ $(adb shell getprop sys.boot_completed | tr -d '\r') == 1 ]] &&
+        adb shell service check appops | grep -F ': found' >/dev/null &&
+        adb shell service check package | grep -F ': found' >/dev/null; do
+        sleep 2
+    done
+}
+wait_for_system
 
 # A regular app UID that requests CAMERA. A shared system UID such as Settings
 # (1000) would carry the UID-mode write to system_server.
@@ -62,12 +73,16 @@ if [[ -z $uid ]]; then
 fi
 log "package=$package uid=$uid"
 
-restore() {
+finish() {
+    wait_for_system
     setup cmd appops set "$package" "$PACKAGE_OP" default
     setup cmd appops set --uid "$package" "$UID_OP" default
     setup cmd package clear-permission-flags --user "$USER_ID" "$package" "$PERMISSION" revoked-compat
+    # Logs survive a system_server restart and explain one.
+    adb logcat -d -b crash >"$out/logcat-crash.txt" 2>&1 || true
+    adb logcat -d -b main,system -t 5000 >"$out/logcat.txt" 2>&1 || true
 }
-trap restore EXIT
+trap finish EXIT
 
 # History first: the permission flag below turns CAMERA off for this UID.
 # CAMERA records individual accesses, and a granted permission with the app on
@@ -75,9 +90,11 @@ trap restore EXIT
 setup pm grant "$package" "$PERMISSION"
 setup monkey -p "$package" -c android.intent.category.LAUNCHER 1
 sleep 3
-setup cmd appops start "$package" "$HISTORY_OP"
+# Without --user, Android 16 QPR2 looks up the current user through a null
+# ActivityManager and fails with a NullPointerException.
+setup cmd appops start --user "$USER_ID" "$package" "$HISTORY_OP"
 sleep 1
-setup cmd appops stop "$package" "$HISTORY_OP"
+setup cmd appops stop --user "$USER_ID" "$package" "$HISTORY_OP"
 
 setup cmd appops set "$package" "$PACKAGE_OP" ignore
 setup cmd appops set --uid "$package" "$UID_OP" ignore
@@ -85,11 +102,19 @@ setup cmd package set-permission-flags --user "$USER_ID" "$package" "$PERMISSION
 
 printf 'name\texit\tcommand\n' >"$out/commands.tsv"
 # Saves stdout as <name>.txt, stderr as <name>.stderr when not empty, and the
-# exit status in commands.tsv.
+# exit status in commands.tsv. dumpsys exits 0 even when the service died
+# during the dump, so that case is recognized from stderr and retried once
+# after the system is back.
 capture() {
-    local name=$1 status=0
+    local name=$1 status attempt
     shift
-    adb shell "$@" >"$out/$name.txt" 2>"$out/$name.stderr" || status=$?
+    for attempt in 1 2; do
+        status=0
+        adb shell "$@" >"$out/$name.txt" 2>"$out/$name.stderr" || status=$?
+        grep -E "$SERVICE_LOST" "$out/$name.stderr" >/dev/null || break
+        log "$name: service lost on attempt $attempt: $(head -n1 "$out/$name.stderr")"
+        wait_for_system
+    done
     [[ -s $out/$name.stderr ]] || rm -f "$out/$name.stderr"
     printf '%s\t%s\t%s\n' "$name" "$status" "$*" >>"$out/commands.tsv"
 }
