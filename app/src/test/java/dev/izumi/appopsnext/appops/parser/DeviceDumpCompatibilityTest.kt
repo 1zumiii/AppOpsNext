@@ -106,13 +106,17 @@ class DeviceDumpCompatibilityTest {
 
     @Test
     fun `history finds the started access`() {
+        val raw = dump("history-camera")
         // Both privileged backends compact the output before the parsers see it.
-        val output = AppOpsHistoryOutputExtractor.extract(dump("history-camera"), historyOp)
+        val output = AppOpsHistoryOutputExtractor.extract(raw, historyOp)
         val discrete = DiscreteAppOpsHistoryParser().parse(historyOp, output)
         assertTrue(
             "individual records: $discrete",
             discrete.any { it.uid == uid && it.packageName == packageName },
         )
+        // Android 17 prints individual records as a table and no longer prints
+        // aggregated snapshots, only their record counts.
+        if (raw.lineSequence().any { it.trim().startsWith(DISCRETE_TABLE_HEADER) }) return
         val aggregated = AggregatedAppOpsHistoryParser().parse(historyOp, output)
         assertTrue(
             "aggregated records: $aggregated",
@@ -136,6 +140,7 @@ class DeviceDumpCompatibilityTest {
 
     private companion object {
         const val DUMPS_ENV = "APPOPSNEXT_DEVICE_DUMPS"
+        const val DISCRETE_TABLE_HEADER = "UID|PACKAGE_NAME|"
 
         /** Same pattern as SERVICE_LOST in scripts/capture-device-dumps.sh. */
         val SERVICE_LOST = Regex("DEAD_OBJECT|Can't find service")
