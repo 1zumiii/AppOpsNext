@@ -111,15 +111,44 @@ capture() {
 }
 
 # History first, before the permission flag below turns CAMERA off for this
-# UID, and before the large dumps: on the API 37 emulator, surfaceflinger
-# aborts in its graphics mapper and takes system_server with it, which drops
-# individual records still held in memory. A lost record cannot be read again,
-# so a retry creates the access again. CAMERA records individual accesses, and
-# a granted permission with the app on screen lets the shell's start command
-# through.
+# UID, and before the large dumps. CAMERA records individual accesses, and a
+# granted permission with the app on screen lets the shell's start command
+# through; an app that has dropped to the background gets a rejection instead.
+#
+# On the API 36.1 and 37.0 emulators, surfaceflinger aborts in its RegionSampling
+# thread once an app is on screen (`!rcEnc->featureInfo()->hasReadColorBufferDma`)
+# and takes system_server with it. Region sampling serves the gesture navigation
+# handle, so three-button navigation avoids it. The loop still retries when the
+# access did not land, because a restart drops records held in memory.
+if [[ $(adb shell getprop ro.boot.qemu | tr -d '\r') == 1 ]]; then
+    setup cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.threebutton
+    sleep 3
+fi
 setup pm grant "$package" "$PERMISSION"
 history_command=(dumpsys appops --history --include-discrete 0 --op "$HISTORY_OP")
-for attempt in 1 2; do
+
+# Whether the history dump holds a successful access by the package, in the
+# nested format (`Access [...]`) or the Android 17 table (a count or a duration).
+has_access() {
+    awk -v package="$package" '
+        /^ *Package: / { in_package = ($2 == package) }
+        in_package && /^ *Access \[/ { found = 1 }
+        /^UID\|PACKAGE_NAME\|/ {
+            n = split($0, header, "|")
+            for (i = 1; i <= n; i++) column[header[i]] = i
+            table = 1
+            next
+        }
+        table && /\|/ {
+            split($0, cell, "|")
+            if (cell[column["PACKAGE_NAME"]] == package &&
+                (cell[column["ACCESS_COUNTS"]] > 0 || cell[column["DURATION"]] > 0)) found = 1
+        }
+        END { exit found ? 0 : 1 }
+    ' "$out/history-camera.txt"
+}
+
+for attempt in 1 2 3; do
     setup monkey -p "$package" -c android.intent.category.LAUNCHER 1
     sleep 3
     # Without --user, Android 16 QPR2 looks up the current user through a
@@ -128,7 +157,10 @@ for attempt in 1 2; do
     sleep 1
     setup cmd appops stop --user "$USER_ID" "$package" "$HISTORY_OP"
     # GET_HISTORY
-    capture_once history-camera "${history_command[@]}" && break
+    if capture_once history-camera "${history_command[@]}" && has_access; then
+        break
+    fi
+    log "history-camera: no access recorded on attempt $attempt"
     wait_for_system
 done
 record history-camera "${history_command[@]}"
