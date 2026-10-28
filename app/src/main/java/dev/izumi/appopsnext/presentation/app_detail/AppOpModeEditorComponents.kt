@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.presentation.components.PermissionEntryIcon
+import dev.izumi.appopsnext.appops.AppOpRuntimePermissionCatalog
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpModeChangePhase
 import dev.izumi.appopsnext.appops.model.AppOpsRestorationStatus
@@ -492,9 +493,17 @@ private fun ModeChangeFailureDialog(
                     state.result.phase ==
                     AppOpModeChangePhase.VERIFY_REQUESTED
                 ) {
+                    val runtimePermissionOp =
+                        AppOpRuntimePermissionCatalog.requiredPermission(
+                            state.request.operationName,
+                        ) != null
                     Text(
                         text = stringResource(
-                            R.string.app_detail_mode_change_rejected_hint,
+                            if (runtimePermissionOp) {
+                                R.string.app_detail_mode_change_rejected_hint
+                            } else {
+                                R.string.app_detail_mode_change_rejected_policy_hint
+                            },
                         ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
