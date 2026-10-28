@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.monitor
 
+import dev.izumi.appopsnext.appops.binder.DeviceOp
 import dev.izumi.appopsnext.appops.model.AppOpNames
 
 /**
@@ -164,14 +165,34 @@ internal object AppOpCodes {
         148 to "android:receive_sensitive_notifications",
     )
 
+    /** Code to `android:` name, for comparing against the platform's own table. */
+    val builtIn: Map<Int, String> get() = codeToName
+
     private val nameToCode: Map<String, Int> =
         codeToName.entries.associate { (code, name) -> name to code }
 
-    /** Accepts either the `android:camera` or the bare `CAMERA` spelling. */
-    fun codeOf(operationName: String): Int? =
-        nameToCode[AppOpNames.stableName(operationName)]
+    /**
+     * The platform's own table, set once the read probe accepts it. It answers
+     * first, so operations newer than this table become watchable and a vendor
+     * that renumbers operations is followed instead of guessed at.
+     */
+    @Volatile
+    private var deviceTable: Map<Int, DeviceOp>? = null
 
-    fun nameOf(code: Int): String? = codeToName[code]
+    fun useDeviceTable(table: List<DeviceOp>?) {
+        deviceTable = table?.associateBy { it.code }
+    }
+
+    /** Accepts either the `android:camera` or the bare `CAMERA` spelling. */
+    fun codeOf(operationName: String): Int? {
+        val stableName = AppOpNames.stableName(operationName)
+        val shellName = AppOpNames.shellName(operationName)
+        deviceTable?.values?.firstOrNull { it.publicName == stableName || it.shellName == shellName }
+            ?.let { return it.code }
+        return nameToCode[stableName]
+    }
+
+    fun nameOf(code: Int): String? = deviceTable?.get(code)?.publicName ?: codeToName[code]
 
     /**
      * The watcher registry prints AppOpsManager's internal names, which differ
@@ -186,7 +207,9 @@ internal object AppOpCodes {
 
     /** The name `dumpsys appops --watchers` prints for a code. */
     fun registryNameOf(code: Int): String? =
-        registryNameOverrides[code] ?: codeToName[code]?.let(AppOpNames::shellName)
+        deviceTable?.get(code)?.shellName
+            ?: registryNameOverrides[code]
+            ?: codeToName[code]?.let(AppOpNames::shellName)
 
     /**
      * Operations watched by the experimental monitor. Long-running sensor access
@@ -210,7 +233,8 @@ internal object AppOpCodes {
      * them are never noted for an ordinary application, and some are reported so
      * often that they are only usable with an interval set.
      */
-    val ALL_NAMES: List<String> = codeToName.values.sorted()
+    val ALL_NAMES: List<String>
+        get() = (deviceTable?.values?.map { it.publicName } ?: codeToName.values).sorted()
 
     val MONITORED_CODES: IntArray =
         MONITORED_NAMES.mapNotNull(::codeOf).toIntArray()

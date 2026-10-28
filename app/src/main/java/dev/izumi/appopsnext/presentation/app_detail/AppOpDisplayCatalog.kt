@@ -29,6 +29,8 @@ object AppOpDisplayCatalog {
         query: String,
         labelResolver: (Int) -> String,
         alternateLabelResolver: (Int) -> String = labelResolver,
+        /** Shell names the device defines beyond this catalog, listed as default rows. */
+        extraOperations: List<String> = emptyList(),
     ): List<AppOpDisplayItem> {
         val normalizedQuery = query.trim()
         val explicitItems = entries
@@ -67,6 +69,22 @@ object AppOpDisplayCatalog {
                 explicitItems
                     .filterKeys { it !in metadataByOperation }
                     .values,
+            )
+            .plus(
+                extraOperations
+                    .filter { normalize(it) !in metadataByOperation && normalize(it) !in explicitItems }
+                    .distinctBy(::normalize)
+                    .map { operationName ->
+                        AppOpDisplayItem(
+                            operationName = operationName,
+                            labelRes = null,
+                            mode = "default",
+                            details = null,
+                            scope = AppOpScope.PACKAGE,
+                            priority = PRIORITY_OTHER,
+                            isImplicitDefault = true,
+                        )
+                    },
             )
             .map { item ->
                 LabelledAppOp(

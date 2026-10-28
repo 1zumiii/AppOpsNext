@@ -1,13 +1,18 @@
 package dev.izumi.appopsnext
 
 import android.app.Application
+import dev.izumi.appopsnext.appops.AppOpsReadCapabilities
+import dev.izumi.appopsnext.appops.AppOpsReadProbe
 import dev.izumi.appopsnext.appops.AppOpsRepository
+import dev.izumi.appopsnext.appops.StructuredAppOpsReads
+import dev.izumi.appopsnext.appops.model.PackageOpsLoadResult
 import dev.izumi.appopsnext.appops.RevokedCompatWriteMemory
 import dev.izumi.appopsnext.apps.InstalledAppsRepository
 import dev.izumi.appopsnext.diagnostics.DiagnosticEnvironmentCollector
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
 import dev.izumi.appopsnext.settings.UserSettingsRepository
 import dev.izumi.appopsnext.shizuku.PrivilegedServiceClient
+import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
 import dev.izumi.appopsnext.templates.PermissionTemplateRepository
 import dev.izumi.appopsnext.history.HistoryPermissionSettingsRepository
 import dev.izumi.appopsnext.history.AppOpsHistoryRepository
@@ -23,6 +28,8 @@ import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.launch
 
 class AppOpsNextApplication : Application() {
     val revokedCompatWriteMemory = RevokedCompatWriteMemory()
@@ -50,9 +57,38 @@ class AppOpsNextApplication : Application() {
         InstalledAppsRepository(this)
     }
 
+    val structuredAppOpsReads: StructuredAppOpsReads by lazy {
+        StructuredAppOpsReads(
+            packageManager = packageManager,
+            onFailure = { capability, error ->
+                applicationScope.launch {
+                    appOpsReadCapabilities.invalidate(capability, error)
+                }
+            },
+        )
+    }
+
+    val appOpsReadCapabilities: AppOpsReadCapabilities by lazy {
+        AppOpsReadCapabilities(
+            context = this,
+            structured = structuredAppOpsReads,
+            probe = AppOpsReadProbe(
+                structured = structuredAppOpsReads,
+                textPackageOps = { packageName, uid ->
+                    (appOpsRepository.loadPackageOpsFromText(packageName, uid)
+                        as? PackageOpsLoadResult.Success)?.snapshot
+                },
+                textOpStates = appOpsRepository::loadOpStatesFromText,
+            ),
+            installedApps = installedAppsRepository,
+            log = diagnosticLogRepository,
+        )
+    }
+
     val appOpsRepository: AppOpsRepository by lazy {
         AppOpsRepository(
             privilegedGateway = privilegedServiceClient,
+            structuredReads = structuredAppOpsReads,
             onCancelledWrite = { write ->
                 diagnosticLogRepository.warning(
                     source = "AppOpsWrite",
@@ -151,5 +187,10 @@ class AppOpsNextApplication : Application() {
         )
         newAppPolicyCoordinator.start()
         historyArchiveRecorder.start()
+        applicationScope.launch {
+            privilegedServiceClient.state
+                .filterIsInstance<PrivilegedServiceState.Connected>()
+                .collect { appOpsReadCapabilities.resolve() }
+        }
     }
 }

@@ -62,6 +62,39 @@ transaction numbers stay unchanged. An unsupported option, malformed response,
 timeout or missing match cannot pass the monitor's registry check. The parser
 also supplies the experimental mode-listener snapshot and diagnostic report.
 
+## Binder reads
+
+Reads can also go directly to `IAppOpsService` through Shizuku's binder
+forwarding (`appops/binder/`), the same route the monitor uses for its watch
+callbacks. Writes always use the commands above.
+
+| Capability | Binder calls | Replaces |
+| --- | --- | --- |
+| `PACKAGE_OPS` | `getUidOps`, `getOpsForPackage` | `GET_PACKAGE_OPS`, `GET_PACKAGE_OP` |
+| `OP_STATES` | `getPackagesForOps`, then `getUidOps` per listed app | `GET_OP_STATES` |
+| `OP_LIST` | `AppOpsManager.getNumOps`, `opToName`, `opToPublicName` | The built-in operation table |
+
+Replies are unparcelled with the platform's own `AppOpsManager.PackageOps`
+creator, so the wire format is always the running system's. The hidden-API
+policy is lifted for `AppOpsManager`, `ServiceManager` and `IAppOpsService`
+with the HiddenApiBypass library; if that fails, plain reflection is tried.
+
+A binder read replaces a text read only after `AppOpsReadProbe` confirms it on
+this device. The probe reads the same state both ways and enables a
+capability only when the results agree: the app's own package and Settings
+for `PACKAGE_OPS`, every installed app's effective `CAMERA` mode for
+`OP_STATES`. The result is stored per `Build.FINGERPRINT` and app version, so
+an OTA or an app update probes again. A binder failure at run time turns the
+capability off for the process, drops the stored result, and the read falls
+back to text. The diagnostic report shows the path of each read on the
+`reads=` line.
+
+Transaction codes are read from `IAppOpsService$Stub` when the platform
+allows it. The fallback is the method's position in the platform sources for
+the API level: Android 17 moved `checkOperationForDevice` to position 12,
+which shifted positions 12 to 54 by one. The fallback cannot follow a vendor
+that reorders the interface; the probe catches that for reads.
+
 ## Compatibility evidence
 
 | Device | System | Evidence |
