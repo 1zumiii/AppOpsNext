@@ -591,6 +591,11 @@
     <string name="guard_event_restored">%1$s · %2$s changed to %3$s and was restored to %4$s</string>
     <string name="guard_event_restore_failed">%1$s · %2$s changed to %3$s and could not be restored to %4$s</string>
     <string name="guard_event_restore_limit">%1$s · %2$s keeps changing to %3$s. Automatic restore pauses for 24 hours.</string>
+    <string name="guard_event_change">Changed to %1$s</string>
+    <string name="guard_event_outcome_restored">Restored</string>
+    <string name="guard_event_outcome_drift">Notified only</string>
+    <string name="guard_event_outcome_failed">Restore failed</string>
+    <string name="guard_event_outcome_limit">Restore paused for 24 hours</string>
     <string name="guard_channel_events">Guard alerts</string>
     <string name="guard_channel_status">Realtime guard</string>
     <string name="guard_service_title">Realtime guard is on</string>

@@ -68,13 +68,13 @@ class GuardNotifier(private val context: Context) {
         )
     }
 
-    private fun appLabel(packageName: String): String =
+    fun appLabel(packageName: String): String =
         runCatching {
             val info = context.packageManager.getApplicationInfo(packageName, PackageManager.ApplicationInfoFlags.of(0))
             context.packageManager.getApplicationLabel(info).toString()
         }.getOrDefault(packageName)
 
-    private fun operationLabel(stableOperationName: String): String {
+    fun operationLabel(stableOperationName: String): String {
         val shellName = AppOpNames.shellName(stableOperationName)
         return AppOpDisplayCatalog.labelResOf(shellName)?.let(context::getString) ?: shellName
     }

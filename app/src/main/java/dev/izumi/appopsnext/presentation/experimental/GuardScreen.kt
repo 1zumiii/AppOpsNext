@@ -39,6 +39,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.guard.GuardEvent
+import dev.izumi.appopsnext.guard.GuardEventKind
 import dev.izumi.appopsnext.guard.GuardMode
 import dev.izumi.appopsnext.guard.GuardNotifier
 import dev.izumi.appopsnext.guard.GuardRule
@@ -215,23 +217,59 @@ fun GuardScreen(
                     )
                 }
             } else {
-                items(events.take(MAX_SHOWN_EVENTS)) { event ->
-                    ExperimentalListRow(
-                        headlineContent = { Text(notifier.describe(event)) },
-                        supportingContent = {
-                            Text(
-                                DateUtils.getRelativeTimeSpanString(
-                                    event.timeMillis,
-                                    System.currentTimeMillis(),
-                                    DateUtils.MINUTE_IN_MILLIS,
-                                ).toString(),
-                            )
-                        },
-                    )
+                item {
+                    ExperimentalGroup(modifier = Modifier.padding(top = 8.dp)) {
+                        events.take(MAX_SHOWN_EVENTS).forEachIndexed { index, event ->
+                            if (index > 0) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            GuardEventRow(event = event, notifier = notifier)
+                        }
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun GuardEventRow(event: GuardEvent, notifier: GuardNotifier) {
+    val title = remember(event.packageName, event.stableOperationName) {
+        "${notifier.appLabel(event.packageName)} · ${notifier.operationLabel(event.stableOperationName)}"
+    }
+    val (iconRes, tint) = when (event.kind) {
+        GuardEventKind.RESTORED -> R.drawable.ic_ph_check_circle to MaterialTheme.colorScheme.primary
+        GuardEventKind.DRIFT -> R.drawable.ic_ph_warning_circle to MaterialTheme.colorScheme.tertiary
+        GuardEventKind.RESTORE_FAILED -> R.drawable.ic_ph_x to MaterialTheme.colorScheme.error
+        GuardEventKind.RESTORE_LIMIT -> R.drawable.ic_ph_clock_counter_clockwise to MaterialTheme.colorScheme.error
+    }
+    val outcome = stringResource(
+        when (event.kind) {
+            GuardEventKind.RESTORED -> R.string.guard_event_outcome_restored
+            GuardEventKind.DRIFT -> R.string.guard_event_outcome_drift
+            GuardEventKind.RESTORE_FAILED -> R.string.guard_event_outcome_failed
+            GuardEventKind.RESTORE_LIMIT -> R.string.guard_event_outcome_limit
+        },
+    )
+    val change = stringResource(
+        R.string.guard_event_change,
+        stringResource(GuardNotifier.modeLabelRes(event.observedMode)),
+    )
+    ExperimentalGroupRow(
+        leadingContent = { Icon(painter = painterResource(iconRes), contentDescription = null, tint = tint) },
+        headlineContent = { Text(title) },
+        supportingContent = { Text("$change · $outcome") },
+        trailingContent = {
+            Text(
+                text = DateUtils.getRelativeTimeSpanString(
+                    event.timeMillis,
+                    System.currentTimeMillis(),
+                    DateUtils.MINUTE_IN_MILLIS,
+                    DateUtils.FORMAT_ABBREV_RELATIVE,
+                ).toString(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+    )
 }
 
 @Composable

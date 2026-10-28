@@ -587,6 +587,11 @@
     <string name="guard_event_restored">%1$s · %2$s 被改为%3$s，已恢复为%4$s</string>
     <string name="guard_event_restore_failed">%1$s · %2$s 被改为%3$s，恢复为%4$s失败</string>
     <string name="guard_event_restore_limit">%1$s · %2$s 反复被改为%3$s，自动恢复暂停 24 小时。</string>
+    <string name="guard_event_change">被改为%1$s</string>
+    <string name="guard_event_outcome_restored">已恢复</string>
+    <string name="guard_event_outcome_drift">仅提醒</string>
+    <string name="guard_event_outcome_failed">恢复失败</string>
+    <string name="guard_event_outcome_limit">自动恢复暂停 24 小时</string>
     <string name="guard_channel_events">守护提醒</string>
     <string name="guard_channel_status">实时守护</string>
     <string name="guard_service_title">实时守护已开启</string>
