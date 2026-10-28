@@ -177,6 +177,11 @@ class MainActivity : ComponentActivity() {
                         settingsViewModel::countSavedHistory,
                     onDeleteSavedHistory =
                         settingsViewModel::deleteSavedHistory,
+                    onExportBackup = settingsViewModel::exportBackup,
+                    onOpenBackup = settingsViewModel::openBackup,
+                    onConfirmBackupImport =
+                        settingsViewModel::confirmBackupImport,
+                    onDismissBackup = settingsViewModel::dismissBackup,
                     onAppLanguageChange =
                         settingsViewModel::setAppLanguage,
                     onCreateTemplate = templatesViewModel::createTemplate,
