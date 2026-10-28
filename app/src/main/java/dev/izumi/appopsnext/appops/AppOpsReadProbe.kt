@@ -29,15 +29,31 @@ internal object AppOpsReadComparison {
         text.effective(uid, packageName) == binder.effective(uid, packageName)
     }
 
+    /** The usable part of a device table and the entries left out of it, as `code:reason`. */
+    data class UsableOpTable(val ops: List<DeviceOp>, val dropped: List<String>)
+
     /**
      * The device table answers for this device even where it differs from the
-     * AOSP order, so differences are reported but do not reject it. Only a table
-     * that cannot be right is rejected: too short, or names that repeat.
+     * AOSP order, so differences are reported but do not reject it.
+     *
+     * Entries that cannot be addressed by name are left out one by one: a public
+     * name outside `android:` (vendor ops on some ROMs) or a shell name that
+     * repeats. For a repeated name the entry the built-in table knows by that
+     * code is kept. Only a table that is too short once filtered is rejected.
      */
-    fun opTableUsable(device: List<DeviceOp>, builtIn: Map<Int, String>): Boolean =
-        device.size >= builtIn.size / 2 &&
-            device.map { it.shellName }.toSet().size == device.size &&
-            device.all { it.publicName.startsWith("android:") }
+    fun usableOpTable(device: List<DeviceOp>, builtIn: Map<Int, String>): UsableOpTable? {
+        val dropped = mutableListOf<String>()
+        val prefixed = device.filter { op ->
+            op.publicName.startsWith("android:").also { if (!it) dropped += "${op.code}:name" }
+        }
+        val ops = prefixed.groupBy { it.shellName }.values.flatMap { sameName ->
+            if (sameName.size == 1) return@flatMap sameName
+            val known = sameName.filter { builtIn[it.code] == it.publicName }.take(1)
+            sameName.filterNot { it in known }.forEach { dropped += "${it.code}:repeat" }
+            known
+        }.sortedBy { it.code }
+        return UsableOpTable(ops, dropped.sorted()).takeIf { ops.size >= builtIn.size / 2 }
+    }
 
     fun opTableDifferences(device: List<DeviceOp>, builtIn: Map<Int, String>): List<Int> {
         val byCode = device.associateBy { it.code }
@@ -75,12 +91,14 @@ class AppOpsReadProbe(
             notes += "opList=unavailable"
         } else {
             val differences = AppOpsReadComparison.opTableDifferences(table, AppOpCodes.builtIn)
-            if (AppOpsReadComparison.opTableUsable(table, AppOpCodes.builtIn)) {
+            val usable = AppOpsReadComparison.usableOpTable(table, AppOpCodes.builtIn)
+            if (usable != null) {
                 capabilities += AppOpsReadCapability.OP_LIST
             } else {
                 notes += "opList=rejected"
             }
             notes += "opCount=${table.size}"
+            usable?.dropped?.takeIf { it.isNotEmpty() }?.let { notes += "opDropped=${it.take(MAX_LISTED)}" }
             if (differences.isNotEmpty()) notes += "opDiffers=${differences.take(MAX_LISTED)}"
         }
         // Without the device's names a binder record cannot be named at all.

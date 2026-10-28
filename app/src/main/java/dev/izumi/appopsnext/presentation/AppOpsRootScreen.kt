@@ -263,6 +263,7 @@ fun AppOpsRootScreen(
             (
                 experimentalRoute == ROUTE_MONITOR_SETTINGS ||
                     experimentalRoute == ROUTE_WATCHERS ||
+                    experimentalRoute == ROUTE_GUARD ||
                     experimentalRoute == ROUTE_MONITOR_LOG
                 ),
     ) {

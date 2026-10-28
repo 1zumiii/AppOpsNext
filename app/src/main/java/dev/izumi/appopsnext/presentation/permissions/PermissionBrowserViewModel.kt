@@ -44,6 +44,12 @@ class PermissionBrowserViewModel(
     private var loadJob: Job? = null
     private var pendingApp: InstalledApp? = null
 
+    init {
+        viewModelScope.launch {
+            app.guardController.restores.collect { refresh() }
+        }
+    }
+
     fun select(operation: String?) {
         if (mutableChange.value is AppOpModeChangeUiState.Applying) return
         loadJob?.cancel()
@@ -176,13 +182,14 @@ class PermissionBrowserViewModel(
                 affectedPackages = affectedPackages(target, appliedScope),
             )
             val settings = app.userSettingsRepository.settings.first()
-            (outcome.result as? AppOpModeChangeResult.Success)?.takeIf { guard }?.let { success ->
-                app.guardController.guard(
+            (outcome.result as? AppOpModeChangeResult.Success)?.let { success ->
+                app.guardController.onUserChange(
                     packageName = request.packageName,
                     uid = target.uid,
-                    stableOperationName = request.operationName,
+                    operationName = request.operationName,
                     scope = appliedScope,
                     mode = success.appliedMode,
+                    guard = guard,
                 )
             }
             mutableChange.value = when (val result = outcome.result) {

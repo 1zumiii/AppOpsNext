@@ -55,6 +55,9 @@ class AppDetailViewModel(
                 loadSelectedApp()
             }
         }
+        viewModelScope.launch {
+            getApplication<AppOpsNextApplication>().guardController.restores.collect { refreshIfReady() }
+        }
     }
 
     fun selectApp(app: InstalledApp) {
@@ -190,13 +193,14 @@ class AppDetailViewModel(
             )
 
             updateDisplayedMode(resolvedRequest, result)
-            if (guard && result is AppOpModeChangeResult.Success) {
-                getApplication<AppOpsNextApplication>().guardController.guard(
+            if (result is AppOpModeChangeResult.Success) {
+                getApplication<AppOpsNextApplication>().guardController.onUserChange(
                     packageName = request.packageName,
                     uid = app.uid,
-                    stableOperationName = request.operationName,
+                    operationName = request.operationName,
                     scope = appliedScope,
                     mode = result.appliedMode,
+                    guard = guard,
                 )
             }
             mutableModeChangeState.value = when (result) {

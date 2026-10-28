@@ -51,17 +51,23 @@ class AppOpsReadProbeTest {
         assertFalse(AppOpsReadComparison.sameEffectiveStates(text, different, apps))
     }
 
-    @Test fun `operation table is rejected only when it cannot be right`() {
-        assertTrue(AppOpsReadComparison.opTableUsable(platformTable, AppOpCodes.builtIn))
-        assertFalse(AppOpsReadComparison.opTableUsable(platformTable.take(10), AppOpCodes.builtIn))
-        assertFalse(
-            AppOpsReadComparison.opTableUsable(
-                platformTable + platformTable.first().copy(code = 999),
-                AppOpCodes.builtIn,
-            ),
-        )
+    @Test fun `operation table is rejected only when it is too short`() {
+        val usable = AppOpsReadComparison.usableOpTable(platformTable, AppOpCodes.builtIn)
+        assertEquals(platformTable.sortedBy { it.code }, usable?.ops)
+        assertEquals(emptyList<String>(), usable?.dropped)
+        assertNull(AppOpsReadComparison.usableOpTable(platformTable.take(10), AppOpCodes.builtIn))
         val renamed = platformTable.map { if (it.code == 26) it.copy(publicName = "android:other") else it }
         assertEquals(listOf(26), AppOpsReadComparison.opTableDifferences(renamed, AppOpCodes.builtIn))
+    }
+
+    @Test fun `vendor and repeated entries are left out one by one`() {
+        val camera = platformTable.first { it.code == 26 }
+        val table = platformTable +
+            DeviceOp(code = 900, shellName = "VENDOR_BOOST", publicName = "vendor:boost") +
+            camera.copy(code = 901)
+        val usable = AppOpsReadComparison.usableOpTable(table, AppOpCodes.builtIn)
+        assertEquals(platformTable.sortedBy { it.code }, usable?.ops)
+        assertEquals(listOf("900:name", "901:repeat"), usable?.dropped)
     }
 
     @Test fun `a binder failure leaves every read on text and says why`() = runBlocking {

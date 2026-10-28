@@ -67,14 +67,19 @@ class StructuredAppOpsReads internal constructor(
     private val nameByCode by lazy { opTable?.associate { it.code to it.shellName } }
     private val codeByName by lazy { opTable?.associate { it.shellName to it.code } }
 
+    /** The entries of [opTable] that can be addressed by name; binder records still use the whole table. */
+    private val listedOps by lazy {
+        opTable?.let { AppOpsReadComparison.usableOpTable(it, AppOpCodes.builtIn)?.ops }
+    }
+
     fun enable(capabilities: Set<AppOpsReadCapability>) {
         mutableEnabled.value = capabilities
-        AppOpCodes.useDeviceTable(opTable.takeIf { AppOpsReadCapability.OP_LIST in capabilities })
+        AppOpCodes.useDeviceTable(listedOps.takeIf { AppOpsReadCapability.OP_LIST in capabilities })
     }
 
     /** The platform's operation table, or null to use the built-in one. */
     fun deviceOps(): List<DeviceOp>? =
-        opTable.takeIf { AppOpsReadCapability.OP_LIST in mutableEnabled.value }
+        listedOps.takeIf { AppOpsReadCapability.OP_LIST in mutableEnabled.value }
 
     internal fun opTableForProbe(): List<DeviceOp>? = opTable
 

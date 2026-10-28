@@ -1,6 +1,7 @@
 package dev.izumi.appopsnext.guard
 
 import dev.izumi.appopsnext.appops.command.AppOpMode
+import dev.izumi.appopsnext.appops.model.AppOpNames
 import dev.izumi.appopsnext.appops.model.AppOpScope
 
 /** How guarded settings are checked. Both active modes are kept until their cost is measured. */
@@ -29,6 +30,12 @@ data class GuardRule(
         fun ruleId(packageName: String, stableOperationName: String, scope: AppOpScope): String =
             "$packageName|$stableOperationName|${scope.name}"
     }
+}
+
+/** Whether a rule guards this setting, in either scope. */
+fun List<GuardRule>.guards(packageName: String, operationName: String): Boolean {
+    val stableName = AppOpNames.stableName(operationName)
+    return any { it.packageName == packageName && it.stableOperationName == stableName }
 }
 
 enum class GuardEventKind {

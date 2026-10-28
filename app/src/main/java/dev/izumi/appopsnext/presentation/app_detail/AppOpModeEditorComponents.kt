@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.guard.GuardMode
+import dev.izumi.appopsnext.guard.guards
 import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.presentation.components.PermissionEntryIcon
 import dev.izumi.appopsnext.appops.AppOpRuntimePermissionCatalog
@@ -214,9 +215,14 @@ internal fun ModeChangeDialog(
     /** The permission page lists many apps, so its confirmation names the package. */
     showPackageName: Boolean = false,
 ) {
-    val guardMode by (LocalContext.current.applicationContext as AppOpsNextApplication)
-        .guardRepository.mode.collectAsStateWithLifecycle(GuardMode.OFF)
-    var guardRequested by remember(state) { mutableStateOf(false) }
+    val guardRepository = (LocalContext.current.applicationContext as AppOpsNextApplication).guardRepository
+    val guardMode by guardRepository.mode.collectAsStateWithLifecycle(GuardMode.OFF)
+    val guardRules by guardRepository.rules.collectAsStateWithLifecycle(emptyList())
+    // A setting that is already guarded stays guarded at its new mode unless the user unchecks it.
+    val alreadyGuarded = (state as? AppOpModeChangeUiState.Confirming)?.request
+        ?.let { guardRules.guards(it.packageName, it.operationName) } == true
+    var guardChoice by remember(state) { mutableStateOf<Boolean?>(null) }
+    val guardRequested = guardChoice ?: alreadyGuarded
     when (state) {
         is AppOpModeChangeUiState.Confirming -> AppBottomSheet(
             onDismissRequest = onDismiss,
@@ -278,14 +284,14 @@ internal fun ModeChangeDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    if (guardMode != GuardMode.OFF) {
+                    if (guardMode != GuardMode.OFF || alreadyGuarded) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .toggleable(
                                     value = guardRequested,
                                     role = Role.Checkbox,
-                                    onValueChange = { guardRequested = it },
+                                    onValueChange = { guardChoice = it },
                                 ),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {

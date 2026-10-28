@@ -48,6 +48,23 @@ class GuardRepository(context: Context) {
         }
     }
 
+    /** Replaces every rule of one setting, in either scope, in a single write. */
+    suspend fun replaceSetting(
+        packageName: String,
+        stableOperationName: String,
+        replacement: (existing: List<GuardRule>) -> GuardRule?,
+    ) {
+        rulesStore.edit { preferences ->
+            val (existing, others) = preferences[RULES].orEmpty().partition { encoded ->
+                GuardCodec.decodeRule(encoded)?.let {
+                    it.packageName == packageName && it.stableOperationName == stableOperationName
+                } == true
+            }
+            val rule = replacement(existing.mapNotNull(GuardCodec::decodeRule))
+            preferences[RULES] = (others + listOfNotNull(rule?.let(GuardCodec::encodeRule))).toSet()
+        }
+    }
+
     suspend fun remove(ruleId: String) {
         rulesStore.edit { preferences ->
             preferences[RULES] = preferences[RULES].orEmpty().filter { GuardCodec.decodeRule(it)?.id != ruleId }.toSet()

@@ -22,6 +22,9 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterIsInstance
@@ -55,6 +58,10 @@ class GuardController(
         context.packageManager.getPackagesForUid(uid)?.toList().orEmpty()
     }
     private val checker = GuardChecker(readMode = ::readMode, restore = ::restore)
+    private val mutableRestores = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** Emits after a check wrote a guarded mode back, so open pages can reload what they show. */
+    val restores: SharedFlow<Unit> = mutableRestores.asSharedFlow()
 
     /** Counted for the cost comparison between the two modes; reset with the process. */
     private val checkCount = AtomicLong()
@@ -110,6 +117,7 @@ class GuardController(
             }
             repository.saveCheck(result.states, result.events)
             notifier.notifyEvents(result.events)
+            if (result.events.any { it.kind == GuardEventKind.RESTORED }) mutableRestores.tryEmit(Unit)
             val millis = SystemClock.elapsedRealtime() - started
             diagnosticLog.info(
                 LOG_SOURCE,
@@ -122,25 +130,35 @@ class GuardController(
             result
         }
 
-    /** Adds or replaces the rule for the mode this setting has now. */
-    suspend fun guard(
+    /**
+     * Records a mode the user set in the app, so the guard does not take it for a drift.
+     *
+     * With [guard] the rules of this setting become one rule for [mode] in [scope],
+     * keeping their automatic restore. Without it they are removed.
+     */
+    suspend fun onUserChange(
         packageName: String,
         uid: Int,
-        stableOperationName: String,
+        operationName: String,
         scope: AppOpScope,
         mode: AppOpMode,
-        autoRestore: Boolean = false,
+        guard: Boolean,
     ) {
-        repository.upsert(
-            GuardRule(
-                packageName = packageName,
-                uid = uid,
-                stableOperationName = AppOpNames.stableName(stableOperationName),
-                scope = scope,
-                expectedMode = mode,
-                autoRestore = autoRestore,
-            ),
-        )
+        val stableName = AppOpNames.stableName(operationName)
+        repository.replaceSetting(packageName, stableName) { existing ->
+            if (!guard) {
+                null
+            } else {
+                GuardRule(
+                    packageName = packageName,
+                    uid = uid,
+                    stableOperationName = stableName,
+                    scope = scope,
+                    expectedMode = mode,
+                    autoRestore = existing.any { it.autoRestore },
+                )
+            }
+        }
     }
 
     private fun applyMode(mode: GuardMode) {

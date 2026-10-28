@@ -4,6 +4,7 @@ import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpScope
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -83,5 +84,13 @@ class GuardCheckerTest {
         val result = checker.check(listOf(camera), states)
         assertEquals(1, result.readFailures)
         assertEquals(states, result.states)
+    }
+
+    @Test fun `a setting counts as guarded in either scope and either spelling`() {
+        val rules = listOf(camera.copy(scope = AppOpScope.UID))
+        assertTrue(rules.guards("com.example", "CAMERA"))
+        assertTrue(rules.guards("com.example", "android:camera"))
+        assertFalse(rules.guards("com.example", "android:record_audio"))
+        assertFalse(rules.guards("com.other", "CAMERA"))
     }
 }
