@@ -608,4 +608,35 @@
         <item quantity="one">%d guarded setting changed</item>
         <item quantity="other">%d guarded settings changed</item>
     </plurals>
+
+    <!-- Backup -->
+    <string name="settings_backup_section">Backup and migration</string>
+    <string name="settings_backup_export">Export backup</string>
+    <string name="settings_backup_export_detail">Saves templates, preferences and monitoring choices to a file</string>
+    <string name="settings_backup_import">Import backup</string>
+    <string name="settings_backup_import_detail">Shows what will change before anything is imported</string>
+    <string name="backup_preview_title">Import backup</string>
+    <string name="backup_preview_source">Exported on %1$s by version %2$s</string>
+    <string name="backup_preview_source_date">Exported on %1$s</string>
+    <string name="backup_preview_templates">Templates: %1$d to add, %2$d already present</string>
+    <string name="backup_preview_new_app_defaults">New app defaults: replaced by the rules in the backup</string>
+    <string name="backup_preview_settings">Preferences: replaced</string>
+    <string name="backup_preview_monitor">Monitoring: %1$d apps and %2$d point settings replace the current ones</string>
+    <string name="backup_preview_skipped">Some parts come from a newer version and will be skipped</string>
+    <string name="backup_import_action">Import</string>
+    <string name="backup_details">Details</string>
+    <string name="backup_details_title">About backups</string>
+    <string name="backup_details_contents">A backup holds templates, preferences, and the apps and points chosen for monitoring.</string>
+    <string name="backup_details_merge">Imported templates are added next to the existing ones, and a template that is already present is not added twice. The new app defaults take the rules from the backup. Preferences and monitoring choices are replaced.</string>
+    <string name="backup_details_excluded">Saved history records stay on this device. An import does not switch on background monitoring. Switch it on in the monitoring settings.</string>
+    <string name="backup_rejected_title">Cannot import</string>
+    <string name="backup_rejected_foreign">This file is not an AppOpsNext backup.</string>
+    <string name="backup_rejected_newer">This backup comes from a newer version of AppOpsNext. Update the app, then import again.</string>
+    <string name="backup_rejected_corrupt">This backup is damaged or incomplete. Nothing was changed.</string>
+    <string name="backup_rejected_empty">This backup holds nothing this version can import.</string>
+    <string name="backup_rejected_unreadable">The file could not be read.</string>
+    <string name="backup_exported">Backup saved</string>
+    <string name="backup_export_failed">Could not save the backup</string>
+    <string name="backup_imported">Backup imported</string>
+    <string name="backup_import_failed">Could not import the backup</string>
 </resources>

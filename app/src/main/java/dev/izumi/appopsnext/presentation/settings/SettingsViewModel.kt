@@ -1,9 +1,12 @@
 package dev.izumi.appopsnext.presentation.settings
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
+import dev.izumi.appopsnext.backup.BackupFormatException
+import dev.izumi.appopsnext.backup.BackupProblem
 import dev.izumi.appopsnext.settings.AppLanguage
 import dev.izumi.appopsnext.settings.ApplicationLanguageManager
 import dev.izumi.appopsnext.update.UpdateChecker
@@ -17,6 +20,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.IOException
 import java.time.ZoneId
 
 class SettingsViewModel(
@@ -35,12 +40,16 @@ class SettingsViewModel(
     private val savedHistory = combine(archiveStore.contents, archiveStore.problem) { archive, problem ->
         summarize(archive.orEmpty(), problem)
     }.flowOn(Dispatchers.Default)
+    private val backupService =
+        getApplication<AppOpsNextApplication>().appBackupService
+    private val backupState = MutableStateFlow<BackupUiState>(BackupUiState.Idle)
     val uiState = combine(
         repository.settings,
         appLanguage,
         updateState,
         savedHistory,
-    ) { settings, language, update, saved ->
+        backupState,
+    ) { settings, language, update, saved, backup ->
             SettingsUiState(
                 hideSystemApps = settings.hideSystemApps,
                 appLanguage = language,
@@ -48,6 +57,7 @@ class SettingsViewModel(
                 saveIndividualHistory = settings.saveIndividualHistory,
                 savedHistoryOperations = settings.savedHistoryOperations.orEmpty(),
                 savedHistory = saved,
+                backup = backup,
             )
     }.stateIn(
             scope = viewModelScope,
@@ -117,6 +127,75 @@ class SettingsViewModel(
         languageManager.setLanguage(language)
     }
 
+    fun exportBackup(uri: Uri) {
+        if (backupState.value == BackupUiState.Working) return
+        backupState.value = BackupUiState.Working
+        viewModelScope.launch {
+            val outcome = runCatching {
+                val text = backupService.export(System.currentTimeMillis())
+                withContext(Dispatchers.IO) {
+                    val stream = getApplication<Application>().contentResolver
+                        .openOutputStream(uri, "wt")
+                        ?: throw IOException("No stream for $uri")
+                    stream.use { it.write(text.toByteArray(Charsets.UTF_8)) }
+                }
+            }.fold(
+                onSuccess = { BackupOutcome.EXPORTED },
+                onFailure = { BackupOutcome.EXPORT_FAILED },
+            )
+            backupState.value = BackupUiState.Finished(outcome)
+        }
+    }
+
+    /** Reads and checks [uri] without writing anything, for the import preview. */
+    fun openBackup(uri: Uri) {
+        if (backupState.value == BackupUiState.Working) return
+        backupState.value = BackupUiState.Working
+        viewModelScope.launch {
+            backupState.value = try {
+                val text = withContext(Dispatchers.IO) { readBackupFile(uri) }
+                if (text == null) {
+                    BackupUiState.Rejected(BackupProblem.FOREIGN)
+                } else {
+                    BackupUiState.Preview(backupService.preview(text))
+                }
+            } catch (error: BackupFormatException) {
+                BackupUiState.Rejected(error.problem)
+            } catch (error: IOException) {
+                BackupUiState.Rejected(null)
+            } catch (error: SecurityException) {
+                BackupUiState.Rejected(null)
+            }
+        }
+    }
+
+    fun confirmBackupImport() {
+        val preview = (backupState.value as? BackupUiState.Preview)?.preview ?: return
+        backupState.value = BackupUiState.Working
+        viewModelScope.launch {
+            val outcome = runCatching { backupService.import(preview.backup) }.fold(
+                onSuccess = { BackupOutcome.IMPORTED },
+                onFailure = { BackupOutcome.IMPORT_FAILED },
+            )
+            backupState.value = BackupUiState.Finished(outcome)
+        }
+    }
+
+    fun dismissBackup() {
+        if (backupState.value != BackupUiState.Working) {
+            backupState.value = BackupUiState.Idle
+        }
+    }
+
+    /** Null when the file is too large to be a backup, which also keeps a wrong pick from filling memory. */
+    private fun readBackupFile(uri: Uri): String? {
+        val stream = getApplication<Application>().contentResolver.openInputStream(uri)
+            ?: throw IOException("No stream for $uri")
+        val bytes = stream.use { it.readNBytes(MAX_BACKUP_BYTES + 1) }
+        if (bytes.size > MAX_BACKUP_BYTES) return null
+        return String(bytes, Charsets.UTF_8)
+    }
+
     private fun summarize(
         archive: Map<String, ArchivedHistory>,
         problem: HistoryArchiveProblem?,
@@ -137,5 +216,10 @@ class SettingsViewModel(
             newestMillis = newest.takeIf { count > 0 },
             problem = problem,
         )
+    }
+
+    private companion object {
+        /** Far above any real backup, which holds a few kilobytes of text. */
+        const val MAX_BACKUP_BYTES = 4 * 1024 * 1024
     }
 }

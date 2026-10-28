@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets
 import java.util.Base64
 
 internal object PermissionTemplateCodec {
-    private const val HEADER = "APP_OPS_NEXT_TEMPLATES_V1"
+    const val HEADER = "APP_OPS_NEXT_TEMPLATES_V1"
     private const val TEMPLATE_RECORD = "T"
     private const val RULE_RECORD = "R"
     private const val FIELD_SEPARATOR = "\t"

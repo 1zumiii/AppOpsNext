@@ -8,6 +8,8 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dev.izumi.appopsnext.appops.command.AppOpMode
+import dev.izumi.appopsnext.backup.TemplateImportMerge
+import dev.izumi.appopsnext.backup.TemplateMergeResult
 import dev.izumi.appopsnext.appops.model.AppOpNames
 import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
@@ -120,6 +122,17 @@ class PermissionTemplateRepository(
         updateTemplates { templates ->
             templates.filterNot { it.id == templateId }
         }
+    }
+
+    /** Adds a backup's templates to the stored ones; see [TemplateImportMerge]. */
+    suspend fun importTemplates(imported: List<PermissionTemplate>): TemplateMergeResult {
+        lateinit var result: TemplateMergeResult
+        updateTemplates { templates ->
+            TemplateImportMerge.merge(templates, imported) {
+                UUID.randomUUID().toString()
+            }.also { result = it }.templates
+        }
+        return result
     }
 
     private suspend fun updateTemplate(

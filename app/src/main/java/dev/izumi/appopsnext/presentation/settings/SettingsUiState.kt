@@ -15,6 +15,7 @@ data class SettingsUiState(
     /** The operations chosen for saving, among [HistoryArchiveRecorder.SAVEABLE_OPERATIONS]. */
     val savedHistoryOperations: Set<String> = emptySet(),
     val savedHistory: SavedHistorySummary = SavedHistorySummary(),
+    val backup: BackupUiState = BackupUiState.Idle,
 )
 
 data class SavedHistorySummary(

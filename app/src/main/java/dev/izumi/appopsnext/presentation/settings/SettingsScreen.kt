@@ -67,6 +67,10 @@ fun SettingsScreen(
     onShizukuAction: () -> Unit,
     onPrivilegedServiceRetry: () -> Unit,
     onClearDiagnosticLog: () -> Unit,
+    onExportBackup: (Uri) -> Unit,
+    onOpenBackup: (Uri) -> Unit,
+    onConfirmBackupImport: () -> Unit,
+    onDismissBackup: () -> Unit,
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
 ) {
@@ -195,6 +199,22 @@ fun SettingsScreen(
             item {
                 SettingsGroup {
                     SavedHistoryEntry(uiState = uiState, onOpen = onOpenSavedHistory)
+                }
+            }
+            item {
+                SettingsSectionTitle(
+                    text = stringResource(R.string.settings_backup_section),
+                )
+            }
+            item {
+                SettingsGroup {
+                    BackupEntries(
+                        state = uiState.backup,
+                        onExport = onExportBackup,
+                        onOpen = onOpenBackup,
+                        onConfirmImport = onConfirmBackupImport,
+                        onDismiss = onDismissBackup,
+                    )
                 }
             }
             item {

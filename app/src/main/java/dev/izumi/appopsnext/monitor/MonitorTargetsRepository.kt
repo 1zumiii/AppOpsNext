@@ -115,6 +115,26 @@ class MonitorTargetsRepository(
         }
     }
 
+    /** Replaces every target and point setting at once, as restoring a backup does. */
+    suspend fun replace(targets: List<MonitorTarget>?, points: List<MonitorPointSettings>?) {
+        dataStore.edit { preferences ->
+            targets?.let {
+                preferences[Keys.TARGETS] =
+                    MonitorTargetsCodec.encode(it.sortedBy(MonitorTarget::packageName))
+            }
+            points?.let {
+                preferences[Keys.POINTS] = MonitorPointSettingsCodec.encode(
+                    it.sortedWith(
+                        compareBy(
+                            MonitorPointSettings::packageName,
+                            MonitorPointSettings::operationName,
+                        ),
+                    ),
+                )
+            }
+        }
+    }
+
     suspend fun clear() {
         dataStore.edit { preferences -> preferences[Keys.TARGETS] = "" }
     }

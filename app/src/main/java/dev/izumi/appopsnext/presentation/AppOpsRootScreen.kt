@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation
 
+import android.net.Uri
 import dev.izumi.appopsnext.presentation.experimental.GuardScreen
 import dev.izumi.appopsnext.presentation.experimental.GuardViewModel
 import androidx.activity.compose.BackHandler
@@ -117,6 +118,10 @@ fun AppOpsRootScreen(
     onSavedHistoryOperationChange: (String, Boolean) -> Unit,
     countSavedHistory: (SavedHistoryDateRange?) -> Int,
     onDeleteSavedHistory: (SavedHistoryDateRange?) -> Unit,
+    onExportBackup: (Uri) -> Unit,
+    onOpenBackup: (Uri) -> Unit,
+    onConfirmBackupImport: () -> Unit,
+    onDismissBackup: () -> Unit,
     experimentalUiState: ExperimentalUiState,
     monitorLogEntries: () -> List<MonitorLogEntry>,
     onClearMonitorLog: () -> Unit,
@@ -619,6 +624,10 @@ fun AppOpsRootScreen(
                     onShizukuAction = onShizukuAction,
                     onPrivilegedServiceRetry = onPrivilegedServiceRetry,
                     onClearDiagnosticLog = onClearDiagnosticLog,
+                    onExportBackup = onExportBackup,
+                    onOpenBackup = onOpenBackup,
+                    onConfirmBackupImport = onConfirmBackupImport,
+                    onDismissBackup = onDismissBackup,
                     bottomBar = navigationBar,
                 )
             }

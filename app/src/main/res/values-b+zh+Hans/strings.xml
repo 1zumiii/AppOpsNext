@@ -602,4 +602,35 @@
     <plurals name="guard_notification_title">
         <item quantity="other">%d 项受守护的设置被改动</item>
     </plurals>
+
+    <!-- Backup -->
+    <string name="settings_backup_section">备份与迁移</string>
+    <string name="settings_backup_export">导出备份</string>
+    <string name="settings_backup_export_detail">将模板、偏好设置和监控选择保存为文件</string>
+    <string name="settings_backup_import">导入备份</string>
+    <string name="settings_backup_import_detail">导入前先显示将要更改的内容</string>
+    <string name="backup_preview_title">导入备份</string>
+    <string name="backup_preview_source">于 %1$s 由 %2$s 版导出</string>
+    <string name="backup_preview_source_date">导出于 %1$s</string>
+    <string name="backup_preview_templates">模板：新增 %1$d 个，已有 %2$d 个</string>
+    <string name="backup_preview_new_app_defaults">新应用默认设置：替换为备份中的规则</string>
+    <string name="backup_preview_settings">偏好设置：替换</string>
+    <string name="backup_preview_monitor">监控：%1$d 个应用和 %2$d 项监控点设置，替换当前内容</string>
+    <string name="backup_preview_skipped">部分内容来自更新的版本，将被跳过</string>
+    <string name="backup_import_action">导入</string>
+    <string name="backup_details">详情</string>
+    <string name="backup_details_title">关于备份</string>
+    <string name="backup_details_contents">备份包含模板、偏好设置，以及监控中选择的应用和监控点。</string>
+    <string name="backup_details_merge">导入的模板添加在现有模板之后，已有的相同模板不会重复添加。新应用默认设置采用备份中的规则。偏好设置和监控选择会被替换。</string>
+    <string name="backup_details_excluded">已保存的历史记录只留在本机。导入不会开启后台监控，需要在监控设置中开启。</string>
+    <string name="backup_rejected_title">无法导入</string>
+    <string name="backup_rejected_foreign">此文件不是 AppOpsNext 备份。</string>
+    <string name="backup_rejected_newer">此备份来自更新版本的 AppOpsNext。请更新应用后再导入。</string>
+    <string name="backup_rejected_corrupt">此备份已损坏或不完整，未做任何更改。</string>
+    <string name="backup_rejected_empty">此备份中没有当前版本可以导入的内容。</string>
+    <string name="backup_rejected_unreadable">无法读取此文件。</string>
+    <string name="backup_exported">备份已保存</string>
+    <string name="backup_export_failed">无法保存备份</string>
+    <string name="backup_imported">备份已导入</string>
+    <string name="backup_import_failed">无法导入备份</string>
 </resources>
