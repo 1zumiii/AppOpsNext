@@ -21,7 +21,7 @@ object AppOpsHistoryOutputExtractor {
         val discreteSection = if (discreteSectionStart >= 0) {
             commandOutput.substring(discreteSectionStart)
         } else {
-            ""
+            extractDiscreteTable(commandOutput, operationName)
         }
         val aggregateEntries = extractAggregateEntries(
             commandOutput = aggregateSource,
@@ -38,6 +38,33 @@ object AppOpsHistoryOutputExtractor {
             if (discreteSection.isNotEmpty()) {
                 append(discreteSection)
             }
+        }
+    }
+
+    /**
+     * Android 17 prints discrete history as one `|` separated table under a
+     * header row and no longer prints aggregated snapshots. Only the header and
+     * this operation's rows are kept.
+     */
+    private fun extractDiscreteTable(
+        commandOutput: String,
+        operationName: String,
+    ): String {
+        val lines = commandOutput.lineSequence().map(String::trim).toList()
+        val headerIndex = lines.indexOfFirst { it.startsWith(DiscreteHistoryTable.HEADER_PREFIX) }
+        if (headerIndex < 0) return ""
+        val columns = lines[headerIndex].split('|')
+        val operationColumn = columns.indexOf(DiscreteHistoryTable.OP_NAME)
+        if (operationColumn < 0) return ""
+        return buildString {
+            appendLine(lines[headerIndex])
+            lines.drop(headerIndex + 1)
+                .takeWhile { it.isEmpty() || it.contains('|') }
+                .filter { row ->
+                    val cells = row.split('|')
+                    cells.size == columns.size && cells[operationColumn] == operationName
+                }
+                .forEach(::appendLine)
         }
     }
 

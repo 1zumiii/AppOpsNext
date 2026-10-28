@@ -1,11 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <!-- The diagnostic log names installed and newly detected apps, which is a
-         record of this device rather than a setting worth restoring elsewhere. -->
+         record of this device rather than a setting worth restoring elsewhere.
+         The read probe describes this device's system build and is probed
+         again on any other. Guard state records what happened to other apps'
+         settings on this device; the guard rules themselves are kept. -->
     <cloud-backup>
         <exclude
             domain="file"
             path="datastore/new_app_policy.preferences_pb" />
+        <exclude
+            domain="file"
+            path="datastore/app_ops_capabilities.preferences_pb" />
+        <exclude
+            domain="file"
+            path="datastore/guard_state.preferences_pb" />
         <exclude
             domain="file"
             path="appopsnext-diagnostic.log" />
@@ -14,6 +23,12 @@
         <exclude
             domain="file"
             path="datastore/new_app_policy.preferences_pb" />
+        <exclude
+            domain="file"
+            path="datastore/app_ops_capabilities.preferences_pb" />
+        <exclude
+            domain="file"
+            path="datastore/guard_state.preferences_pb" />
         <exclude
             domain="file"
             path="appopsnext-diagnostic.log" />

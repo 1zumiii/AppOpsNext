@@ -1,8 +1,8 @@
 package dev.izumi.appopsnext.monitor
 
 import android.os.IBinder
-import android.os.Parcel
-import rikka.shizuku.ShizukuBinderWrapper
+import dev.izumi.appopsnext.appops.binder.AppOpsBinder
+import dev.izumi.appopsnext.appops.binder.AppOpsTransactions
 
 /**
  * Registers AppOps watch callbacks through Shizuku's remote binder call.
@@ -124,63 +124,31 @@ internal class AppOpsMonitorClient {
         registeredService?.pingBinder() == true
     }.getOrDefault(false)
 
-    private fun appOpsService(): IBinder {
-        // Do not use Shizuku's permanent service cache: a dead proxy must be replaced.
-        val raw = Class.forName("android.os.ServiceManager")
-            .getMethod("getService", String::class.java)
-            .invoke(null, APP_OPS_SERVICE) as? IBinder
-            ?: error("The AppOps system service is unavailable")
-        // A descriptor that is not the one the transaction codes belong to means
-        // a call would land on an unrelated method, so refuse rather than guess.
-        check(raw.pingBinder()) { "The AppOps system service is dead" }
-        val descriptor = raw.interfaceDescriptor
-        check(descriptor == AppOpsTransactions.INTERFACE) {
-            "Unexpected AppOps interface descriptor: $descriptor"
-        }
-        return ShizukuBinderWrapper(raw)
-    }
+    private fun appOpsService(): IBinder = AppOpsBinder.service()
 
     private fun transactWatch(
         service: IBinder,
         transaction: Int,
         opCodes: IntArray,
         callback: IBinder,
-    ) {
-        val data = Parcel.obtain()
-        val reply = Parcel.obtain()
-        try {
-            data.writeInterfaceToken(AppOpsTransactions.INTERFACE)
+    ) = AppOpsBinder.call(
+        service,
+        transaction,
+        write = { data ->
             data.writeIntArray(opCodes)
             data.writeStrongBinder(callback)
-            service.transact(transaction, data, reply, 0)
-            check(reply.dataAvail() >= 4) { "Missing AppOps transaction reply" }
-            reply.readException()
-        } finally {
-            reply.recycle()
-            data.recycle()
-        }
-    }
+        },
+        read = {},
+    )
 
     private fun transactStop(
         service: IBinder,
         transaction: Int,
         callback: IBinder,
-    ) {
-        val data = Parcel.obtain()
-        val reply = Parcel.obtain()
-        try {
-            data.writeInterfaceToken(AppOpsTransactions.INTERFACE)
-            data.writeStrongBinder(callback)
-            service.transact(transaction, data, reply, 0)
-            check(reply.dataAvail() >= 4) { "Missing AppOps transaction reply" }
-            reply.readException()
-        } finally {
-            reply.recycle()
-            data.recycle()
-        }
-    }
-
-    private companion object {
-        const val APP_OPS_SERVICE = "appops"
-    }
+    ) = AppOpsBinder.call(
+        service,
+        transaction,
+        write = { data -> data.writeStrongBinder(callback) },
+        read = {},
+    )
 }

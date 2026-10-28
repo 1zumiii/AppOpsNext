@@ -13,7 +13,6 @@ import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
 import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
 import dev.izumi.appopsnext.appops.model.AppOpScope
-import dev.izumi.appopsnext.appops.parser.OpStatesParser
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.presentation.app_detail.AppOpModeChangeRequest
 import dev.izumi.appopsnext.presentation.app_detail.AppOpModeChangeUiState
@@ -45,6 +44,12 @@ class PermissionBrowserViewModel(
     private var loadJob: Job? = null
     private var pendingApp: InstalledApp? = null
 
+    init {
+        viewModelScope.launch {
+            app.guardController.restores.collect { refresh() }
+        }
+    }
+
     fun select(operation: String?) {
         if (mutableChange.value is AppOpModeChangeUiState.Applying) return
         loadJob?.cancel()
@@ -60,17 +65,10 @@ class PermissionBrowserViewModel(
         loadJob = viewModelScope.launch {
             try {
                 val states = withContext(Dispatchers.IO) {
-                    val result = app.privilegedServiceClient.getOpStates(operation)
-                    check(!result.timedOut && result.exitCode == 0) {
-                        "AppOps query failed"
-                    }
-                    check(result.stdout.contains("Current AppOps Service state:")) {
-                        "Unexpected AppOps dump"
-                    }
-                    OpStatesParser.parse(
-                        output = result.stdout,
+                    repository.loadOpStates(
                         operationName = operation,
                         userId = Process.myUid() / 100000,
+                        uids = app.installedAppsRepository.loadInstalledApps().map { it.uid },
                     )
                 }
                 mutableState.value = PermissionBrowserState(
@@ -116,7 +114,7 @@ class PermissionBrowserViewModel(
         )
     }
 
-    fun confirm() {
+    fun confirm(guard: Boolean = false) {
         val request =
             (mutableChange.value as? AppOpModeChangeUiState.Confirming)?.request
                 ?: return
@@ -184,6 +182,16 @@ class PermissionBrowserViewModel(
                 affectedPackages = affectedPackages(target, appliedScope),
             )
             val settings = app.userSettingsRepository.settings.first()
+            (outcome.result as? AppOpModeChangeResult.Success)?.let { success ->
+                app.guardController.onUserChange(
+                    packageName = request.packageName,
+                    uid = target.uid,
+                    operationName = request.operationName,
+                    scope = appliedScope,
+                    mode = success.appliedMode,
+                    guard = guard,
+                )
+            }
             mutableChange.value = when (val result = outcome.result) {
                 is AppOpModeChangeResult.Success -> when {
                     permissionFlagApplied &&

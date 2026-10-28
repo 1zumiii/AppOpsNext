@@ -25,8 +25,8 @@ android {
         applicationId = "dev.izumi.appopsnext"
         minSdk = 35
         targetSdk = 35
-        versionCode = 41
-        versionName = "1.6.5"
+        versionCode = 42
+        versionName = "1.6.6-dev.3"
         buildConfigField(
             "String",
             "SHIZUKU_API_VERSION",
@@ -159,6 +159,8 @@ dependencies {
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)
+    implementation(libs.hiddenapibypass)
+    implementation(libs.work.runtime)
 
     testImplementation(libs.junit4)
 

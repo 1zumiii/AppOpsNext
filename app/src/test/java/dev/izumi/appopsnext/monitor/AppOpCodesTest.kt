@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.monitor
 
+import dev.izumi.appopsnext.appops.binder.DeviceOp
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -35,5 +36,23 @@ class AppOpCodesTest {
         assertEquals("MONITOR_HIGH_POWER_LOCATION", AppOpCodes.registryNameOf(42))
         assertEquals("RECEIVE_SOUNDTRIGGER_AUDIO", AppOpCodes.registryNameOf(120))
         assertEquals("UNARCHIVAL_CONFIRMATION", AppOpCodes.registryNameOf(146))
+    }
+
+    @Test fun `the platform table answers first and adds operations newer than the built-in one`() {
+        val platform = AppOpCodes.builtIn.map { (code, name) ->
+            DeviceOp(code, AppOpCodes.registryNameOf(code)!!, name)
+        } + DeviceOp(149, "FUTURE_OP", "android:future_op")
+        AppOpCodes.useDeviceTable(platform)
+        try {
+            assertEquals(149, AppOpCodes.codeOf("android:future_op"))
+            assertEquals(149, AppOpCodes.codeOf("FUTURE_OP"))
+            assertEquals("android:future_op", AppOpCodes.nameOf(149))
+            assertEquals("FUTURE_OP", AppOpCodes.registryNameOf(149))
+            assertEquals(true, "android:future_op" in AppOpCodes.ALL_NAMES)
+            assertEquals(26, AppOpCodes.codeOf("CAMERA"))
+        } finally {
+            AppOpCodes.useDeviceTable(null)
+        }
+        assertEquals(null, AppOpCodes.codeOf("android:future_op"))
     }
 }

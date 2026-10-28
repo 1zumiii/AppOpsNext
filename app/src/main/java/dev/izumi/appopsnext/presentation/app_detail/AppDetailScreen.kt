@@ -84,7 +84,7 @@ fun AppDetailScreen(
         AppOpMode,
         AppOpMode,
     ) -> Unit,
-    onModeChangeConfirmed: () -> Unit,
+    onModeChangeConfirmed: (guard: Boolean) -> Unit,
     onModeChangeDismissed: () -> Unit,
     onDenyFallbackNoticeDismissed: (Boolean) -> Unit,
     onPermissionFlagNoticeDismissed: (Boolean) -> Unit,
