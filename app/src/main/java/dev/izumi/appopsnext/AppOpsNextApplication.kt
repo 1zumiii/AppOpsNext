@@ -8,6 +8,7 @@ import dev.izumi.appopsnext.appops.StructuredAppOpsReads
 import dev.izumi.appopsnext.appops.model.PackageOpsLoadResult
 import dev.izumi.appopsnext.appops.RevokedCompatWriteMemory
 import dev.izumi.appopsnext.apps.InstalledAppsRepository
+import dev.izumi.appopsnext.backup.AppBackupService
 import dev.izumi.appopsnext.diagnostics.DiagnosticEnvironmentCollector
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
 import dev.izumi.appopsnext.guard.GuardController
@@ -169,6 +170,15 @@ class AppOpsNextApplication : Application() {
 
     val monitorTargetsRepository: MonitorTargetsRepository by lazy {
         MonitorTargetsRepository(this)
+    }
+
+    val appBackupService: AppBackupService by lazy {
+        AppBackupService(
+            templateRepository = permissionTemplateRepository,
+            settingsRepository = userSettingsRepository,
+            monitorTargetsRepository = monitorTargetsRepository,
+            appVersion = BuildConfig.VERSION_NAME,
+        )
     }
 
     /** Kept out of backups like the history: it is a record of other apps' accesses. */

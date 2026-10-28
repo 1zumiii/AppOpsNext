@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import dev.izumi.appopsnext.backup.UserSettingsBackup
 import java.io.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -142,6 +143,27 @@ class UserSettingsRepository(
     suspend fun setBatteryNoticeSuppressed(suppressed: Boolean) {
         dataStore.edit { preferences ->
             preferences[Keys.SUPPRESS_BATTERY_NOTICE] = suppressed
+        }
+    }
+
+    /** Writes the settings a backup carries and leaves the rest as they are. */
+    suspend fun applyBackup(backup: UserSettingsBackup) {
+        dataStore.edit { preferences ->
+            fun put(key: Preferences.Key<Boolean>, value: Boolean?) {
+                if (value != null) preferences[key] = value
+            }
+            put(Keys.HIDE_SYSTEM_APPS, backup.hideSystemApps)
+            put(Keys.SUPPRESS_DENY_FALLBACK_NOTICE, backup.suppressDenyFallbackNotice)
+            put(Keys.SUPPRESS_PERMISSION_FLAG_NOTICE, backup.suppressPermissionFlagNotice)
+            put(Keys.AUTO_APPLY_NEW_APP_TEMPLATE, backup.autoApplyNewAppTemplate)
+            put(Keys.MONITOR_HEADS_UP, backup.monitorHeadsUp)
+            put(Keys.SUPPRESS_BATTERY_NOTICE, backup.suppressBatteryNotice)
+            put(Keys.SHOW_ALL_MONITOR_OPERATIONS, backup.showAllMonitorOperations)
+            put(Keys.SUPPRESS_ALL_OPERATIONS_WARNING, backup.suppressAllOperationsWarning)
+            put(Keys.SAVE_INDIVIDUAL_HISTORY, backup.saveIndividualHistory)
+            backup.savedHistoryOperations?.let {
+                preferences[Keys.SAVED_HISTORY_OPERATIONS] = it
+            }
         }
     }
 
