@@ -108,7 +108,7 @@ class PermissionBrowserViewModel(
         )
     }
 
-    fun confirm() {
+    fun confirm(guard: Boolean = false) {
         val request =
             (mutableChange.value as? AppOpModeChangeUiState.Confirming)?.request
                 ?: return
@@ -176,6 +176,15 @@ class PermissionBrowserViewModel(
                 affectedPackages = affectedPackages(target, appliedScope),
             )
             val settings = app.userSettingsRepository.settings.first()
+            (outcome.result as? AppOpModeChangeResult.Success)?.takeIf { guard }?.let { success ->
+                app.guardController.guard(
+                    packageName = request.packageName,
+                    uid = target.uid,
+                    stableOperationName = request.operationName,
+                    scope = appliedScope,
+                    mode = success.appliedMode,
+                )
+            }
             mutableChange.value = when (val result = outcome.result) {
                 is AppOpModeChangeResult.Success -> when {
                     permissionFlagApplied &&

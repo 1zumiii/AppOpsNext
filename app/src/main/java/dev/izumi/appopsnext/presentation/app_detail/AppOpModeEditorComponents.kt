@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedButton
@@ -33,12 +34,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.guard.GuardMode
 import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.presentation.components.PermissionEntryIcon
 import dev.izumi.appopsnext.appops.AppOpRuntimePermissionCatalog
@@ -201,7 +206,7 @@ internal fun EditableModeMenu(
 @Composable
 internal fun ModeChangeDialog(
     state: AppOpModeChangeUiState,
-    onConfirm: () -> Unit,
+    onConfirm: (guard: Boolean) -> Unit,
     onDismiss: () -> Unit,
     onDenyFallbackNoticeDismiss: (Boolean) -> Unit,
     onPermissionFlagNoticeDismiss: (Boolean) -> Unit,
@@ -209,6 +214,9 @@ internal fun ModeChangeDialog(
     /** The permission page lists many apps, so its confirmation names the package. */
     showPackageName: Boolean = false,
 ) {
+    val guardMode by (LocalContext.current.applicationContext as AppOpsNextApplication)
+        .guardRepository.mode.collectAsStateWithLifecycle(GuardMode.OFF)
+    var guardRequested by remember(state) { mutableStateOf(false) }
     when (state) {
         is AppOpModeChangeUiState.Confirming -> AppBottomSheet(
             onDismissRequest = onDismiss,
@@ -270,10 +278,28 @@ internal fun ModeChangeDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                    if (guardMode != GuardMode.OFF) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .toggleable(
+                                    value = guardRequested,
+                                    role = Role.Checkbox,
+                                    onValueChange = { guardRequested = it },
+                                ),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Checkbox(checked = guardRequested, onCheckedChange = null)
+                            Text(
+                                text = stringResource(R.string.guard_confirm_option),
+                                modifier = Modifier.padding(start = 8.dp),
+                            )
+                        }
+                    }
                 }
             },
             confirmButton = {
-                Button(onClick = onConfirm) {
+                Button(onClick = { onConfirm(guardRequested) }) {
                     Text(text = stringResource(R.string.action_apply))
                 }
             },

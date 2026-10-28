@@ -114,7 +114,7 @@ class AppDetailViewModel(
         mutableSearchQuery.value = query
     }
 
-    fun confirmModeChange() {
+    fun confirmModeChange(guard: Boolean = false) {
         val request =
             (mutableModeChangeState.value as? AppOpModeChangeUiState.Confirming)
                 ?.request
@@ -190,6 +190,15 @@ class AppDetailViewModel(
             )
 
             updateDisplayedMode(resolvedRequest, result)
+            if (guard && result is AppOpModeChangeResult.Success) {
+                getApplication<AppOpsNextApplication>().guardController.guard(
+                    packageName = request.packageName,
+                    uid = app.uid,
+                    stableOperationName = request.operationName,
+                    scope = appliedScope,
+                    mode = result.appliedMode,
+                )
+            }
             mutableModeChangeState.value = when (result) {
                 is AppOpModeChangeResult.Success -> {
                     val settings = userSettingsRepository.settings.first()

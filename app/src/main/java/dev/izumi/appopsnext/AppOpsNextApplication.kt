@@ -10,6 +10,9 @@ import dev.izumi.appopsnext.appops.RevokedCompatWriteMemory
 import dev.izumi.appopsnext.apps.InstalledAppsRepository
 import dev.izumi.appopsnext.diagnostics.DiagnosticEnvironmentCollector
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
+import dev.izumi.appopsnext.guard.GuardController
+import dev.izumi.appopsnext.guard.GuardNotifier
+import dev.izumi.appopsnext.guard.GuardRepository
 import dev.izumi.appopsnext.settings.UserSettingsRepository
 import dev.izumi.appopsnext.shizuku.PrivilegedServiceClient
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
@@ -103,6 +106,23 @@ class AppOpsNextApplication : Application() {
         )
     }
 
+    val guardRepository: GuardRepository by lazy { GuardRepository(this) }
+
+    val guardNotifier: GuardNotifier by lazy { GuardNotifier(this) }
+
+    val guardController: GuardController by lazy {
+        GuardController(
+            context = this,
+            repository = guardRepository,
+            appOpsRepository = appOpsRepository,
+            privilegedServiceClient = privilegedServiceClient,
+            diagnosticLog = diagnosticLogRepository,
+            scope = applicationScope,
+            writeMemory = revokedCompatWriteMemory,
+            notifier = guardNotifier,
+        )
+    }
+
     val userSettingsRepository: UserSettingsRepository by lazy {
         UserSettingsRepository(this)
     }
@@ -187,6 +207,7 @@ class AppOpsNextApplication : Application() {
         )
         newAppPolicyCoordinator.start()
         historyArchiveRecorder.start()
+        guardController.start()
         applicationScope.launch {
             privilegedServiceClient.state
                 .filterIsInstance<PrivilegedServiceState.Connected>()

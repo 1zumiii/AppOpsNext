@@ -47,6 +47,15 @@
                 android:value="Observes AppOps accesses through Shizuku while the user has the experimental monitor enabled." />
         </service>
 
+        <service
+            android:name=".guard.GuardWatchService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Watches AppOps mode changes through Shizuku for the settings the user chose to guard, while realtime guarding is enabled." />
+        </service>
+
         <provider
             android:name="rikka.shizuku.ShizukuProvider"
             android:authorities="${applicationId}.shizuku"

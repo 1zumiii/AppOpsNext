@@ -27,6 +27,10 @@ internal object AppOpsTransactions {
 
     fun getUidOps(): Code = resolve("getUidOps")
 
+    fun startWatchingMode(): Code = resolve("startWatchingMode")
+
+    fun stopWatchingMode(): Code = resolve("stopWatchingMode")
+
     fun startWatchingActive(): Code = resolve("startWatchingActive")
 
     fun stopWatchingActive(): Code = resolve("stopWatchingActive")
@@ -62,6 +66,8 @@ internal object AppOpsTransactions {
 
     /** Identical in API 35 and 36, including 36 QPR2. */
     private val API_36_POSITIONS = mapOf(
+        "startWatchingMode" to 5,
+        "stopWatchingMode" to 6,
         "getPackagesForOps" to 18,
         "getOpsForPackage" to 19,
         "getUidOps" to 29,

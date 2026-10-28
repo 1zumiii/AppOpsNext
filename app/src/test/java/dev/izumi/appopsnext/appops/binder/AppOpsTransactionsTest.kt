@@ -23,4 +23,11 @@ class AppOpsTransactionsTest {
         assertEquals(43, AppOpsTransactions.fallbackCode("stopWatchingStarted", 37))
         assertEquals(45, AppOpsTransactions.fallbackCode("stopWatchingNoted", 37))
     }
+
+    @Test fun `mode watch methods sit before the shifted range`() {
+        for (sdk in listOf(35, 36, 37)) {
+            assertEquals(5, AppOpsTransactions.fallbackCode("startWatchingMode", sdk))
+            assertEquals(6, AppOpsTransactions.fallbackCode("stopWatchingMode", sdk))
+        }
+    }
 }
