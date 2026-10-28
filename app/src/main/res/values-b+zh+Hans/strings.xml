@@ -163,7 +163,7 @@
     <string name="diagnostic_report_copied">诊断报告已复制，请脱敏后再分享</string>
     <string name="settings_about">关于</string>
     <string name="settings_app_version">应用版本</string>
-    <string name="settings_app_version_value">%1$s（%2$d）</string>
+    <string name="settings_app_version_value">%1$s (%2$d)</string>
     <string name="settings_developer">开发者</string>
     <string name="settings_developer_name">1zumiii</string>
     <string name="settings_github">GitHub</string>
