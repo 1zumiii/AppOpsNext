@@ -1,6 +1,10 @@
 package dev.izumi.appopsnext.presentation.app_list
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.FilterChip
+import dev.izumi.appopsnext.apps.model.AndroidUser
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,6 +65,7 @@ fun AppListScreen(
     batchState: BatchOperationUiState,
     onSearchQueryChange: (String) -> Unit,
     onRefresh: () -> Unit,
+    onUserSelected: (Int?) -> Unit,
     onAppSelected: (InstalledApp) -> Unit,
     templates: List<PermissionTemplate>,
     onTemplateApplyRequested:
@@ -108,7 +113,8 @@ fun AppListScreen(
                 },
                 actions = {
                     if (!permissionTab) {
-                        IconButton(
+                        // Templates and batch changes apply to the current user only.
+                        if (uiState.selectedUserId == null) IconButton(
                             onClick = {
                                 batchSelectionMode = !batchSelectionMode
                                 selectedPackages = emptySet()
@@ -142,6 +148,18 @@ fun AppListScreen(
         bottomBar = bottomBar,
     ) { contentPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
+            if (uiState.users.size > 1) {
+                UserPicker(
+                    users = uiState.users,
+                    currentUserId = uiState.currentUserId,
+                    selectedUserId = uiState.selectedUserId ?: uiState.currentUserId,
+                    onUserSelected = { id ->
+                        batchSelectionMode = false
+                        selectedPackages = emptySet()
+                        onUserSelected(id.takeIf { it != uiState.currentUserId })
+                    },
+                )
+            }
             TabRow(selectedTabIndex = if (permissionTab) 1 else 0) {
                 Tab(
                     selected = !permissionTab,
@@ -339,6 +357,7 @@ private fun InstalledAppListItem(
                 packageName = app.packageName,
                 appLabel = app.label,
                 size = 40.dp,
+                userId = app.userId,
             )
             Column(
                 modifier = Modifier.weight(1f),
@@ -365,6 +384,38 @@ private fun InstalledAppListItem(
                     onCheckedChange = onBatchSelectionChange,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun UserPicker(
+    users: List<AndroidUser>,
+    currentUserId: Int,
+    selectedUserId: Int,
+    onUserSelected: (Int) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        users.forEach { user ->
+            FilterChip(
+                selected = user.id == selectedUserId,
+                onClick = { onUserSelected(user.id) },
+                label = {
+                    Text(
+                        text = if (user.name.isBlank()) {
+                            stringResource(R.string.user_unnamed, user.id)
+                        } else {
+                            stringResource(R.string.user_named, user.name, user.id)
+                        },
+                    )
+                },
+            )
         }
     }
 }

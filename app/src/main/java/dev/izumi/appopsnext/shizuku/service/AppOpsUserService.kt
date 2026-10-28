@@ -124,6 +124,61 @@ class AppOpsUserService : IPrivilegedAppOpsService.Stub {
         )
     }
 
+    override fun listUsers(): ShellCommandResult =
+        commandExecutor.execute(AppOpsCommands.listUsers())
+
+    override fun listPackagesForUser(userId: Int): ShellCommandResult =
+        commandExecutor.execute(AppOpsCommands.listPackagesForUser(userId))
+
+    override fun getPackageOpsForUser(
+        userId: Int,
+        packageName: String,
+    ): ShellCommandResult =
+        commandExecutor.execute(
+            AppOpsCommands.getPackageOpsForUser(userId, packageName),
+        )
+
+    override fun getPackageOpForUser(
+        userId: Int,
+        packageName: String,
+        operationName: String,
+    ): ShellCommandResult =
+        commandExecutor.execute(
+            AppOpsCommands.getPackageOpForUser(userId, packageName, operationName),
+        )
+
+    override fun setPackageOpModeForUser(
+        userId: Int,
+        packageName: String,
+        operationName: String,
+        mode: String,
+    ): ShellCommandResult {
+        val validatedMode = requireNotNull(AppOpMode.fromShellValue(mode)) {
+            "Unsupported AppOps mode"
+        }
+        return commandExecutor.execute(
+            AppOpsCommands.setPackageOpModeForUser(
+                userId, packageName, operationName, validatedMode,
+            ),
+        )
+    }
+
+    override fun setUidOpModeForUser(
+        userId: Int,
+        packageName: String,
+        operationName: String,
+        mode: String,
+    ): ShellCommandResult {
+        val validatedMode = requireNotNull(AppOpMode.fromShellValue(mode)) {
+            "Unsupported AppOps mode"
+        }
+        return commandExecutor.execute(
+            AppOpsCommands.setUidOpModeForUser(
+                userId, packageName, operationName, validatedMode,
+            ),
+        )
+    }
+
     override fun destroy() {
         commandExecutor.close()
         exitProcess(0)

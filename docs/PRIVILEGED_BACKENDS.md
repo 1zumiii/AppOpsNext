@@ -38,8 +38,22 @@ operation and permission names first, and the daemon validates them again.
 | `SET_PACKAGE` | `cmd appops set <package> <op> <mode>` |
 | `SET_UID` | `cmd appops set --uid <package> <op> <mode>` |
 | `GET_PACKAGE_PERMISSIONS` | `dumpsys package <package>` |
+| `LIST_USERS` | `pm list users` (no arguments) |
+| `LIST_PACKAGES_FOR_USER` | `pm list packages --user <user> -U` |
+| `GET_USER_PACKAGE_OPS` | `cmd appops get --user <user> <package>` |
+| `GET_USER_PACKAGE_OP` | `cmd appops get --user <user> <package> <op>` |
+| `SET_USER_PACKAGE` | `cmd appops set --user <user> <package> <op> <mode>` |
+| `SET_USER_UID` | `cmd appops set --user <user> --uid <package> <op> <mode>` |
 | `SET_REVOKED_COMPAT` | `cmd package set-permission-flags --user <user> <package> <permission> revoked-compat` |
 | `CLEAR_REVOKED_COMPAT` | `cmd package clear-permission-flags --user <user> <package> <permission> revoked-compat` |
+
+The user commands let the app list, app detail and permission browser work
+on another Android user, such as a work profile or an app clone. `<user>` is a
+canonical non-negative integer, validated by both the app and the daemon. They
+are appended AIDL methods 15 to 20, and the commands above them are unchanged.
+Binder reads for another user take the uid from the app list
+(`LIST_PACKAGES_FOR_USER`), or derive it as `userId * 100000 + appId`. Templates,
+new-app automation, the setting guard and history stay on the current user.
 
 `GET_UID_STATES` exists for the monitor's off-screen filter and returns the
 process state AppOps keeps for each UID carrying that package. It is scoped to

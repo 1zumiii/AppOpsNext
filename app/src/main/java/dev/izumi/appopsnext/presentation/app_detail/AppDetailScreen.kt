@@ -156,7 +156,8 @@ fun AppDetailScreen(
                     }
                 },
                 actions = {
-                    if (uiState is AppDetailUiState.Ready) {
+                    // Templates and batch changes apply to the current user only.
+                    if (uiState is AppDetailUiState.Ready && app?.userId == null) {
                         IconButton(onClick = { showTemplatePicker = true }) {
                             Icon(
                                 painter = painterResource(
@@ -514,6 +515,7 @@ private fun AppSummaryCard(
                 packageName = app.packageName,
                 appLabel = app.label,
                 size = 44.dp,
+                userId = app.userId,
             )
             Column(
                 modifier = Modifier.weight(1f),

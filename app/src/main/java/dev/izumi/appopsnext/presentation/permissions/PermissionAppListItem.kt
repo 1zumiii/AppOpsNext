@@ -60,7 +60,12 @@ internal fun PermissionAppListItem(
                     enabled = selectable,
                 )
             } else {
-                AppIcon(packageName = app.packageName, appLabel = app.label, size = 40.dp)
+                AppIcon(
+                    packageName = app.packageName,
+                    appLabel = app.label,
+                    size = 40.dp,
+                    userId = app.userId,
+                )
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(

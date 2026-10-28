@@ -30,5 +30,25 @@ interface IPrivilegedAppOpsService {
         boolean revoked
     ) = 13;
     ShellCommandResult getOpStates(String operationName) = 14;
+    ShellCommandResult listUsers() = 15;
+    ShellCommandResult listPackagesForUser(int userId) = 16;
+    ShellCommandResult getPackageOpsForUser(int userId, String packageName) = 17;
+    ShellCommandResult getPackageOpForUser(
+        int userId,
+        String packageName,
+        String operationName
+    ) = 18;
+    ShellCommandResult setPackageOpModeForUser(
+        int userId,
+        String packageName,
+        String operationName,
+        String mode
+    ) = 19;
+    ShellCommandResult setUidOpModeForUser(
+        int userId,
+        String packageName,
+        String operationName,
+        String mode
+    ) = 20;
     void destroy() = 16777114;
 }

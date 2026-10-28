@@ -95,6 +95,7 @@ fun AppOpsRootScreen(
     onClearDiagnosticLog: () -> Unit,
     onAppSearchQueryChange: (String) -> Unit,
     onRefreshApps: () -> Unit,
+    onUserSelected: (Int?) -> Unit,
     onRefreshHistory: () -> Unit,
     onHistoryVisibilityChanged: (Boolean) -> Unit,
     onHistoryPermissionsChanged: (List<String>) -> Unit,
@@ -236,6 +237,8 @@ fun AppOpsRootScreen(
                 selectedApp = null
                 selectedHistoryPermissionName = null
                 showHistoryAppStatistics = false
+                // Every page outside the app list works on the current user only.
+                if (it != MainDestination.APPS) onUserSelected(null)
                 selectedDestination = it
             },
         )
@@ -522,6 +525,7 @@ fun AppOpsRootScreen(
                     },
                     onSearchQueryChange = onAppSearchQueryChange,
                     onRefresh = onRefreshApps,
+                    onUserSelected = onUserSelected,
                     onAppSelected = { app ->
                         focusManager.clearFocus()
                         keyboardController?.hide()
@@ -667,7 +671,7 @@ fun AppOpsRootScreen(
 private val InstalledAppStateSaver = listSaver<InstalledApp?, Any>(
     save = { app ->
         app?.let {
-            listOf(it.label, it.packageName, it.uid, it.isSystemApp)
+            listOf(it.label, it.packageName, it.uid, it.isSystemApp, it.userId ?: NO_USER)
         }.orEmpty()
     },
     restore = { values ->
@@ -677,12 +681,14 @@ private val InstalledAppStateSaver = listSaver<InstalledApp?, Any>(
                 packageName = it[1] as String,
                 uid = it[2] as Int,
                 isSystemApp = it[3] as Boolean,
+                userId = (it[4] as Int).takeIf { id -> id != NO_USER },
             )
         }
     },
 )
 
-private const val SAVED_APP_FIELD_COUNT = 4
+private const val SAVED_APP_FIELD_COUNT = 5
+private const val NO_USER = -1
 private const val ROUTE_EXPERIMENTAL = "experimental"
 private const val ROUTE_WATCHERS = "watchers"
 private const val ROUTE_GUARD = "guard"

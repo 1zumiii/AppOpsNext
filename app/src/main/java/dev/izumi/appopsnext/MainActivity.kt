@@ -145,6 +145,7 @@ class MainActivity : ComponentActivity() {
                         diagnosticsViewModel::clearDiagnosticLog,
                     onAppSearchQueryChange = appListViewModel::updateSearchQuery,
                     onRefreshApps = appListViewModel::refresh,
+                    onUserSelected = appListViewModel::selectUser,
                     onRefreshHistory = historyViewModel::refresh,
                     onHistoryVisibilityChanged = historyViewModel::setVisible,
                     onHistoryPermissionsChanged =

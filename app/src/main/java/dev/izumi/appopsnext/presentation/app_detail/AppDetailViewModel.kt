@@ -105,10 +105,12 @@ class AppDetailViewModel(
                 originalMode = originalMode,
                 requestedMode = requestedMode,
                 affectedPackages = affectedPackages(app, scope),
-                runtimePermissionDenied = isRuntimePermissionDenied(
-                    packageName = app.packageName,
-                    operationName = operationName,
-                ),
+                runtimePermissionDenied = app.userId == null &&
+                    isRuntimePermissionDenied(
+                        packageName = app.packageName,
+                        operationName = operationName,
+                    ),
+                userId = app.userId,
             ),
         )
     }
@@ -149,6 +151,7 @@ class AppDetailViewModel(
                                 packageName = request.packageName,
                                 operation = operation,
                                 scope = scope,
+                                userId = app.userId,
                             )
                         },
                         revokedCompatRetry = RevokedCompatRetry(
@@ -160,6 +163,7 @@ class AppDetailViewModel(
                                 operation = operation,
                                 permissionName = permissionName,
                                 requestedMode = requestedMode,
+                                userId = app.userId,
                             )
                         },
                     ) { scope ->
@@ -170,6 +174,7 @@ class AppDetailViewModel(
                                 scope = scope,
                                 expectedOriginalMode = request.originalMode,
                                 requestedMode = requestedMode,
+                                userId = app.userId,
                             )
                         } else {
                             transaction.applyMode(
@@ -177,6 +182,7 @@ class AppDetailViewModel(
                                 operation = operation,
                                 scope = scope,
                                 requestedMode = requestedMode,
+                                userId = app.userId,
                             )
                         }
                     }
@@ -193,7 +199,7 @@ class AppDetailViewModel(
             )
 
             updateDisplayedMode(resolvedRequest, result)
-            if (result is AppOpModeChangeResult.Success) {
+            if (app.userId == null && result is AppOpModeChangeResult.Success) {
                 getApplication<AppOpsNextApplication>().guardController.onUserChange(
                     packageName = request.packageName,
                     uid = app.uid,
@@ -297,10 +303,7 @@ class AppDetailViewModel(
     }
 
     private fun packagesForUid(uid: Int): List<String> =
-        getApplication<Application>().packageManager
-            .getPackagesForUid(uid)
-            ?.toList()
-            .orEmpty()
+        getApplication<AppOpsNextApplication>().userAppsRepository.packagesForUid(uid)
 
     private fun affectedPackages(
         app: InstalledApp,
@@ -309,13 +312,9 @@ class AppDetailViewModel(
         when (scope) {
             AppOpScope.PACKAGE -> listOf(app.packageName)
             AppOpScope.UID ->
-                getApplication<AppOpsNextApplication>()
-                    .packageManager
-                    .getPackagesForUid(app.uid)
-                    ?.toList()
-                    ?.sorted()
-                    ?.ifEmpty { listOf(app.packageName) }
-                    ?: listOf(app.packageName)
+                packagesForUid(app.uid)
+                    .sorted()
+                    .ifEmpty { listOf(app.packageName) }
         }
 
     private fun isRuntimePermissionDenied(
@@ -378,6 +377,7 @@ class AppDetailViewModel(
                 val result = repository.loadPackageOps(
                     packageName = app.packageName,
                     uid = app.uid,
+                    userId = app.userId,
                 )
             ) {
                 is PackageOpsLoadResult.Success -> AppDetailUiState.Ready(

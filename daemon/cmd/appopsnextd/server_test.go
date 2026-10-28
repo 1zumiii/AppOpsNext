@@ -249,3 +249,58 @@ func TestParseRejectsMalformedRevokedCompatRequests(t *testing.T) {
 		}
 	}
 }
+
+func TestParseUserScopedCommands(t *testing.T) {
+	for request, expected := range map[string][]string{
+		"LIST_USERS": {"/system/bin/pm", "list", "users"},
+		"LIST_PACKAGES_FOR_USER 10": {
+			"/system/bin/pm", "list", "packages", "--user", "10", "-U",
+		},
+		"GET_USER_PACKAGE_OPS 10 com.example.app": {
+			"/system/bin/cmd", "appops", "get", "--user", "10", "com.example.app",
+		},
+		"GET_USER_PACKAGE_OP 10 com.example.app CAMERA": {
+			"/system/bin/cmd", "appops", "get", "--user", "10",
+			"com.example.app", "CAMERA",
+		},
+		"SET_USER_PACKAGE 10 com.example.app CAMERA ignore": {
+			"/system/bin/cmd", "appops", "set", "--user", "10",
+			"com.example.app", "CAMERA", "ignore",
+		},
+		"SET_USER_UID 0 com.example.app CAMERA allow": {
+			"/system/bin/cmd", "appops", "set", "--user", "0", "--uid",
+			"com.example.app", "CAMERA", "allow",
+		},
+	} {
+		actual, err := parseCommand(request)
+		if err != nil || !reflect.DeepEqual(actual.arguments, expected) {
+			t.Fatalf("%s command = %#v, error = %v", request, actual, err)
+		}
+	}
+}
+
+func TestParseRejectsMalformedUserScopedCommands(t *testing.T) {
+	for _, request := range []string{
+		"LIST_USERS 0",
+		"LIST_PACKAGES_FOR_USER",
+		"LIST_PACKAGES_FOR_USER -1",
+		"LIST_PACKAGES_FOR_USER 010",
+		"LIST_PACKAGES_FOR_USER +10",
+		"LIST_PACKAGES_FOR_USER all",
+		"LIST_PACKAGES_FOR_USER 10 extra",
+		"GET_USER_PACKAGE_OPS 10",
+		"GET_USER_PACKAGE_OPS current com.example.app",
+		"GET_USER_PACKAGE_OPS 10 com.example.app;id",
+		"GET_USER_PACKAGE_OP 10 com.example.app",
+		"GET_USER_PACKAGE_OP 10 com.example.app CAMERA;id",
+		"SET_USER_PACKAGE 10 com.example.app CAMERA",
+		"SET_USER_PACKAGE 10 com.example.app CAMERA bogus",
+		"SET_USER_PACKAGE -2 com.example.app CAMERA allow",
+		"SET_USER_UID 00 com.example.app CAMERA allow",
+		"SET_USER_UID 10 com.example.app CAMERA allow extra",
+	} {
+		if _, err := parseCommand(request); err == nil {
+			t.Fatalf("accepted malformed request %q", request)
+		}
+	}
+}

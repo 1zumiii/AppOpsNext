@@ -416,6 +416,67 @@ class PrivilegedServiceClient(
                 ?: throw IllegalStateException("Privileged service is unavailable")
         }
 
+    override suspend fun listUsers(): ShellCommandResult =
+        withContext(Dispatchers.IO) {
+            executeNative { it.listUsers() }
+                ?: service?.listUsers()
+                ?: throw IllegalStateException("Privileged service is unavailable")
+        }
+
+    override suspend fun listPackagesForUser(
+        userId: Int,
+    ): ShellCommandResult =
+        withContext(Dispatchers.IO) {
+            executeNative { it.listPackagesForUser(userId) }
+                ?: service?.listPackagesForUser(userId)
+                ?: throw IllegalStateException("Privileged service is unavailable")
+        }
+
+    override suspend fun getPackageOpsForUser(
+        userId: Int,
+        packageName: String,
+    ): ShellCommandResult =
+        withContext(Dispatchers.IO) {
+            executeNative { it.getPackageOpsForUser(userId, packageName) }
+                ?: service?.getPackageOpsForUser(userId, packageName)
+                ?: throw IllegalStateException("Privileged service is unavailable")
+        }
+
+    override suspend fun getPackageOpForUser(
+        userId: Int,
+        packageName: String,
+        operationName: String,
+    ): ShellCommandResult =
+        withContext(Dispatchers.IO) {
+            executeNative { it.getPackageOpForUser(userId, packageName, operationName) }
+                ?: service?.getPackageOpForUser(userId, packageName, operationName)
+                ?: throw IllegalStateException("Privileged service is unavailable")
+        }
+
+    override suspend fun setPackageOpModeForUser(
+        userId: Int,
+        packageName: String,
+        operationName: String,
+        mode: AppOpMode,
+    ): ShellCommandResult =
+        withContext(Dispatchers.IO) {
+            executeNative { it.setPackageOpModeForUser(userId, packageName, operationName, mode) }
+                ?: service?.setPackageOpModeForUser(userId, packageName, operationName, mode.shellValue)
+                ?: throw IllegalStateException("Privileged service is unavailable")
+        }
+
+    override suspend fun setUidOpModeForUser(
+        userId: Int,
+        packageName: String,
+        operationName: String,
+        mode: AppOpMode,
+    ): ShellCommandResult =
+        withContext(Dispatchers.IO) {
+            executeNative { it.setUidOpModeForUser(userId, packageName, operationName, mode) }
+                ?: service?.setUidOpModeForUser(userId, packageName, operationName, mode.shellValue)
+                ?: throw IllegalStateException("Privileged service is unavailable")
+        }
+
     private suspend fun executeNative(
         action: suspend (NativeDaemonGateway) -> ShellCommandResult,
     ): ShellCommandResult? {
