@@ -134,6 +134,16 @@ tasks.matching {
     dependsOn(buildNativeDaemon)
 }
 
+// DeviceDumpCompatibilityTest reads captured dumps from this directory. As an
+// input it keeps a changed or newly set capture from being reported UP-TO-DATE.
+tasks.withType<Test>().configureEach {
+    val deviceDumps = providers.environmentVariable("APPOPSNEXT_DEVICE_DUMPS")
+    inputs.property("deviceDumps", deviceDumps.orElse(""))
+    deviceDumps.orNull?.let {
+        inputs.dir(it).withPathSensitivity(PathSensitivity.RELATIVE).optional()
+    }
+}
+
 tasks.configureEach {
     if (name == "validateSigningRelease") {
         doFirst {
