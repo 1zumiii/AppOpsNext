@@ -33,6 +33,12 @@ jobs:
         # header prefix (issue #13). 37.0 is the newest google_apis x86_64
         # image; later 37.x builds ship only as 16 KB page-size images.
         api-level: ["35", "36", "36.1", "37.0"]
+        include:
+          # With swiftshader_indirect, surfaceflinger on 37.0 aborts in the
+          # goldfish mapper (hasReadColorBufferDma assertion) and restarts
+          # system_server, which drops in-memory history.
+          - api-level: "37.0"
+            gpu: swangle_indirect
     env:
       APPOPSNEXT_DEVICE_DUMPS: ${{ github.workspace }}/build/device-dumps/api-${{ matrix.api-level }}
 
@@ -83,7 +89,7 @@ jobs:
           heap-size: 512M
           disk-size: 8G
           emulator-boot-timeout: 900
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          emulator-options: -no-window -gpu ${{ matrix.gpu || 'swiftshader_indirect' }} -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
           script: scripts/capture-device-dumps.sh "$APPOPSNEXT_DEVICE_DUMPS"
 
