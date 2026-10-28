@@ -25,7 +25,7 @@ jobs:
   capture:
     name: API ${{ matrix.api-level }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -73,6 +73,18 @@ jobs:
           api-level: ${{ matrix.api-level }}
           target: google_apis
           arch: x86_64
+          # With the action's defaults (2 cores, no RAM or disk size), the
+          # 36.1 and 37.0 images never got past `adb: device offline` within
+          # ten minutes. API 36 raises its own RAM to 2560 MB and booted in
+          # seconds. The runner has 4 cores and 16 GB.
+          profile: pixel_6
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 8G
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
           script: scripts/capture-device-dumps.sh "$APPOPSNEXT_DEVICE_DUMPS"
 
       - name: Parse dumps
