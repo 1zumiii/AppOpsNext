@@ -68,7 +68,9 @@ object AppOpsWatchersParser {
         for (raw in output.lineSequence()) {
             val line = raw.trim()
             if (line.isEmpty()) continue
-            if (raw.startsWith("  ") && !raw.startsWith("   ")) {
+            // Section titles sit at two spaces. Android 16 QPR2 adds group titles at column 0
+            // (`AppOps Restrictions`, `AppOps Uid Op State`), which end a section the same way.
+            if (!raw.startsWith("   ")) {
                 endEntry()
                 section = line.takeIf { it in SECTIONS }
                 if (section != null) recognizedSection = true
@@ -143,7 +145,7 @@ object AppOpsWatchersParser {
         }
         endEntry()
         return AppOpsWatcherSnapshot(
-            recognized = output.lineSequence().firstOrNull()?.trim() == HEADER && recognizedSection &&
+            recognized = AppOpsDump.isHeader(output.lineSequence().first()) && recognizedSection &&
                 !ERROR.containsMatchIn(output),
             accessWatchers = access,
             modeWatchers = modes.values.toList(),
@@ -154,7 +156,6 @@ object AppOpsWatchersParser {
 
     private fun watchingUid(value: String): Int? = if (value == "-1") -1 else UidStateParser.uidOf(value)
 
-    private const val HEADER = "Current AppOps Service state:"
     private const val OP_MODES = "Op mode watchers:"
     private const val PACKAGE_MODES = "Package mode watchers:"
     private val MODE_SECTIONS = setOf(OP_MODES, PACKAGE_MODES, "All op mode watchers:")

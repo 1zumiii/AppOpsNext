@@ -11,6 +11,9 @@ import dev.izumi.appopsnext.appops.model.AppOpsRestorationStatus
 import dev.izumi.appopsnext.appops.model.PackageOpsLoadResult
 import dev.izumi.appopsnext.appops.model.PackageOpsSnapshot
 import dev.izumi.appopsnext.appops.model.ShellCommandResult
+import dev.izumi.appopsnext.appops.parser.AppOpsDump
+import dev.izumi.appopsnext.appops.parser.OpStates
+import dev.izumi.appopsnext.appops.parser.OpStatesParser
 import dev.izumi.appopsnext.appops.parser.PackageOpsParser
 import dev.izumi.appopsnext.appops.parser.RuntimePermissionState
 import dev.izumi.appopsnext.appops.parser.RuntimePermissionStateParser
@@ -33,6 +36,7 @@ class AppOpsRepository(
     private val writeCoordinator: AppOpsWriteCoordinator = AppOpsWriteCoordinator.Shared,
     private val cancellationRecoveryTimeoutMillis: Long = 25_000L,
     private val onCancelledWrite: (CancelledAppOpsWrite) -> Unit = {},
+    private val structuredReads: StructuredAppOpsReads? = null,
 ) {
     suspend fun readPackageOps(
         packageName: String,
@@ -50,6 +54,17 @@ class AppOpsRepository(
     }
 
     suspend fun loadPackageOps(
+        packageName: String,
+        uid: Int? = null,
+    ): PackageOpsLoadResult {
+        structuredReads?.packageOps(packageName, uid)?.let { snapshot ->
+            return PackageOpsLoadResult.Success(snapshot)
+        }
+        return loadPackageOpsFromText(packageName, uid)
+    }
+
+    /** The command path, also the reference the read probe compares against. */
+    suspend fun loadPackageOpsFromText(
         packageName: String,
         uid: Int? = null,
     ): PackageOpsLoadResult {
@@ -82,6 +97,38 @@ class AppOpsRepository(
         }
         return PackageOpsLoadResult.Success(
             snapshot = snapshot,
+        )
+    }
+
+    /**
+     * Every UID and package mode of one operation for [userId]. [uids] are the
+     * apps on screen, which the binder path needs for UID modes.
+     *
+     * @throws IllegalStateException when neither path can read the operation.
+     */
+    suspend fun loadOpStates(
+        operationName: String,
+        userId: Int,
+        uids: Collection<Int>,
+    ): OpStates =
+        structuredReads?.opStates(operationName, userId, uids)
+            ?: loadOpStatesFromText(operationName, userId)
+
+    /** @throws IllegalStateException when the dump fails or is not one we recognize. */
+    suspend fun loadOpStatesFromText(
+        operationName: String,
+        userId: Int,
+    ): OpStates {
+        val result = privilegedGateway.getOpStates(operationName)
+        check(result.isSuccessful) { "AppOps query failed" }
+        check(result.stdout.lineSequence().any(AppOpsDump::isHeader)) {
+            val firstLine = result.stdout.lineSequence().firstOrNull(String::isNotBlank)
+            "Unexpected AppOps dump, first line: ${firstLine?.trim()?.take(120)}"
+        }
+        return OpStatesParser.parse(
+            output = result.stdout,
+            operationName = operationName,
+            userId = userId,
         )
     }
 
@@ -595,6 +642,7 @@ class AppOpsRepository(
         operation: AppOpIdentifier,
         scope: AppOpScope,
     ): AppOpMode? {
+        structuredReads?.mode(packageName, operation.shellName, scope)?.let { return it }
         val result = catchBackendFailure {
             privilegedGateway.getPackageOp(packageName, operation.shellName)
         }.getOrNull() ?: return null

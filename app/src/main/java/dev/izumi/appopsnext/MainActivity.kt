@@ -1,5 +1,8 @@
 package dev.izumi.appopsnext
 
+import androidx.compose.runtime.mutableIntStateOf
+import dev.izumi.appopsnext.guard.GuardNotifier
+import dev.izumi.appopsnext.presentation.experimental.GuardViewModel
 import android.os.Bundle
 import android.content.Intent
 import androidx.lifecycle.lifecycleScope
@@ -37,12 +40,16 @@ class MainActivity : ComponentActivity() {
     private val permissionBrowserViewModel: PermissionBrowserViewModel by viewModels()
     private val experimentalViewModel: ExperimentalViewModel by viewModels()
     private val watchersViewModel: WatchersViewModel by viewModels()
+    private val guardViewModel: GuardViewModel by viewModels()
+    /** Bumped by a guard notification so the root screen opens the guard page. */
+    private val openGuardRequests = mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         DevelopmentWindowPolicy.apply(window)
         restoreBackgroundMonitor()
         showNewAppResult(intent)
+        showGuard(intent)
 
         setContent {
             val diagnosticsUiState =
@@ -101,6 +108,8 @@ class MainActivity : ComponentActivity() {
                     onClearMonitorLog = experimentalViewModel::clearLog,
                     watchersUiState = watchersUiState.value,
                     onRefreshWatchers = watchersViewModel::refresh,
+                    guardViewModel = guardViewModel,
+                    openGuardRequest = openGuardRequests.intValue,
                     onMonitorEnabledChange =
                         experimentalViewModel::setMonitorEnabled,
                     onEnableUnconfirmedMonitor =
@@ -207,6 +216,13 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         showNewAppResult(intent)
+        showGuard(intent)
+    }
+
+    private fun showGuard(intent: Intent) {
+        if (!intent.getBooleanExtra(GuardNotifier.EXTRA_OPEN_GUARD, false)) return
+        intent.removeExtra(GuardNotifier.EXTRA_OPEN_GUARD)
+        openGuardRequests.intValue++
     }
 
     /**
@@ -266,6 +282,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         (application as AppOpsNextApplication).apply {
             newAppPolicyCoordinator.onAppForeground()
+            guardController.onAppForeground()
             historyArchiveRecorder.onAppForeground()
         }
         appListViewModel.refreshAfterResume()

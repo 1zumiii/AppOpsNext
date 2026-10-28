@@ -20,12 +20,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayItem
@@ -109,12 +112,16 @@ private fun rememberPermissionItems(query: String): List<AppOpDisplayItem> {
             },
         )
     }
-    return remember(query, context, alternateContext) {
+    val structuredReads = (context.applicationContext as AppOpsNextApplication).structuredAppOpsReads
+    // The probe can finish after this screen opens; the list then gains the device's extra operations.
+    val readCapabilities by structuredReads.enabled.collectAsStateWithLifecycle()
+    return remember(query, context, alternateContext, readCapabilities) {
         AppOpDisplayCatalog.build(
             entries = emptyList(),
             query = query,
             labelResolver = context::getString,
             alternateLabelResolver = alternateContext::getString,
+            extraOperations = structuredReads.deviceOps().orEmpty().map { it.shellName },
         )
     }
 }

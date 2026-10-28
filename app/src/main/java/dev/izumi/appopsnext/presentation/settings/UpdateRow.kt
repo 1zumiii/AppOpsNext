@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -19,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.BuildConfig
 import dev.izumi.appopsnext.R
@@ -60,6 +62,7 @@ fun AppVersionRow(
                     BuildConfig.VERSION_NAME,
                     BuildConfig.VERSION_CODE,
                 ),
+                softWrap = false,
             )
         },
         trailingContent = { UpdateStatus(updateState) },
@@ -98,8 +101,11 @@ private fun UpdateStatus(state: UpdateState) {
 
 @Composable
 private fun StatusLabel(text: String) {
+    // Wraps on its own instead of squeezing the version number beside it.
     Text(
         text = text,
+        modifier = Modifier.widthIn(max = 150.dp),
+        textAlign = TextAlign.End,
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

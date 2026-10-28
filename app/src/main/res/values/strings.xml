@@ -109,6 +109,7 @@
     <string name="app_detail_mode_deny_fallback_applied">Android rejected Deny. AppOpsNext restored the original value and successfully set this permission to Ignore.</string>
     <string name="app_detail_mode_deny_fallback_dont_show">Do not show this automatic fallback result again</string>
     <string name="app_detail_mode_change_rejected_hint">The system did not retain the requested mode. AppOps cannot grant a capability blocked by an Android runtime permission or vendor policy, but it can further restrict a granted permission.</string>
+    <string name="app_detail_mode_change_rejected_policy_hint">The system did not retain the requested mode. This operation is not tied to a runtime permission, so the system or a vendor policy most likely rejected the change. AppOpsNext cannot override this restriction.</string>
     <string name="app_detail_mode_allow_foreground_hint">Android rejected Allow. If this permission supports while-in-use access, you can manually try Foreground only.</string>
     <string name="app_detail_mode_runtime_managed_hint">On this system, Android manages this AppOp through the runtime permission and does not accept direct AppOps changes.</string>
     <string name="app_detail_mode_permission_flag_title">Set to Ignore through the permission</string>
@@ -562,4 +563,49 @@
     <string name="permission_runtime_granted">Runtime permission granted</string>
     <string name="permission_runtime_denied">Runtime permission not granted</string>
     <string name="permission_info_grants">For ignored permissions, the extra label shows the current Android grant status. The mode alone cannot identify a manual change or a compatibility revocation.</string>
+
+    <!-- Setting guard -->
+    <string name="guard_section">Guard</string>
+    <string name="guard_title">Setting guard</string>
+    <string name="guard_entry_summary">Notice when a setting you chose is changed back</string>
+    <string name="guard_caption">Guarded settings are compared with the device. When the system, a vendor policy or another app changes one, AppOpsNext reports it and can restore it.</string>
+    <string name="guard_mode_section">Check mode</string>
+    <string name="guard_mode_off">Off</string>
+    <string name="guard_mode_off_summary">Settings are not checked</string>
+    <string name="guard_mode_periodic">Hourly check</string>
+    <string name="guard_mode_periodic_summary">Checks every hour and when the app opens. A change is found with a delay.</string>
+    <string name="guard_mode_realtime">Realtime</string>
+    <string name="guard_mode_realtime_summary">Finds a change as it happens. Needs an ongoing notification and stops while Shizuku is stopped.</string>
+    <string name="guard_rules_section">Guarded settings</string>
+    <string name="guard_check_now">Check now</string>
+    <string name="guard_checking">Checking</string>
+    <string name="guard_rules_empty">No guarded settings yet. Select “Guard this setting” when changing a permission.</string>
+    <string name="guard_rule_expected">Kept at %1$s</string>
+    <string name="guard_rule_expected_uid">Kept at %1$s for the whole UID</string>
+    <string name="guard_rule_auto_restore">Restore automatically</string>
+    <string name="guard_rule_remove">Stop guarding</string>
+    <string name="guard_events_section">Recent changes</string>
+    <string name="guard_events_clear">Clear</string>
+    <string name="guard_events_empty">No changes found.</string>
+    <string name="guard_event_drift">%1$s · %2$s changed to %3$s, the guarded setting is %4$s</string>
+    <string name="guard_event_restored">%1$s · %2$s changed to %3$s and was restored to %4$s</string>
+    <string name="guard_event_restore_failed">%1$s · %2$s changed to %3$s and could not be restored to %4$s</string>
+    <string name="guard_event_restore_limit">%1$s · %2$s keeps changing to %3$s. Automatic restore pauses for 24 hours.</string>
+    <string name="guard_event_change">Changed to %1$s</string>
+    <string name="guard_event_outcome_restored">Restored</string>
+    <string name="guard_event_outcome_drift">Notified only</string>
+    <string name="guard_event_outcome_failed">Restore failed</string>
+    <string name="guard_event_outcome_limit">Restore paused for 24 hours</string>
+    <string name="guard_channel_events">Guard alerts</string>
+    <string name="guard_channel_status">Realtime guard</string>
+    <string name="guard_service_title">Realtime guard is on</string>
+    <string name="guard_confirm_option">Guard this setting</string>
+    <plurals name="guard_service_text">
+        <item quantity="one">Watching %d setting</item>
+        <item quantity="other">Watching %d settings</item>
+    </plurals>
+    <plurals name="guard_notification_title">
+        <item quantity="one">%d guarded setting changed</item>
+        <item quantity="other">%d guarded settings changed</item>
+    </plurals>
 </resources>

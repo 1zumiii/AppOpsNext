@@ -60,6 +60,7 @@ fun ExperimentalScreen(
     onMonitorChange: (Boolean) -> Unit,
     onEnableUnconfirmedMonitor: () -> Unit,
     onOpenWatchers: () -> Unit,
+    onOpenGuard: () -> Unit,
     onOpenSettings: () -> Unit,
     logCount: Int,
     onOpenLog: () -> Unit,
@@ -165,6 +166,18 @@ fun ExperimentalScreen(
                                 },
                             )
                         },
+                        trailingContent = { MainPageChevron() },
+                    )
+                }
+            }
+            item {
+                ExperimentalSectionTitle(stringResource(R.string.guard_section))
+                ExperimentalGroup {
+                    ExperimentalGroupRow(
+                        modifier = Modifier.clickable(onClick = onOpenGuard),
+                        leadingContent = { ExperimentalRowIcon(R.drawable.ic_ph_shield) },
+                        headlineContent = { Text(stringResource(R.string.guard_title)) },
+                        supportingContent = { Text(stringResource(R.string.guard_entry_summary)) },
                         trailingContent = { MainPageChevron() },
                     )
                 }
@@ -308,7 +321,7 @@ private fun MonitorFeature(
 }
 
 @Composable
-private fun ExperimentalSectionTitle(text: String) {
+internal fun ExperimentalSectionTitle(text: String) {
     Text(
         text = text,
         modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 8.dp),

@@ -111,6 +111,25 @@ class AppOpDisplayCatalogTest {
     private fun englishLabel(resourceId: Int): String =
         englishLabels[resourceId] ?: "label-$resourceId"
 
+    @Test fun `device operations beyond the catalog are listed after it as default rows`() {
+        val items = AppOpDisplayCatalog.build(
+            entries = listOf(entry("VENDOR_PRIVATE_OP", "allow")),
+            query = "",
+            labelResolver = ::label,
+            extraOperations = listOf("NEW_IN_17", "CAMERA", "VENDOR_PRIVATE_OP", "NEW_IN_17"),
+        )
+        val added = items.filter { it.operationName == "NEW_IN_17" }
+        assertEquals(1, added.size)
+        assertEquals(true, added.single().isImplicitDefault)
+        assertEquals(
+            true,
+            items.indexOfFirst { it.operationName == "NEW_IN_17" } >
+                items.indexOfLast { it.labelRes != null },
+        )
+        assertEquals(1, items.count { it.operationName.equals("CAMERA", ignoreCase = true) })
+        assertEquals("allow", items.single { it.operationName == "VENDOR_PRIVATE_OP" }.mode)
+    }
+
     private fun entry(
         name: String,
         mode: String,

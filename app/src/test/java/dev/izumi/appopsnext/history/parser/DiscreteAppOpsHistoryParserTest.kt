@@ -110,4 +110,35 @@ class DiscreteAppOpsHistoryParserTest {
                 Locale.US,
             ).parse(value),
         ).time
+
+    @Test
+    fun `reads the Android 17 table and pairs the count row with the duration row`() {
+        val result = parser.parse("CAMERA", ANDROID_17_TABLE)
+
+        assertEquals(1, result.size)
+        val event = result.single()
+        assertEquals(10186, event.uid)
+        assertEquals("com.android.camera2", event.packageName)
+        assertEquals(null, event.attributionTag)
+        assertEquals(1075L, event.durationMillis)
+        assertEquals("top", event.uidState)
+        assertEquals("s", event.flags)
+        assertEquals(timestamp("2026-10-28 16:40:34.156"), event.accessTimeMillis)
+    }
+
+    private companion object {
+        val ANDROID_17_TABLE = """
+            AppOps Historical Service State:
+
+            History:  mode=HISTORICAL_MODE_ENABLED_ACTIVE
+            Database Total records: SHORT_INTERVAL=10, LONG_INTERVAL=0
+            ------------Discrete App Ops-------------
+
+            UID|PACKAGE_NAME|DEVICE_ID|OP_NAME|ATTRIBUTION_TAG|ACCESS_TIME|ACCESS_COUNTS|REJECT_COUNTS|DURATION|UID_STATE|OP_FLAGS|ATTRIBUTION_CHAIN_ID|ATTRIBUTION_FLAGS
+            10186|com.android.camera2|default:0|CAMERA|null|2026-10-28 16:40:34.156|0|0|1075|top|s|-1|1
+            10186|com.android.camera2|default:0|CAMERA|null|2026-10-28 16:40:34.156|1|0|0|top|s|-1|1
+            10186|com.android.camera2|default:0|RECORD_AUDIO|null|2026-10-28 16:40:35.000|1|0|0|top|s|-1|1
+            10190|com.example|default:0|CAMERA|tag|2026-10-28 16:41:00.000|0|1|0|fg|s|-1|1
+        """.trimIndent()
+    }
 }

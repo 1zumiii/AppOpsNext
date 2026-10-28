@@ -312,7 +312,8 @@ details.
 Copyright (C) 2026 1zumiii.
 
 Third-party components keep their own licenses: the Shizuku API is MIT, and the
-Phosphor Icons are MIT; AndroidX and Jetpack Compose are Apache-2.0. These are
+Phosphor Icons are MIT; AndroidX, Jetpack Compose and HiddenApiBypass are
+Apache-2.0. These are
 compatible with GPL-3.0. The Phosphor notice is included in the app at
 `app/src/main/assets/licenses/phosphor-icons.txt`.
 

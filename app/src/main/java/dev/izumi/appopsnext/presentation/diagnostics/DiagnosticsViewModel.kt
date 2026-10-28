@@ -8,6 +8,7 @@ import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.appops.AppOpsWatchersRepository
 import dev.izumi.appopsnext.appops.model.AppOpsReadState
 import dev.izumi.appopsnext.diagnostics.DiagnosticEnvironmentCollector
+import dev.izumi.appopsnext.appops.AppOpsReadCapabilities
 import dev.izumi.appopsnext.diagnostics.DiagnosticReportComposer
 import dev.izumi.appopsnext.model.DeviceSummary
 import dev.izumi.appopsnext.shizuku.ShizukuController
@@ -39,6 +40,12 @@ class DiagnosticsViewModel(
         watcherRegistry,
         getApplication<AppOpsNextApplication>().appOpsMonitorController.status,
     ) { registry, monitor -> "$registry\nmonitor=$monitor" }
+    private val readPaths = combine(
+        getApplication<AppOpsNextApplication>().appOpsReadCapabilities.status,
+        getApplication<AppOpsNextApplication>().structuredAppOpsReads.enabled,
+        AppOpsReadCapabilities::report,
+    )
+    private val registryReports = combine(monitorReport, readPaths, ::Pair)
 
     private val device = DeviceSummary(
         manufacturer = diagnosticEnvironment.manufacturer,
@@ -52,8 +59,8 @@ class DiagnosticsViewModel(
         privilegedServiceClient.state,
         appOpsReadState,
         diagnosticLog.lines,
-        monitorReport,
-    ) { shizukuState, serviceState, readState, logLines, watchers ->
+        registryReports,
+    ) { shizukuState, serviceState, readState, logLines, (watchers, reads) ->
         DiagnosticsUiState(
             device = device,
             shizukuState = shizukuState,
@@ -66,6 +73,7 @@ class DiagnosticsViewModel(
                 appOpsReadState = readState,
                 eventLines = logLines,
                 watcherRegistry = watchers,
+                readPaths = reads,
             ),
             diagnosticEventCount = logLines.size,
         )

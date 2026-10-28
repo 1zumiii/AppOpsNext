@@ -1,5 +1,7 @@
 package dev.izumi.appopsnext.presentation
 
+import dev.izumi.appopsnext.presentation.experimental.GuardScreen
+import dev.izumi.appopsnext.presentation.experimental.GuardViewModel
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
@@ -81,7 +83,7 @@ fun AppOpsRootScreen(
     onPermissionSelected: (String?) -> Unit,
     onRefreshPermission: () -> Unit,
     onPermissionModeChangeRequested: (InstalledApp, AppOpMode) -> Unit,
-    onPermissionModeChangeConfirmed: () -> Unit,
+    onPermissionModeChangeConfirmed: (guard: Boolean) -> Unit,
     onPermissionModeChangeDismissed: () -> Unit,
     onPermissionDenyNoticeDismissed: (Boolean) -> Unit,
     onPermissionFlagNoticeDismissedForBrowser: (Boolean) -> Unit,
@@ -105,7 +107,7 @@ fun AppOpsRootScreen(
         AppOpMode,
         AppOpMode,
     ) -> Unit,
-    onAppOpModeChangeConfirmed: () -> Unit,
+    onAppOpModeChangeConfirmed: (guard: Boolean) -> Unit,
     onAppOpModeChangeDismissed: () -> Unit,
     onDenyFallbackNoticeDismissed: (Boolean) -> Unit,
     onPermissionFlagNoticeDismissed: (Boolean) -> Unit,
@@ -120,6 +122,8 @@ fun AppOpsRootScreen(
     onClearMonitorLog: () -> Unit,
     watchersUiState: WatchersUiState,
     onRefreshWatchers: () -> Unit,
+    guardViewModel: GuardViewModel,
+    openGuardRequest: Int,
     onMonitorEnabledChange: (Boolean) -> Unit,
     onEnableUnconfirmedMonitor: () -> Unit,
     onMonitorHeadsUpChange: (Boolean) -> Unit,
@@ -185,6 +189,9 @@ fun AppOpsRootScreen(
     var showSavedHistory by rememberSaveable { mutableStateOf(false) }
     var experimentalRoute by rememberSaveable {
         mutableStateOf<String?>(null)
+    }
+    LaunchedEffect(openGuardRequest) {
+        if (openGuardRequest > 0) experimentalRoute = ROUTE_GUARD
     }
     var monitorPointKey by rememberSaveable { mutableStateOf<String?>(null) }
     var monitorAppPackage by rememberSaveable {
@@ -256,6 +263,7 @@ fun AppOpsRootScreen(
             (
                 experimentalRoute == ROUTE_MONITOR_SETTINGS ||
                     experimentalRoute == ROUTE_WATCHERS ||
+                    experimentalRoute == ROUTE_GUARD ||
                     experimentalRoute == ROUTE_MONITOR_LOG
                 ),
     ) {
@@ -405,6 +413,11 @@ fun AppOpsRootScreen(
                 onClear = onClearMonitorLog,
             )
 
+            experimentalRoute == ROUTE_GUARD -> GuardScreen(
+                viewModel = guardViewModel,
+                onBack = { experimentalRoute = ROUTE_EXPERIMENTAL },
+            )
+
             experimentalRoute == ROUTE_WATCHERS -> WatchersScreen(
                 uiState = watchersUiState,
                 onRefresh = onRefreshWatchers,
@@ -417,6 +430,7 @@ fun AppOpsRootScreen(
                 onMonitorChange = onMonitorEnabledChange,
                 onEnableUnconfirmedMonitor = onEnableUnconfirmedMonitor,
                 onOpenWatchers = { experimentalRoute = ROUTE_WATCHERS },
+                onOpenGuard = { experimentalRoute = ROUTE_GUARD },
                 onOpenSettings = { experimentalRoute = ROUTE_MONITOR_SETTINGS },
                 logCount = monitorLogEntries().size,
                 onOpenLog = { experimentalRoute = ROUTE_MONITOR_LOG },
@@ -662,6 +676,7 @@ private val InstalledAppStateSaver = listSaver<InstalledApp?, Any>(
 private const val SAVED_APP_FIELD_COUNT = 4
 private const val ROUTE_EXPERIMENTAL = "experimental"
 private const val ROUTE_WATCHERS = "watchers"
+private const val ROUTE_GUARD = "guard"
 private const val ROUTE_MONITOR_SETTINGS = "monitor_settings"
 private const val ROUTE_MONITOR_TARGETS = "monitor_targets"
 private const val ROUTE_MONITOR_POINTS = "monitor_points"

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedButton
@@ -33,14 +34,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.guard.GuardMode
+import dev.izumi.appopsnext.guard.guards
 import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.presentation.components.PermissionEntryIcon
+import dev.izumi.appopsnext.appops.AppOpRuntimePermissionCatalog
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpModeChangePhase
 import dev.izumi.appopsnext.appops.model.AppOpsRestorationStatus
@@ -200,7 +207,7 @@ internal fun EditableModeMenu(
 @Composable
 internal fun ModeChangeDialog(
     state: AppOpModeChangeUiState,
-    onConfirm: () -> Unit,
+    onConfirm: (guard: Boolean) -> Unit,
     onDismiss: () -> Unit,
     onDenyFallbackNoticeDismiss: (Boolean) -> Unit,
     onPermissionFlagNoticeDismiss: (Boolean) -> Unit,
@@ -208,6 +215,14 @@ internal fun ModeChangeDialog(
     /** The permission page lists many apps, so its confirmation names the package. */
     showPackageName: Boolean = false,
 ) {
+    val guardRepository = (LocalContext.current.applicationContext as AppOpsNextApplication).guardRepository
+    val guardMode by guardRepository.mode.collectAsStateWithLifecycle(GuardMode.OFF)
+    val guardRules by guardRepository.rules.collectAsStateWithLifecycle(emptyList())
+    // A setting that is already guarded stays guarded at its new mode unless the user unchecks it.
+    val alreadyGuarded = (state as? AppOpModeChangeUiState.Confirming)?.request
+        ?.let { guardRules.guards(it.packageName, it.operationName) } == true
+    var guardChoice by remember(state) { mutableStateOf<Boolean?>(null) }
+    val guardRequested = guardChoice ?: alreadyGuarded
     when (state) {
         is AppOpModeChangeUiState.Confirming -> AppBottomSheet(
             onDismissRequest = onDismiss,
@@ -269,10 +284,28 @@ internal fun ModeChangeDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                    if (guardMode != GuardMode.OFF || alreadyGuarded) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .toggleable(
+                                    value = guardRequested,
+                                    role = Role.Checkbox,
+                                    onValueChange = { guardChoice = it },
+                                ),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Checkbox(checked = guardRequested, onCheckedChange = null)
+                            Text(
+                                text = stringResource(R.string.guard_confirm_option),
+                                modifier = Modifier.padding(start = 8.dp),
+                            )
+                        }
+                    }
                 }
             },
             confirmButton = {
-                Button(onClick = onConfirm) {
+                Button(onClick = { onConfirm(guardRequested) }) {
                     Text(text = stringResource(R.string.action_apply))
                 }
             },
@@ -492,9 +525,17 @@ private fun ModeChangeFailureDialog(
                     state.result.phase ==
                     AppOpModeChangePhase.VERIFY_REQUESTED
                 ) {
+                    val runtimePermissionOp =
+                        AppOpRuntimePermissionCatalog.requiredPermission(
+                            state.request.operationName,
+                        ) != null
                     Text(
                         text = stringResource(
-                            R.string.app_detail_mode_change_rejected_hint,
+                            if (runtimePermissionOp) {
+                                R.string.app_detail_mode_change_rejected_hint
+                            } else {
+                                R.string.app_detail_mode_change_rejected_policy_hint
+                            },
                         ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
