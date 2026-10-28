@@ -41,6 +41,41 @@ interface PrivilegedAppOpsGateway {
     ): ShellCommandResult =
         error("Permission flag writes are not implemented by this gateway")
 
+    suspend fun listUsers(): ShellCommandResult =
+        error("User listing is not implemented by this gateway")
+
+    suspend fun listPackagesForUser(userId: Int): ShellCommandResult =
+        error("Per-user package listing is not implemented by this gateway")
+
+    suspend fun getPackageOpsForUser(
+        userId: Int,
+        packageName: String,
+    ): ShellCommandResult =
+        error("User-scoped reads are not implemented by this gateway")
+
+    suspend fun getPackageOpForUser(
+        userId: Int,
+        packageName: String,
+        operationName: String,
+    ): ShellCommandResult =
+        error("User-scoped reads are not implemented by this gateway")
+
+    suspend fun setPackageOpModeForUser(
+        userId: Int,
+        packageName: String,
+        operationName: String,
+        mode: AppOpMode,
+    ): ShellCommandResult =
+        error("User-scoped writes are not implemented by this gateway")
+
+    suspend fun setUidOpModeForUser(
+        userId: Int,
+        packageName: String,
+        operationName: String,
+        mode: AppOpMode,
+    ): ShellCommandResult =
+        error("User-scoped writes are not implemented by this gateway")
+
     suspend fun setPackageOpMode(
         packageName: String,
         operationName: String,

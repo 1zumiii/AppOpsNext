@@ -284,7 +284,7 @@ internal fun ModeChangeDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    if (guardMode != GuardMode.OFF || alreadyGuarded) {
+                    if ((guardMode != GuardMode.OFF || alreadyGuarded) && state.request.userId == null) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()

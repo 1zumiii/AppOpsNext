@@ -8,6 +8,7 @@ import dev.izumi.appopsnext.appops.StructuredAppOpsReads
 import dev.izumi.appopsnext.appops.model.PackageOpsLoadResult
 import dev.izumi.appopsnext.appops.RevokedCompatWriteMemory
 import dev.izumi.appopsnext.apps.InstalledAppsRepository
+import dev.izumi.appopsnext.apps.UserAppsRepository
 import dev.izumi.appopsnext.backup.AppBackupService
 import dev.izumi.appopsnext.diagnostics.DiagnosticEnvironmentCollector
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
@@ -59,6 +60,10 @@ class AppOpsNextApplication : Application() {
 
     val installedAppsRepository: InstalledAppsRepository by lazy {
         InstalledAppsRepository(this)
+    }
+
+    val userAppsRepository: UserAppsRepository by lazy {
+        UserAppsRepository(this, privilegedServiceClient)
     }
 
     val structuredAppOpsReads: StructuredAppOpsReads by lazy {

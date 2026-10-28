@@ -86,9 +86,11 @@ class StructuredAppOpsReads internal constructor(
     suspend fun packageOps(
         packageName: String,
         uid: Int?,
+        userId: Int? = null,
         force: Boolean = false,
     ): PackageOpsSnapshot? = attempt(AppOpsReadCapability.PACKAGE_OPS, force) {
-        val appUid = uid ?: uidOf(packageName) ?: error("Unknown package $packageName")
+        val appUid = uid ?: uidFor(packageName, userId)
+            ?: error("Unknown package $packageName")
         val names = checkNotNull(nameByCode) { "Operation names are unavailable" }
         reader.session {
             StructuredOpsMapper.packageSnapshot(
@@ -105,9 +107,11 @@ class StructuredAppOpsReads internal constructor(
         packageName: String,
         operationName: String,
         scope: AppOpScope,
+        userId: Int? = null,
         force: Boolean = false,
     ): AppOpMode? = attempt(AppOpsReadCapability.PACKAGE_OPS, force) {
-        val uid = uidOf(packageName) ?: error("Unknown package $packageName")
+        val uid = uidFor(packageName, userId)
+            ?: error("Unknown package $packageName")
         val code = codeOf(operationName)
         val ops = intArrayOf(code)
         val records = reader.session {
@@ -136,6 +140,15 @@ class StructuredAppOpsReads internal constructor(
                 uidRecords = uids.distinct().flatMap { uidOps(it, ops) },
             )
         } ?: error("Unknown mode for $operationName")
+    }
+
+    /**
+     * A package keeps one app id on every user, so another user's uid is that
+     * user's range plus the app id seen here. Null when this user lacks the app.
+     */
+    private fun uidFor(packageName: String, userId: Int?): Int? {
+        val own = uidOf(packageName) ?: return null
+        return if (userId == null) own else UserUids.forUser(userId, own)
     }
 
     private fun codeOf(operationName: String): Int =

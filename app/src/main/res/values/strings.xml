@@ -82,6 +82,8 @@
     <string name="app_list_count">Showing %1$d of %2$d apps</string>
     <string name="app_list_load_failed">Could not load installed apps</string>
     <string name="app_list_empty_search">No matching apps</string>
+    <string name="user_named">%1$s (%2$d)</string>
+    <string name="user_unnamed">User %1$d</string>
     <string name="app_icon_description">App icon for %1$s</string>
     <string name="app_type_system">System app · UID %1$d</string>
     <string name="app_type_user">User app · UID %1$d</string>

@@ -67,8 +67,9 @@ class PermissionBrowserViewModel(
                 val states = withContext(Dispatchers.IO) {
                     repository.loadOpStates(
                         operationName = operation,
-                        userId = Process.myUid() / 100000,
-                        uids = app.installedAppsRepository.loadInstalledApps().map { it.uid },
+                        userId = app.userAppsRepository.selectedUserId.value
+                            ?: app.userAppsRepository.currentUserId,
+                        uids = loadedApps().map { it.uid },
                     )
                 }
                 mutableState.value = PermissionBrowserState(
@@ -109,7 +110,9 @@ class PermissionBrowserViewModel(
                 originalMode = originalMode,
                 requestedMode = mode,
                 affectedPackages = affectedPackages(appRow, effective.scope),
-                runtimePermissionDenied = isRuntimePermissionDenied(appRow, operation),
+                runtimePermissionDenied = appRow.userId == null &&
+                    isRuntimePermissionDenied(appRow, operation),
+                userId = appRow.userId,
             ),
         )
     }
@@ -140,6 +143,7 @@ class PermissionBrowserViewModel(
                                 packageName = target.packageName,
                                 operation = operation,
                                 scope = scope,
+                                userId = target.userId,
                             )
                         },
                         revokedCompatRetry = RevokedCompatRetry(
@@ -151,6 +155,7 @@ class PermissionBrowserViewModel(
                                 operation = operation,
                                 permissionName = permission,
                                 requestedMode = mode,
+                                userId = target.userId,
                             )
                         },
                     ) { scope ->
@@ -161,6 +166,7 @@ class PermissionBrowserViewModel(
                                 scope = scope,
                                 expectedOriginalMode = request.originalMode,
                                 requestedMode = mode,
+                                userId = target.userId,
                             )
                         } else {
                             transaction.applyMode(
@@ -168,6 +174,7 @@ class PermissionBrowserViewModel(
                                 operation = operation,
                                 scope = scope,
                                 requestedMode = mode,
+                                userId = target.userId,
                             )
                         }
                     }
@@ -182,7 +189,7 @@ class PermissionBrowserViewModel(
                 affectedPackages = affectedPackages(target, appliedScope),
             )
             val settings = app.userSettingsRepository.settings.first()
-            (outcome.result as? AppOpModeChangeResult.Success)?.let { success ->
+            (outcome.result as? AppOpModeChangeResult.Success)?.takeIf { target.userId == null }?.let { success ->
                 app.guardController.onUserChange(
                     packageName = request.packageName,
                     uid = target.uid,
@@ -256,7 +263,17 @@ class PermissionBrowserViewModel(
     }
 
     private fun packagesForUid(uid: Int): List<String> =
-        app.packageManager.getPackagesForUid(uid)?.toList().orEmpty()
+        app.userAppsRepository.packagesForUid(uid)
+
+    /** The apps of the user on screen, which is also what the screen lists. */
+    private suspend fun loadedApps(): List<InstalledApp> {
+        val userId = app.userAppsRepository.selectedUserId.value
+        return if (userId == null) {
+            app.installedAppsRepository.loadInstalledApps()
+        } else {
+            app.userAppsRepository.loadApps(userId)
+        }
+    }
 
     private fun affectedPackages(target: InstalledApp, scope: AppOpScope): List<String> =
         if (scope == AppOpScope.UID) packagesForUid(target.uid)
@@ -270,6 +287,10 @@ class PermissionBrowserViewModel(
 
     private suspend fun readRuntimeGrants(operation: String): Map<String, Boolean> =
         withContext(Dispatchers.IO) {
+            // Grants are read from the current user's package manager only.
+            if (app.userAppsRepository.selectedUserId.value != null) {
+                return@withContext emptyMap()
+            }
             val permission = AppOpRuntimePermissionCatalog.requiredPermission(operation)
                 ?: return@withContext emptyMap()
             // PackageManager reads do not issue one AppOps shell command per app.

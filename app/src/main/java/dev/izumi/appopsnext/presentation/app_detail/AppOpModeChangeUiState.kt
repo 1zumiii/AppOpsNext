@@ -12,6 +12,8 @@ data class AppOpModeChangeRequest(
     val requestedMode: AppOpMode,
     val affectedPackages: List<String>,
     val runtimePermissionDenied: Boolean,
+    /** Null for the user this app runs in. */
+    val userId: Int? = null,
 )
 
 sealed interface AppOpModeChangeUiState {
