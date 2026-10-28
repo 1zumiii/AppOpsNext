@@ -92,6 +92,15 @@ class AppOpsWatchersParserTest {
         assertTrue(snapshot.modeWatchers.last().packages.isEmpty())
     }
 
+    @Test fun `a group title at column 0 ends the noted section`() {
+        // Android 16 QPR2 prints these titles after the watcher sections.
+        val qpr2 = dump() + "\nAppOps Restrictions\n  User restrictions for token android.os.Binder@abc:\n" +
+            "AppOps Uid Op State\n  Uid 10123:\n    state=cch\n"
+        val snapshot = AppOpsWatchersParser.parse(qpr2)
+        assertEquals(emptySet<AccessWatchKind>(), snapshot.malformedAccessKinds)
+        assertEquals(WatchRegistration.CONFIRMED, snapshot.registration(operations, kinds, 2000))
+    }
+
     @Test fun `late sections and unrelated restrictions are not clipped or misparsed`() {
         val longDump = dump().replace("  All op active watchers:",
             "  Settings:\n" + "    setting=value\n".repeat(300) + "  All op active watchers:") +

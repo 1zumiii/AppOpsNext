@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.history.parser
 
+import dev.izumi.appopsnext.history.DiscreteHistoryTable
 import dev.izumi.appopsnext.history.model.AppOpHistoryEvent
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -19,8 +20,18 @@ class DiscreteAppOpsHistoryParser {
         var currentOperation: String? = null
         var attributionTag: String? = null
 
+        var table: DiscreteHistoryTable? = null
+
         output.lineSequence().forEach { rawLine ->
             val line = rawLine.trim()
+            if (line.startsWith(DiscreteHistoryTable.HEADER_PREFIX)) {
+                table = DiscreteHistoryTable(line.split('|'))
+                return@forEach
+            }
+            table?.let { columns ->
+                columns.event(line, operationName, dateFormat)?.let(events::add)
+                return@forEach
+            }
             if (!readingDiscreteHistory) {
                 readingDiscreteHistory = line == DISCRETE_SECTION_HEADER
                 return@forEach

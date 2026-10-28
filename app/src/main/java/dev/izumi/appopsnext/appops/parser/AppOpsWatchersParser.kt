@@ -68,7 +68,9 @@ object AppOpsWatchersParser {
         for (raw in output.lineSequence()) {
             val line = raw.trim()
             if (line.isEmpty()) continue
-            if (raw.startsWith("  ") && !raw.startsWith("   ")) {
+            // Section titles sit at two spaces. Android 16 QPR2 adds group titles at column 0
+            // (`AppOps Restrictions`, `AppOps Uid Op State`), which end a section the same way.
+            if (!raw.startsWith("   ")) {
                 endEntry()
                 section = line.takeIf { it in SECTIONS }
                 if (section != null) recognizedSection = true
