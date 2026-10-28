@@ -5,12 +5,16 @@ import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.apps.AppListFilter
+import dev.izumi.appopsnext.apps.model.AndroidUser
 import dev.izumi.appopsnext.apps.model.InstalledApp
+import dev.izumi.appopsnext.settings.UserSettings
+import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
 import dev.izumi.appopsnext.AppOpsNextApplication
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -23,6 +27,10 @@ class AppListViewModel(
         getApplication<AppOpsNextApplication>().userSettingsRepository
     private val diagnosticLog =
         getApplication<AppOpsNextApplication>().diagnosticLogRepository
+    private val userApps = getApplication<AppOpsNextApplication>().userAppsRepository
+    private val privilegedServiceClient =
+        getApplication<AppOpsNextApplication>().privilegedServiceClient
+    private val users = MutableStateFlow<List<AndroidUser>>(emptyList())
     private val installedApps = MutableStateFlow<List<InstalledApp>>(emptyList())
     private val searchQuery = MutableStateFlow("")
     private val isLoading = MutableStateFlow(true)
@@ -35,7 +43,18 @@ class AppListViewModel(
         isLoading,
         loadFailed,
         settingsRepository.settings,
-    ) { apps, query, loading, failed, settings ->
+        users,
+        userApps.selectedUserId,
+    ) { values ->
+        @Suppress("UNCHECKED_CAST")
+        val apps = values[0] as List<InstalledApp>
+        val query = values[1] as String
+        val loading = values[2] as Boolean
+        val failed = values[3] as Boolean
+        val settings = values[4] as UserSettings
+        @Suppress("UNCHECKED_CAST")
+        val allUsers = values[5] as List<AndroidUser>
+        val selectedUserId = values[6] as Int?
         val eligibleApps = if (settings.hideSystemApps) {
             apps.filterNot(InstalledApp::isSystemApp)
         } else {
@@ -51,6 +70,9 @@ class AppListViewModel(
             ),
             isLoading = loading,
             loadFailed = failed,
+            users = allUsers,
+            selectedUserId = selectedUserId,
+            currentUserId = userApps.currentUserId,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -60,6 +82,32 @@ class AppListViewModel(
 
     init {
         load(forceRefresh = true, holdIndicator = false)
+        // Other users are listed by the privileged backend, so the picker
+        // appears once it connects.
+        viewModelScope.launch {
+            privilegedServiceClient.state.collect { state ->
+                if (state is PrivilegedServiceState.Connected) loadUsers()
+            }
+        }
+    }
+
+    fun selectUser(userId: Int?) {
+        val target = userId?.takeIf { it != userApps.currentUserId }
+        if (target == userApps.selectedUserId.value) return
+        userApps.select(target)
+        searchQuery.value = ""
+        installedApps.value = emptyList()
+        loadJob?.cancel()
+        loadJob = null
+        load(forceRefresh = true, holdIndicator = false)
+    }
+
+    private suspend fun loadUsers() {
+        val loaded = userApps.loadUsers()
+        users.value = loaded
+        // A user that disappeared, such as a removed clone, falls back to the owner.
+        val selected = userApps.selectedUserId.value
+        if (selected != null && loaded.none { it.id == selected }) selectUser(null)
     }
 
     fun updateSearchQuery(query: String) {
@@ -95,7 +143,12 @@ class AppListViewModel(
                 message = "Loading installed applications.",
             )
             runCatching {
-                repository.loadInstalledApps(forceRefresh = forceRefresh)
+                val selected = userApps.selectedUserId.value
+                if (selected == null) {
+                    repository.loadInstalledApps(forceRefresh = forceRefresh)
+                } else {
+                    userApps.loadApps(selected)
+                }
             }.onSuccess { apps ->
                 installedApps.value = apps
                 diagnosticLog.info(
@@ -106,6 +159,7 @@ class AppListViewModel(
                             (SystemClock.elapsedRealtime() - startedAt),
                 )
             }.onFailure { error ->
+                if (error is CancellationException) throw error
                 loadFailed.value = true
                 diagnosticLog.error(
                     source = LOG_SOURCE,

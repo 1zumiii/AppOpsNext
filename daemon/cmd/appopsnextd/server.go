@@ -238,6 +238,67 @@ func parseCommand(request string) (appOpsCommand, error) {
 			"revoked-compat",
 		), nil
 
+	case "LIST_USERS":
+		if len(fields) != 1 {
+			return appOpsCommand{}, errors.New("invalid user list query")
+		}
+		return command("/system/bin/pm", "list", "users"), nil
+
+	case "LIST_PACKAGES_FOR_USER":
+		if len(fields) != 2 || !validUserID(fields[1]) {
+			return appOpsCommand{}, errors.New("invalid user package query")
+		}
+		return command(
+			"/system/bin/pm",
+			"list",
+			"packages",
+			"--user",
+			fields[1],
+			"-U",
+		), nil
+
+	case "GET_USER_PACKAGE_OPS":
+		if len(fields) != 3 ||
+			!validUserID(fields[1]) ||
+			!validPackageName(fields[2]) {
+			return appOpsCommand{}, errors.New("invalid user package query")
+		}
+		return command(
+			"/system/bin/cmd",
+			"appops",
+			"get",
+			"--user",
+			fields[1],
+			fields[2],
+		), nil
+
+	case "GET_USER_PACKAGE_OP":
+		if len(fields) != 4 ||
+			!validUserID(fields[1]) ||
+			!validPackageName(fields[2]) ||
+			!validOperationName(fields[3]) {
+			return appOpsCommand{}, errors.New("invalid user operation query")
+		}
+		return command(
+			"/system/bin/cmd",
+			"appops",
+			"get",
+			"--user",
+			fields[1],
+			fields[2],
+			fields[3],
+		), nil
+
+	case "SET_USER_PACKAGE", "SET_USER_UID":
+		if !validUserModeCommand(fields) {
+			return appOpsCommand{}, errors.New("invalid user mode request")
+		}
+		arguments := []string{"/system/bin/cmd", "appops", "set", "--user", fields[1]}
+		if fields[0] == "SET_USER_UID" {
+			arguments = append(arguments, "--uid")
+		}
+		return command(append(arguments, fields[2], fields[3], fields[4])...), nil
+
 	default:
 		return appOpsCommand{}, errors.New("unsupported daemon command")
 	}
@@ -247,12 +308,23 @@ func validPermissionFlagCommand(fields []string) bool {
 	if len(fields) != 4 {
 		return false
 	}
-	userID, err := strconv.Atoi(fields[1])
-	return err == nil &&
-		userID >= 0 &&
-		strconv.Itoa(userID) == fields[1] &&
+	return validUserID(fields[1]) &&
 		validPackageName(fields[2]) &&
 		validPermissionName(fields[3])
+}
+
+// validUserID accepts the canonical decimal form only, so "07" and "+7" cannot
+// reach the shell command under a different spelling.
+func validUserID(value string) bool {
+	userID, err := strconv.Atoi(value)
+	return err == nil && userID >= 0 && strconv.Itoa(userID) == value
+}
+
+func validUserModeCommand(fields []string) bool {
+	if len(fields) != 5 || !validUserID(fields[1]) {
+		return false
+	}
+	return validModeCommand(append([]string{fields[0]}, fields[2:]...))
 }
 
 func validPermissionName(value string) bool {

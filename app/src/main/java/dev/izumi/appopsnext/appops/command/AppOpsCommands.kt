@@ -151,6 +151,88 @@ object AppOpsCommands {
         )
     }
 
+    fun listUsers(): List<String> = listOf(PM_BINARY, "list", "users")
+
+    fun listPackagesForUser(userId: Int): List<String> {
+        validateUserId(userId)
+
+        return listOf(
+            PM_BINARY, "list", "packages", USER_OPTION, userId.toString(), "-U",
+        )
+    }
+
+    fun getPackageOpsForUser(userId: Int, packageName: String): List<String> {
+        validateUserId(userId)
+        validatePackageName(packageName)
+
+        return listOf(
+            COMMAND_BINARY,
+            APP_OPS_SERVICE,
+            GET_COMMAND,
+            USER_OPTION,
+            userId.toString(),
+            packageName,
+        )
+    }
+
+    fun getPackageOpForUser(
+        userId: Int,
+        packageName: String,
+        operationName: String,
+    ): List<String> {
+        validateOperationName(operationName)
+        return getPackageOpsForUser(userId, packageName) + operationName
+    }
+
+    fun setPackageOpModeForUser(
+        userId: Int,
+        packageName: String,
+        operationName: String,
+        mode: AppOpMode,
+    ): List<String> {
+        validateUserId(userId)
+        validatePackageName(packageName)
+        validateOperationName(operationName)
+
+        return listOf(
+            COMMAND_BINARY,
+            APP_OPS_SERVICE,
+            SET_COMMAND,
+            USER_OPTION,
+            userId.toString(),
+            packageName,
+            operationName,
+            mode.shellValue,
+        )
+    }
+
+    fun setUidOpModeForUser(
+        userId: Int,
+        packageName: String,
+        operationName: String,
+        mode: AppOpMode,
+    ): List<String> {
+        validateUserId(userId)
+        validatePackageName(packageName)
+        validateOperationName(operationName)
+
+        return listOf(
+            COMMAND_BINARY,
+            APP_OPS_SERVICE,
+            SET_COMMAND,
+            USER_OPTION,
+            userId.toString(),
+            UID_OPTION,
+            packageName,
+            operationName,
+            mode.shellValue,
+        )
+    }
+
+    private fun validateUserId(userId: Int) {
+        require(userId >= 0) { "Invalid Android user" }
+    }
+
     private fun validatePackageName(packageName: String) {
         require(PackageNameValidator.isValid(packageName)) {
             "Invalid Android package name"
@@ -164,6 +246,7 @@ object AppOpsCommands {
     }
 
     private const val COMMAND_BINARY = "/system/bin/cmd"
+    private const val PM_BINARY = "/system/bin/pm"
     private const val DUMPSYS_BINARY = "/system/bin/dumpsys"
     private const val APP_OPS_SERVICE = "appops"
     private const val PACKAGE_SERVICE = "package"

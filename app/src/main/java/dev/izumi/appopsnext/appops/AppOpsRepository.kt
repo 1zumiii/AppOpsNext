@@ -41,8 +41,9 @@ class AppOpsRepository(
     suspend fun readPackageOps(
         packageName: String,
         uid: Int? = null,
+        userId: Int? = null,
     ): AppOpsReadState {
-        return when (val result = loadPackageOps(packageName, uid)) {
+        return when (val result = loadPackageOps(packageName, uid, userId)) {
             is PackageOpsLoadResult.Success -> AppOpsReadState.Ready(
                 operationCount = result.snapshot.entries.size,
             )
@@ -53,23 +54,33 @@ class AppOpsRepository(
         }
     }
 
+    /**
+     * [userId] null means the user this app runs in. For another user pass the
+     * app's [uid] when it is known, since the binder read is uid based.
+     */
     suspend fun loadPackageOps(
         packageName: String,
         uid: Int? = null,
+        userId: Int? = null,
     ): PackageOpsLoadResult {
-        structuredReads?.packageOps(packageName, uid)?.let { snapshot ->
+        structuredReads?.packageOps(packageName, uid, userId)?.let { snapshot ->
             return PackageOpsLoadResult.Success(snapshot)
         }
-        return loadPackageOpsFromText(packageName, uid)
+        return loadPackageOpsFromText(packageName, uid, userId)
     }
 
     /** The command path, also the reference the read probe compares against. */
     suspend fun loadPackageOpsFromText(
         packageName: String,
         uid: Int? = null,
+        userId: Int? = null,
     ): PackageOpsLoadResult {
         val commandResult = catchBackendFailure {
-            privilegedGateway.getPackageOps(packageName)
+            if (userId == null) {
+                privilegedGateway.getPackageOps(packageName)
+            } else {
+                privilegedGateway.getPackageOpsForUser(userId, packageName)
+            }
         }.getOrElse {
             return PackageOpsLoadResult.Failure(
                 AppOpsReadFailureReason.BACKEND_UNAVAILABLE,
@@ -91,7 +102,7 @@ class AppOpsRepository(
         val snapshot = if (
             parsedSnapshot.entries.any { it.scope == AppOpScope.UID }
         ) {
-            resolveEntryScopes(parsedSnapshot, uid)
+            resolveEntryScopes(parsedSnapshot, uid, userId)
         } else {
             parsedSnapshot
         }
@@ -135,11 +146,12 @@ class AppOpsRepository(
     private suspend fun resolveEntryScopes(
         snapshot: PackageOpsSnapshot,
         uid: Int?,
+        userId: Int?,
     ): PackageOpsSnapshot {
         val uidResolvedSnapshot = uid?.let {
             resolveEntryScopesUsingUidSnapshot(snapshot, it)
         }
-        return uidResolvedSnapshot ?: resolveEntryScopesIndividually(snapshot)
+        return uidResolvedSnapshot ?: resolveEntryScopesIndividually(snapshot, userId)
     }
 
     private suspend fun resolveEntryScopesUsingUidSnapshot(
@@ -181,15 +193,24 @@ class AppOpsRepository(
 
     private suspend fun resolveEntryScopesIndividually(
         snapshot: PackageOpsSnapshot,
+        userId: Int?,
     ): PackageOpsSnapshot {
         val resolvedEntries = snapshot.entries
             .distinctBy { it.name.lowercase(Locale.ROOT) }
             .flatMap { discoveredEntry ->
                 val result = catchBackendFailure {
-                    privilegedGateway.getPackageOp(
-                        packageName = snapshot.packageName,
-                        operationName = discoveredEntry.name,
-                    )
+                    if (userId == null) {
+                        privilegedGateway.getPackageOp(
+                            packageName = snapshot.packageName,
+                            operationName = discoveredEntry.name,
+                        )
+                    } else {
+                        privilegedGateway.getPackageOpForUser(
+                            userId = userId,
+                            packageName = snapshot.packageName,
+                            operationName = discoveredEntry.name,
+                        )
+                    }
                 }.getOrNull()
 
                 if (result?.isSuccessful == true) {
@@ -222,6 +243,7 @@ class AppOpsRepository(
         operation: AppOpIdentifier,
         expectedOriginalMode: AppOpMode,
         requestedMode: AppOpMode,
+        userId: Int? = null,
     ): AppOpModeChangeResult {
         return changeMode(
             packageName = packageName,
@@ -229,6 +251,7 @@ class AppOpsRepository(
             scope = AppOpScope.PACKAGE,
             expectedOriginalMode = expectedOriginalMode,
             requestedMode = requestedMode,
+            userId = userId,
         )
     }
 
@@ -261,10 +284,12 @@ class AppOpsRepository(
             scope: AppOpScope,
             expectedOriginalMode: AppOpMode,
             requestedMode: AppOpMode,
+            userId: Int? = null,
         ): AppOpModeChangeResult = operationMutex.withLock {
             check(active) { "Write transaction has finished" }
             changeModeInTransaction(
                 packageName, operation, scope, expectedOriginalMode, requestedMode,
+                userId,
             )
         }
 
@@ -273,9 +298,10 @@ class AppOpsRepository(
             operation: AppOpIdentifier,
             scope: AppOpScope,
             requestedMode: AppOpMode,
+            userId: Int? = null,
         ): AppOpModeChangeResult = operationMutex.withLock {
             check(active) { "Write transaction has finished" }
-            applyModeInTransaction(packageName, operation, scope, requestedMode)
+            applyModeInTransaction(packageName, operation, scope, requestedMode, userId)
         }
 
         /**
@@ -289,10 +315,11 @@ class AppOpsRepository(
             operation: AppOpIdentifier,
             permissionName: String,
             requestedMode: AppOpMode,
+            userId: Int? = null,
         ): AppOpModeChangeResult? = operationMutex.withLock {
             check(active) { "Write transaction has finished" }
             applyRevokedCompatInTransaction(
-                packageName, uid, operation, permissionName, requestedMode,
+                packageName, uid, operation, permissionName, requestedMode, userId,
             )
         }
     }
@@ -303,9 +330,11 @@ class AppOpsRepository(
         scope: AppOpScope,
         expectedOriginalMode: AppOpMode,
         requestedMode: AppOpMode,
+        userId: Int? = null,
     ): AppOpModeChangeResult = withWriteTransaction { transaction ->
         transaction.changeMode(
             packageName, operation, scope, expectedOriginalMode, requestedMode,
+            userId,
         )
     }
 
@@ -314,8 +343,9 @@ class AppOpsRepository(
         operation: AppOpIdentifier,
         scope: AppOpScope,
         requestedMode: AppOpMode,
+        userId: Int? = null,
     ): AppOpModeChangeResult = withWriteTransaction { transaction ->
-        transaction.applyMode(packageName, operation, scope, requestedMode)
+        transaction.applyMode(packageName, operation, scope, requestedMode, userId)
     }
 
     private suspend fun changeModeInTransaction(
@@ -324,8 +354,9 @@ class AppOpsRepository(
         scope: AppOpScope,
         expectedOriginalMode: AppOpMode,
         requestedMode: AppOpMode,
+        userId: Int?,
     ): AppOpModeChangeResult {
-        val originalMode = readMode(packageName, operation, scope)
+        val originalMode = readMode(packageName, operation, scope, userId)
             ?: return AppOpModeChangeResult.Failure(
                 phase = AppOpModeChangePhase.READ_ORIGINAL,
                 originalMode = null,
@@ -348,6 +379,7 @@ class AppOpsRepository(
             scope = scope,
             originalMode = originalMode,
             requestedMode = requestedMode,
+            userId = userId,
         )
     }
 
@@ -356,8 +388,9 @@ class AppOpsRepository(
         operation: AppOpIdentifier,
         scope: AppOpScope,
         requestedMode: AppOpMode,
+        userId: Int?,
     ): AppOpModeChangeResult {
-        val originalMode = readMode(packageName, operation, scope)
+        val originalMode = readMode(packageName, operation, scope, userId)
             ?: return AppOpModeChangeResult.Failure(
                 phase = AppOpModeChangePhase.READ_ORIGINAL,
                 originalMode = null,
@@ -370,6 +403,7 @@ class AppOpsRepository(
             scope = scope,
             originalMode = originalMode,
             requestedMode = requestedMode,
+            userId = userId,
         )
     }
 
@@ -379,6 +413,7 @@ class AppOpsRepository(
         scope: AppOpScope,
         originalMode: AppOpMode,
         requestedMode: AppOpMode,
+        userId: Int?,
     ): AppOpModeChangeResult {
         if (originalMode == requestedMode) {
             return AppOpModeChangeResult.Success(
@@ -391,7 +426,7 @@ class AppOpsRepository(
         currentCoroutineContext().ensureActive()
         var failurePhase = AppOpModeChangePhase.APPLY_REQUESTED
         try {
-            if (!setMode(packageName, operation, scope, requestedMode)) {
+            if (!setMode(packageName, operation, scope, requestedMode, userId)) {
                 return restoreAfterFailedChange(
                     packageName = packageName,
                     operation = operation,
@@ -399,11 +434,12 @@ class AppOpsRepository(
                     originalMode = originalMode,
                     primaryFailure = AppOpModeChangePhase.APPLY_REQUESTED,
                     observedMode = null,
+                    userId = userId,
                 )
             }
 
             failurePhase = AppOpModeChangePhase.VERIFY_REQUESTED
-            val observedMode = readMode(packageName, operation, scope)
+            val observedMode = readMode(packageName, operation, scope, userId)
             if (observedMode != requestedMode) {
                 return restoreAfterFailedChange(
                     packageName = packageName,
@@ -412,6 +448,7 @@ class AppOpsRepository(
                     originalMode = originalMode,
                     primaryFailure = AppOpModeChangePhase.VERIFY_REQUESTED,
                     observedMode = observedMode,
+                    userId = userId,
                 )
             }
 
@@ -431,6 +468,7 @@ class AppOpsRepository(
                         originalMode = originalMode,
                         primaryFailure = failurePhase,
                         observedMode = null,
+                        userId = userId,
                     )
                 } ?: AppOpModeChangeResult.Failure(
                     phase = AppOpModeChangePhase.RESTORE_ORIGINAL,
@@ -453,8 +491,9 @@ class AppOpsRepository(
         originalMode: AppOpMode,
         primaryFailure: AppOpModeChangePhase,
         observedMode: AppOpMode?,
+        userId: Int?,
     ): AppOpModeChangeResult.Failure {
-        if (!setMode(packageName, operation, scope, originalMode)) {
+        if (!setMode(packageName, operation, scope, originalMode, userId)) {
             return AppOpModeChangeResult.Failure(
                 phase = AppOpModeChangePhase.RESTORE_ORIGINAL,
                 originalMode = originalMode,
@@ -463,7 +502,7 @@ class AppOpsRepository(
             )
         }
 
-        val restoredMode = readMode(packageName, operation, scope)
+        val restoredMode = readMode(packageName, operation, scope, userId)
         if (restoredMode != originalMode) {
             return AppOpModeChangeResult.Failure(
                 phase = AppOpModeChangePhase.VERIFY_RESTORED,
@@ -487,6 +526,7 @@ class AppOpsRepository(
         operation: AppOpIdentifier,
         permissionName: String,
         requestedMode: AppOpMode,
+        requestedUserId: Int?,
     ): AppOpModeChangeResult? {
         val revoke = when (requestedMode) {
             AppOpMode.IGNORE -> true
@@ -498,8 +538,9 @@ class AppOpsRepository(
             ?: return null
         // The flag only restricts a granted permission. It cannot grant one.
         if (!original.granted || original.revokedCompat == revoke) return null
-        val originalMode = readMode(packageName, operation, AppOpScope.UID)
-            ?: return null
+        val originalMode = readMode(
+            packageName, operation, AppOpScope.UID, requestedUserId,
+        ) ?: return null
 
         currentCoroutineContext().ensureActive()
         var failurePhase = AppOpModeChangePhase.APPLY_REQUESTED
@@ -510,11 +551,14 @@ class AppOpsRepository(
                     original, originalMode,
                     primaryFailure = AppOpModeChangePhase.APPLY_REQUESTED,
                     observedMode = null,
+                    restoreUserId = requestedUserId,
                 )
             }
 
             failurePhase = AppOpModeChangePhase.VERIFY_REQUESTED
-            val observedMode = readMode(packageName, operation, AppOpScope.UID)
+            val observedMode = readMode(
+                packageName, operation, AppOpScope.UID, requestedUserId,
+            )
             // Clearing the flag hands the mode back to Android, which derives
             // allow or foreground from the grant. Either lifts the restriction.
             val verified = if (revoke) {
@@ -530,6 +574,7 @@ class AppOpsRepository(
                     original, originalMode,
                     primaryFailure = AppOpModeChangePhase.VERIFY_REQUESTED,
                     observedMode = observedMode,
+                    restoreUserId = requestedUserId,
                 )
             }
 
@@ -545,6 +590,7 @@ class AppOpsRepository(
                         original, originalMode,
                         primaryFailure = failurePhase,
                         observedMode = null,
+                        restoreUserId = requestedUserId,
                     )
                 } ?: AppOpModeChangeResult.Failure(
                     phase = AppOpModeChangePhase.RESTORE_ORIGINAL,
@@ -571,6 +617,7 @@ class AppOpsRepository(
         originalMode: AppOpMode,
         primaryFailure: AppOpModeChangePhase,
         observedMode: AppOpMode?,
+        restoreUserId: Int?,
     ): AppOpModeChangeResult.Failure {
         if (
             !setRevokedCompat(
@@ -586,7 +633,9 @@ class AppOpsRepository(
         }
 
         val restored = readPermissionState(packageName, userId, permissionName)
-        val restoredMode = readMode(packageName, operation, AppOpScope.UID)
+        val restoredMode = readMode(
+            packageName, operation, AppOpScope.UID, restoreUserId,
+        )
         if (restored != original || restoredMode != originalMode) {
             return AppOpModeChangeResult.Failure(
                 phase = AppOpModeChangePhase.VERIFY_RESTORED,
@@ -631,20 +680,22 @@ class AppOpsRepository(
             )
         }.getOrNull()?.isSuccessful == true
 
-    private suspend fun readPackageMode(
-        packageName: String,
-        operation: AppOpIdentifier,
-    ): AppOpMode? =
-        readMode(packageName, operation, AppOpScope.PACKAGE)
-
     suspend fun readMode(
         packageName: String,
         operation: AppOpIdentifier,
         scope: AppOpScope,
+        userId: Int? = null,
     ): AppOpMode? {
-        structuredReads?.mode(packageName, operation.shellName, scope)?.let { return it }
+        structuredReads?.mode(packageName, operation.shellName, scope, userId)
+            ?.let { return it }
         val result = catchBackendFailure {
-            privilegedGateway.getPackageOp(packageName, operation.shellName)
+            if (userId == null) {
+                privilegedGateway.getPackageOp(packageName, operation.shellName)
+            } else {
+                privilegedGateway.getPackageOpForUser(
+                    userId, packageName, operation.shellName,
+                )
+            }
         }.getOrNull() ?: return null
         if (!result.isSuccessful) return null
 
@@ -660,38 +711,33 @@ class AppOpsRepository(
         return AppOpMode.fromShellValue(scopedEntry.mode)
     }
 
-    private suspend fun setPackageMode(
-        packageName: String,
-        operation: AppOpIdentifier,
-        mode: AppOpMode,
-    ): Boolean =
-        catchBackendFailure {
-            privilegedGateway.setPackageOpMode(
-                packageName = packageName,
-                operationName = operation.shellName,
-                mode = mode,
-            )
-        }.getOrNull()?.isSuccessful == true
-
     private suspend fun setMode(
         packageName: String,
         operation: AppOpIdentifier,
         scope: AppOpScope,
         mode: AppOpMode,
+        userId: Int?,
     ): Boolean =
-        when (scope) {
-            AppOpScope.PACKAGE ->
-                setPackageMode(packageName, operation, mode)
+        catchBackendFailure {
+            val name = operation.shellName
+            when {
+                userId == null && scope == AppOpScope.PACKAGE ->
+                    privilegedGateway.setPackageOpMode(packageName, name, mode)
 
-            AppOpScope.UID ->
-                catchBackendFailure {
-                    privilegedGateway.setUidOpMode(
-                        packageName = packageName,
-                        operationName = operation.shellName,
-                        mode = mode,
+                userId == null ->
+                    privilegedGateway.setUidOpMode(packageName, name, mode)
+
+                scope == AppOpScope.PACKAGE ->
+                    privilegedGateway.setPackageOpModeForUser(
+                        userId, packageName, name, mode,
                     )
-                }.getOrNull()?.isSuccessful == true
-        }
+
+                else ->
+                    privilegedGateway.setUidOpModeForUser(
+                        userId, packageName, name, mode,
+                    )
+            }
+        }.getOrNull()?.isSuccessful == true
 
     private inline fun <T> catchBackendFailure(action: () -> T): Result<T> =
         runCatching(action).onFailure { error ->

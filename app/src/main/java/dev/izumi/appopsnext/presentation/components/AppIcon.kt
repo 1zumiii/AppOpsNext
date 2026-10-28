@@ -25,6 +25,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -35,22 +36,28 @@ fun AppIcon(
     appLabel: String,
     modifier: Modifier = Modifier,
     size: Dp = DefaultAppIconSize,
+    /** Null for the user this app runs in. */
+    userId: Int? = null,
 ) {
     val context = LocalContext.current
     val sizePx = with(LocalDensity.current) { size.roundToPx() }
+    val cacheKey = if (userId == null) packageName else "$userId:$packageName"
     val bitmap = produceState<ImageBitmap?>(
-        initialValue = AppIconCache[packageName],
-        key1 = packageName,
+        initialValue = AppIconCache[cacheKey],
+        key1 = cacheKey,
         key2 = sizePx,
     ) {
         if (value != null) return@produceState
         value = withContext(Dispatchers.IO) {
-            AppIconCache[packageName]
+            AppIconCache[cacheKey]
                 ?: runCatching {
-                    context.packageManager
-                        .getApplicationIcon(packageName)
+                    val userIcon = userId?.let {
+                        (context.applicationContext as AppOpsNextApplication)
+                            .userAppsRepository.loadIcon(packageName, it)
+                    }
+                    (userIcon ?: context.packageManager.getApplicationIcon(packageName))
                         .render(sizePx)
-                        .also { AppIconCache.put(packageName, it) }
+                        .also { AppIconCache.put(cacheKey, it) }
                 }.getOrNull()
         }
     }

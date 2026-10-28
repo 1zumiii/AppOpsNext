@@ -165,6 +165,94 @@ internal class NativeDaemonGateway(
         )
     }
 
+    override suspend fun listUsers(): ShellCommandResult =
+        connection.execute(NativeDaemonCommand(verb = "LIST_USERS"))
+
+    override suspend fun listPackagesForUser(userId: Int): ShellCommandResult {
+        requireUserId(userId)
+        return connection.execute(
+            NativeDaemonCommand(
+                verb = "LIST_PACKAGES_FOR_USER",
+                arguments = listOf(userId.toString()),
+            ),
+        )
+    }
+
+    override suspend fun getPackageOpsForUser(
+        userId: Int,
+        packageName: String,
+    ): ShellCommandResult {
+        requireUserId(userId)
+        requirePackageName(packageName)
+        return connection.execute(
+            NativeDaemonCommand(
+                verb = "GET_USER_PACKAGE_OPS",
+                arguments = listOf(userId.toString(), packageName),
+            ),
+        )
+    }
+
+    override suspend fun getPackageOpForUser(
+        userId: Int,
+        packageName: String,
+        operationName: String,
+    ): ShellCommandResult {
+        requireUserId(userId)
+        requirePackageName(packageName)
+        requireOperationName(operationName)
+        return connection.execute(
+            NativeDaemonCommand(
+                verb = "GET_USER_PACKAGE_OP",
+                arguments = listOf(userId.toString(), packageName, operationName),
+            ),
+        )
+    }
+
+    override suspend fun setPackageOpModeForUser(
+        userId: Int,
+        packageName: String,
+        operationName: String,
+        mode: AppOpMode,
+    ): ShellCommandResult = setModeForUser(
+        "SET_USER_PACKAGE", userId, packageName, operationName, mode,
+    )
+
+    override suspend fun setUidOpModeForUser(
+        userId: Int,
+        packageName: String,
+        operationName: String,
+        mode: AppOpMode,
+    ): ShellCommandResult = setModeForUser(
+        "SET_USER_UID", userId, packageName, operationName, mode,
+    )
+
+    private suspend fun setModeForUser(
+        verb: String,
+        userId: Int,
+        packageName: String,
+        operationName: String,
+        mode: AppOpMode,
+    ): ShellCommandResult {
+        requireUserId(userId)
+        requirePackageName(packageName)
+        requireOperationName(operationName)
+        return connection.execute(
+            NativeDaemonCommand(
+                verb = verb,
+                arguments = listOf(
+                    userId.toString(),
+                    packageName,
+                    operationName,
+                    mode.shellValue,
+                ),
+            ),
+        )
+    }
+
+    private fun requireUserId(userId: Int) {
+        require(userId >= 0) { "Invalid Android user" }
+    }
+
     override fun close() {
         connection.close()
     }

@@ -144,7 +144,8 @@ fun PermissionDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(
+                    // Batch changes apply to the current user only.
+                    if (appListState.selectedUserId == null) IconButton(
                         onClick = {
                             selecting = !selecting
                             selected = emptySet()

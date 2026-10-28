@@ -80,6 +80,8 @@
     <string name="app_list_count">显示 %1$d 个，共 %2$d 个应用</string>
     <string name="app_list_load_failed">无法读取已安装应用</string>
     <string name="app_list_empty_search">没有匹配的应用</string>
+    <string name="user_named">%1$s（%2$d）</string>
+    <string name="user_unnamed">用户 %1$d</string>
     <string name="app_icon_description">%1$s 的应用图标</string>
     <string name="app_type_system">系统应用 · UID %1$d</string>
     <string name="app_type_user">用户应用 · UID %1$d</string>

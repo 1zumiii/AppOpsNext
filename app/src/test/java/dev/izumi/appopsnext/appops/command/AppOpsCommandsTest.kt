@@ -186,4 +186,44 @@ class AppOpsCommandsTest {
             }
         }
     }
+
+    @Test
+    fun `user listing commands use pm`() {
+        assertEquals(listOf("/system/bin/pm", "list", "users"), AppOpsCommands.listUsers())
+        assertEquals(
+            listOf("/system/bin/pm", "list", "packages", "--user", "10", "-U"),
+            AppOpsCommands.listPackagesForUser(10),
+        )
+        assertThrows(IllegalArgumentException::class.java) { AppOpsCommands.listPackagesForUser(-1) }
+    }
+
+    @Test
+    fun `user scoped reads and writes carry the user option`() {
+        assertEquals(
+            listOf("/system/bin/cmd", "appops", "get", "--user", "10", "com.example.app"),
+            AppOpsCommands.getPackageOpsForUser(10, "com.example.app"),
+        )
+        assertEquals(
+            listOf("/system/bin/cmd", "appops", "get", "--user", "10", "com.example.app", "CAMERA"),
+            AppOpsCommands.getPackageOpForUser(10, "com.example.app", "CAMERA"),
+        )
+        assertEquals(
+            listOf("/system/bin/cmd", "appops", "set", "--user", "10", "com.example.app", "CAMERA", "ignore"),
+            AppOpsCommands.setPackageOpModeForUser(10, "com.example.app", "CAMERA", AppOpMode.IGNORE),
+        )
+        assertEquals(
+            listOf("/system/bin/cmd", "appops", "set", "--user", "10", "--uid", "com.example.app", "CAMERA", "allow"),
+            AppOpsCommands.setUidOpModeForUser(10, "com.example.app", "CAMERA", AppOpMode.ALLOW),
+        )
+    }
+
+    @Test
+    fun `user scoped commands reject a bad user, package or operation`() {
+        assertThrows(IllegalArgumentException::class.java) { AppOpsCommands.getPackageOpsForUser(-1, "com.example.app") }
+        assertThrows(IllegalArgumentException::class.java) { AppOpsCommands.getPackageOpsForUser(0, "com.example.app;id") }
+        assertThrows(IllegalArgumentException::class.java) { AppOpsCommands.getPackageOpForUser(0, "com.example.app", "CAMERA;id") }
+        assertThrows(IllegalArgumentException::class.java) {
+            AppOpsCommands.setUidOpModeForUser(-5, "com.example.app", "CAMERA", AppOpMode.ALLOW)
+        }
+    }
 }
