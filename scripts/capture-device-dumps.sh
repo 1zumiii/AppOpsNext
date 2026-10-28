@@ -84,40 +84,58 @@ finish() {
 }
 trap finish EXIT
 
-# History first: the permission flag below turns CAMERA off for this UID.
-# CAMERA records individual accesses, and a granted permission with the app on
-# screen lets the shell's start command through.
+printf 'name\texit\tcommand\n' >"$out/commands.tsv"
+# Saves stdout as <name>.txt and stderr as <name>.stderr. Returns 1 when
+# stderr shows that the service died during the dump: dumpsys still exits 0
+# then.
+capture_once() {
+    local name=$1
+    shift
+    status=0
+    adb shell "$@" >"$out/$name.txt" 2>"$out/$name.stderr" || status=$?
+    grep -E "$SERVICE_LOST" "$out/$name.stderr" >/dev/null || return 0
+    log "$name: service lost: $(head -n1 "$out/$name.stderr")"
+    return 1
+}
+# Records the last attempt in commands.tsv and drops an empty stderr file.
+record() {
+    local name=$1
+    shift
+    [[ -s $out/$name.stderr ]] || rm -f "$out/$name.stderr"
+    printf '%s\t%s\t%s\n' "$name" "$status" "$*" >>"$out/commands.tsv"
+}
+# A lost service is retried once after the system is back.
+capture() {
+    capture_once "$@" || { wait_for_system; capture_once "$@" || true; }
+    record "$@"
+}
+
+# History first, before the permission flag below turns CAMERA off for this
+# UID, and before the large dumps: on the API 37 emulator, surfaceflinger
+# aborts in its graphics mapper and takes system_server with it, which drops
+# individual records still held in memory. A lost record cannot be read again,
+# so a retry creates the access again. CAMERA records individual accesses, and
+# a granted permission with the app on screen lets the shell's start command
+# through.
 setup pm grant "$package" "$PERMISSION"
-setup monkey -p "$package" -c android.intent.category.LAUNCHER 1
-sleep 3
-# Without --user, Android 16 QPR2 looks up the current user through a null
-# ActivityManager and fails with a NullPointerException.
-setup cmd appops start --user "$USER_ID" "$package" "$HISTORY_OP"
-sleep 1
-setup cmd appops stop --user "$USER_ID" "$package" "$HISTORY_OP"
+history_command=(dumpsys appops --history --include-discrete 0 --op "$HISTORY_OP")
+for attempt in 1 2; do
+    setup monkey -p "$package" -c android.intent.category.LAUNCHER 1
+    sleep 3
+    # Without --user, Android 16 QPR2 looks up the current user through a
+    # null ActivityManager and fails with a NullPointerException.
+    setup cmd appops start --user "$USER_ID" "$package" "$HISTORY_OP"
+    sleep 1
+    setup cmd appops stop --user "$USER_ID" "$package" "$HISTORY_OP"
+    # GET_HISTORY
+    capture_once history-camera "${history_command[@]}" && break
+    wait_for_system
+done
+record history-camera "${history_command[@]}"
 
 setup cmd appops set "$package" "$PACKAGE_OP" ignore
 setup cmd appops set --uid "$package" "$UID_OP" ignore
 setup cmd package set-permission-flags --user "$USER_ID" "$package" "$PERMISSION" revoked-compat
-
-printf 'name\texit\tcommand\n' >"$out/commands.tsv"
-# Saves stdout as <name>.txt, stderr as <name>.stderr when not empty, and the
-# exit status in commands.tsv. dumpsys exits 0 even when the service died
-# during the dump, so that case is recognized from stderr and retried once
-# after the system is back.
-capture() {
-    local name=$1 status attempt
-    shift
-    for attempt in 1 2; do
-        status=0
-        adb shell "$@" >"$out/$name.txt" 2>"$out/$name.stderr" || status=$?
-        grep -E "$SERVICE_LOST" "$out/$name.stderr" >/dev/null || break
-        log "$name: service lost on attempt $attempt: $(head -n1 "$out/$name.stderr")"
-        wait_for_system
-    done
-    [[ -s $out/$name.stderr ]] || rm -f "$out/$name.stderr"
-    printf '%s\t%s\t%s\n' "$name" "$status" "$*" >>"$out/commands.tsv"
-}
 
 # GET_PACKAGE_OPS, GET_PACKAGE_OP, GET_UID_OPS
 capture package-ops cmd appops get "$package"
@@ -132,8 +150,6 @@ capture op-states-uid-mode dumpsys appops --op "$UID_OP"
 capture uid-states dumpsys appops --package "$package"
 # GET_WATCHERS
 capture watchers dumpsys appops --watchers
-# GET_HISTORY
-capture history-camera dumpsys appops --history --include-discrete 0 --op "$HISTORY_OP"
 # GET_PACKAGE_PERMISSIONS
 capture package-permissions dumpsys package "$package"
 

@@ -118,7 +118,8 @@ these steps:
    the same shell identity as the daemon. It sets a package mode
    (`RUN_IN_BACKGROUND`), a UID mode (`RUN_ANY_IN_BACKGROUND`) and the
    `REVOKED_COMPAT` flag on `CAMERA`, and starts and stops `CAMERA` once to
-   create history. Then it runs each read command in the table above.
+   create history. It reads the history right away, then runs the other read
+   commands in the table above.
 2. `DeviceDumpCompatibilityTest` runs the production parsers over the
    captured files. It checks that each dump header is recognized and that the
    parsers find the states from step 1. When `APPOPSNEXT_DEVICE_DUMPS` is not
