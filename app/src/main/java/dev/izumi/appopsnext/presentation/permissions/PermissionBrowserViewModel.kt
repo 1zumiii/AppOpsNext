@@ -13,6 +13,7 @@ import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
 import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
 import dev.izumi.appopsnext.appops.model.AppOpScope
+import dev.izumi.appopsnext.appops.parser.AppOpsDump
 import dev.izumi.appopsnext.appops.parser.OpStatesParser
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.presentation.app_detail.AppOpModeChangeRequest
@@ -64,8 +65,9 @@ class PermissionBrowserViewModel(
                     check(!result.timedOut && result.exitCode == 0) {
                         "AppOps query failed"
                     }
-                    check(result.stdout.contains("Current AppOps Service state:")) {
-                        "Unexpected AppOps dump"
+                    check(result.stdout.lineSequence().any(AppOpsDump::isHeader)) {
+                        val firstLine = result.stdout.lineSequence().firstOrNull(String::isNotBlank)
+                        "Unexpected AppOps dump, first line: ${firstLine?.trim()?.take(120)}"
                     }
                     OpStatesParser.parse(
                         output = result.stdout,

@@ -16,6 +16,12 @@ class AppOpsWatchersParserTest {
         assertEquals(WatchRegistration.MISSING, snapshot.registration(operations, kinds, 0))
     }
 
+    @Test fun `accepts the header without the Current prefix`() {
+        val snapshot = AppOpsWatchersParser.parse(dump().removePrefix("Current "))
+        assertTrue(snapshot.recognized)
+        assertEquals(WatchRegistration.CONFIRMED, snapshot.registration(operations, kinds, 2000))
+    }
+
     @Test fun `own uid restriction cannot confirm global coverage`() {
         val snapshot = AppOpsWatchersParser.parse(dump().replace("watchinguid=-1", "watchinguid=2000"))
         assertEquals(WatchRegistration.MISSING, snapshot.registration(operations, kinds, 2000))

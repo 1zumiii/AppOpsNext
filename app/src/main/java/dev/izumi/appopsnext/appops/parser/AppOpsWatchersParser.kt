@@ -143,7 +143,7 @@ object AppOpsWatchersParser {
         }
         endEntry()
         return AppOpsWatcherSnapshot(
-            recognized = output.lineSequence().firstOrNull()?.trim() == HEADER && recognizedSection &&
+            recognized = AppOpsDump.isHeader(output.lineSequence().first()) && recognizedSection &&
                 !ERROR.containsMatchIn(output),
             accessWatchers = access,
             modeWatchers = modes.values.toList(),
@@ -154,7 +154,6 @@ object AppOpsWatchersParser {
 
     private fun watchingUid(value: String): Int? = if (value == "-1") -1 else UidStateParser.uidOf(value)
 
-    private const val HEADER = "Current AppOps Service state:"
     private const val OP_MODES = "Op mode watchers:"
     private const val PACKAGE_MODES = "Package mode watchers:"
     private val MODE_SECTIONS = setOf(OP_MODES, PACKAGE_MODES, "All op mode watchers:")
