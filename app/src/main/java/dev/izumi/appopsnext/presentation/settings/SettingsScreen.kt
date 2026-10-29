@@ -203,22 +203,6 @@ fun SettingsScreen(
             }
             item {
                 SettingsSectionTitle(
-                    text = stringResource(R.string.settings_backup_section),
-                )
-            }
-            item {
-                SettingsGroup {
-                    BackupEntries(
-                        state = uiState.backup,
-                        onExport = onExportBackup,
-                        onOpen = onOpenBackup,
-                        onConfirmImport = onConfirmBackupImport,
-                        onDismiss = onDismissBackup,
-                    )
-                }
-            }
-            item {
-                SettingsSectionTitle(
                     text = stringResource(R.string.settings_experimental),
                 )
             }
@@ -237,6 +221,22 @@ fun SettingsScreen(
                         },
                         trailingContent = { MainPageChevron() },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
+                }
+            }
+            item {
+                SettingsSectionTitle(
+                    text = stringResource(R.string.settings_backup_section),
+                )
+            }
+            item {
+                SettingsGroup {
+                    BackupEntries(
+                        state = uiState.backup,
+                        onExport = onExportBackup,
+                        onOpen = onOpenBackup,
+                        onConfirmImport = onConfirmBackupImport,
+                        onDismiss = onDismissBackup,
                     )
                 }
             }
