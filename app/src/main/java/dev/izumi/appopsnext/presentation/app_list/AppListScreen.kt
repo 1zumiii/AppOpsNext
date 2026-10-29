@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Checkbox
@@ -249,6 +250,17 @@ private fun AppListContent(
     onToggleAll: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val listState = rememberLazyListState()
+    // The list keeps the first visible app in view when its order changes, which
+    // lands in the middle of a new order. A new order starts from the top instead.
+    // Saved, so coming back to the list or rotating keeps the position.
+    var listedOrder by rememberSaveable { mutableStateOf(uiState.sortOrder) }
+    LaunchedEffect(uiState.sortOrder) {
+        if (uiState.sortOrder != listedOrder) {
+            listedOrder = uiState.sortOrder
+            listState.scrollToItem(0)
+        }
+    }
     Column(
         modifier = modifier,
     ) {
@@ -279,6 +291,7 @@ private fun AppListContent(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
+                state = listState,
                 contentPadding = PaddingValues(
                     start = 20.dp,
                     end = 20.dp,
