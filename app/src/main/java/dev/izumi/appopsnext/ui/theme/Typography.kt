@@ -2,6 +2,7 @@ package dev.izumi.appopsnext.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 private val DefaultTypography = Typography()
@@ -24,15 +25,38 @@ val CompactEnglishTypography = DefaultTypography.copy(
     labelSmall = DefaultTypography.labelSmall.smaller(),
 )
 
-val BalancedChineseTypography = DefaultTypography.copy(
-    titleLarge = DefaultTypography.titleLarge.smaller(CHINESE_FONT_SIZE_REDUCTION_SP),
-    titleMedium = DefaultTypography.titleMedium.smaller(CHINESE_FONT_SIZE_REDUCTION_SP),
-    titleSmall = DefaultTypography.titleSmall.smaller(CHINESE_FONT_SIZE_REDUCTION_SP),
-    bodyLarge = DefaultTypography.bodyLarge.smaller(CHINESE_FONT_SIZE_REDUCTION_SP),
-    bodyMedium = DefaultTypography.bodyMedium.smaller(CHINESE_FONT_SIZE_REDUCTION_SP),
-    labelLarge = DefaultTypography.labelLarge.smaller(CHINESE_FONT_SIZE_REDUCTION_SP),
-    labelMedium = DefaultTypography.labelMedium.smaller(CHINESE_FONT_SIZE_REDUCTION_SP),
+val BalancedChineseTypography = Typography(
+    displayLarge = DefaultTypography.displayLarge.chinese(),
+    displayMedium = DefaultTypography.displayMedium.chinese(),
+    displaySmall = DefaultTypography.displaySmall.chinese(),
+    headlineLarge = DefaultTypography.headlineLarge.chinese(),
+    headlineMedium = DefaultTypography.headlineMedium.chinese(),
+    headlineSmall = DefaultTypography.headlineSmall.chinese(),
+    titleLarge = DefaultTypography.titleLarge.chinese().copy(
+        fontSize = 24.sp, lineHeight = 32.sp, fontWeight = FontWeight.Medium,
+    ),
+    titleMedium = DefaultTypography.titleMedium.chinese().copy(
+        fontSize = 16.sp, lineHeight = 24.sp,
+    ),
+    titleSmall = DefaultTypography.titleSmall.chinese().copy(
+        fontSize = 13.sp, lineHeight = 20.sp,
+    ),
+    bodyLarge = DefaultTypography.bodyLarge.chinese().copy(
+        fontSize = 15.sp, lineHeight = 23.sp,
+    ),
+    bodyMedium = DefaultTypography.bodyMedium.chinese().copy(
+        fontSize = 13.sp, lineHeight = 20.sp,
+    ),
+    bodySmall = DefaultTypography.bodySmall.chinese().copy(
+        fontSize = 12.sp, lineHeight = 18.sp,
+    ),
+    labelLarge = DefaultTypography.labelLarge.chinese(),
+    labelMedium = DefaultTypography.labelMedium.chinese(),
+    labelSmall = DefaultTypography.labelSmall.chinese(),
 )
+
+/** Chinese keeps the system font, which users may have chosen themselves, without Latin tracking. */
+private fun TextStyle.chinese(): TextStyle = copy(letterSpacing = 0.sp)
 
 val AppDefaultTypography: Typography = DefaultTypography
 
@@ -41,4 +65,3 @@ private fun TextStyle.smaller(reductionSp: Float = ENGLISH_FONT_SIZE_REDUCTION_S
 )
 
 private const val ENGLISH_FONT_SIZE_REDUCTION_SP = 1f
-private const val CHINESE_FONT_SIZE_REDUCTION_SP = 0.5f

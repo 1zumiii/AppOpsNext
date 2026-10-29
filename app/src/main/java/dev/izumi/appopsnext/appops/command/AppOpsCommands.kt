@@ -153,6 +153,8 @@ object AppOpsCommands {
 
     fun listUsers(): List<String> = listOf(PM_BINARY, "list", "users")
 
+    fun getPackageTimes(): List<String> = listOf(DUMPSYS_BINARY, PACKAGE_SERVICE, "packages")
+
     fun listPackagesForUser(userId: Int): List<String> {
         validateUserId(userId)
 

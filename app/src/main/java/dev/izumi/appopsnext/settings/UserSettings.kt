@@ -43,6 +43,8 @@ data class UserSettings(
      */
     val savedHistoryOperations: Set<String>? = null,
     val appSortOrder: AppSortOrder = AppSortOrder.NAME,
+    /** Mirrors what was handed to the system, which offers no way to read it back. */
+    val appTheme: AppTheme = AppTheme.SYSTEM,
     /** Watches installs from a Shizuku daemon, so new-app rules apply right away. */
     val instantNewAppRules: Boolean = UserSettingsDefaults.INSTANT_NEW_APP_RULES,
 )

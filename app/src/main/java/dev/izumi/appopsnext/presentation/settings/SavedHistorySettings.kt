@@ -30,7 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
+import dev.izumi.appopsnext.presentation.components.CompactSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -146,7 +146,7 @@ fun SavedHistoryScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                     shape = RoundedCornerShape(18.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
                 ) {
                     ListItem(
                         modifier = Modifier.clickable {
@@ -156,7 +156,7 @@ fun SavedHistoryScreen(
                         headlineContent = { Text(text = stringResource(R.string.settings_save_history)) },
                         supportingContent = { Text(text = stringResource(R.string.settings_save_history_short)) },
                         trailingContent = {
-                            Switch(
+                            CompactSwitch(
                                 checked = uiState.saveIndividualHistory,
                                 onCheckedChange = onSaveIndividualHistoryChange,
                             )
@@ -225,11 +225,9 @@ fun SavedHistoryScreen(
             }
             item {
                 SavedHistorySectionTitle(stringResource(R.string.settings_saved_history))
-                Text(
-                    text = savedHistoryText(saved),
+                SavedHistoryHeadline(
+                    summary = saved,
                     modifier = Modifier.padding(horizontal = 24.dp),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium,
                 )
                 SavedHistoryUsage(
                     summary = saved,
@@ -536,17 +534,34 @@ private fun SavedHistoryDatePicker(
     )
 }
 
+/** The record count, with the dates it spans on a line of their own so neither wraps mid-date. */
 @Composable
-private fun savedHistoryText(summary: SavedHistorySummary): String {
-    val oldest = summary.oldestMillis ?: return stringResource(R.string.settings_saved_history_empty)
-    val newest = summary.newestMillis ?: oldest
-    val format = DateFormat.getDateInstance(DateFormat.MEDIUM)
-    return stringResource(
-        R.string.settings_saved_history_summary,
-        summary.recordCount,
-        format.format(Date(oldest)),
-        format.format(Date(newest)),
-    )
+private fun SavedHistoryHeadline(summary: SavedHistorySummary, modifier: Modifier = Modifier) {
+    val oldest = summary.oldestMillis
+    Column(modifier = modifier) {
+        Text(
+            text = if (oldest == null) {
+                stringResource(R.string.settings_saved_history_empty)
+            } else {
+                stringResource(R.string.settings_saved_history_count, summary.recordCount)
+            },
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Medium,
+        )
+        if (oldest != null) {
+            val format = DateFormat.getDateInstance(DateFormat.MEDIUM)
+            Text(
+                text = stringResource(
+                    R.string.settings_saved_history_range,
+                    format.format(Date(oldest)),
+                    format.format(Date(summary.newestMillis ?: oldest)),
+                ),
+                modifier = Modifier.padding(top = 2.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }
 
 @Composable

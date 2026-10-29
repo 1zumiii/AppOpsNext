@@ -63,13 +63,9 @@ fun CompactTextField(
     val focused by interaction.collectIsFocusedAsState()
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(
-            1.dp,
-            if (focused) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.outline,
-        ),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = if (focused) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
     ) {
         BasicTextField(
             value = value,

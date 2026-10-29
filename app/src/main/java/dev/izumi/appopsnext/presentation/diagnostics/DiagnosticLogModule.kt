@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -45,6 +46,7 @@ fun DiagnosticLogModule(
     uiState: DiagnosticsUiState,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
     var showReport by remember { mutableStateOf(false) }
     ListItem(
@@ -55,12 +57,15 @@ fun DiagnosticLogModule(
         headlineContent = {
             Text(text = stringResource(R.string.diagnostic_log_title))
         },
+        // Compact rows keep to one line, so the rows of a group are one height.
         supportingContent = {
+            val count = uiState.diagnosticEventCount
             Text(
-                text = stringResource(
-                    R.string.diagnostic_log_summary,
-                    uiState.diagnosticEventCount,
-                ),
+                text = if (compact) {
+                    pluralStringResource(R.plurals.diagnostic_log_compact_summary, count, count)
+                } else {
+                    stringResource(R.string.diagnostic_log_summary, count)
+                },
             )
         },
         trailingContent = { MainPageChevron() },

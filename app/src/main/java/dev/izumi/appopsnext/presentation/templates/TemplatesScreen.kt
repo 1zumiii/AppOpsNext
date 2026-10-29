@@ -35,6 +35,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -42,7 +43,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
+import dev.izumi.appopsnext.presentation.components.CompactSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -82,6 +83,8 @@ import dev.izumi.appopsnext.presentation.app_detail.KnownAppOp
 import dev.izumi.appopsnext.presentation.components.MainPageSectionTitle
 import dev.izumi.appopsnext.presentation.components.PermissionEntryIcon
 import dev.izumi.appopsnext.presentation.components.MainPageEntryIcon
+import dev.izumi.appopsnext.presentation.components.MainPageGroupDivider
+import dev.izumi.appopsnext.presentation.components.mainPageGroupShape
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
 import dev.izumi.appopsnext.templates.model.PermissionTemplateRule
 import dev.izumi.appopsnext.templates.NewAppPolicyTemplate
@@ -110,7 +113,6 @@ fun TemplatesScreen(
         mutableStateOf<PermissionTemplate?>(null)
     }
     var showNewAppPolicyInfo by remember { mutableStateOf(false) }
-    var showTemplateActions by remember(selectedTemplate?.id) { mutableStateOf(false) }
     val context = LocalContext.current
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -188,25 +190,13 @@ fun TemplatesScreen(
                             )
                         }
                     } else {
-                        Box {
-                            IconButton(onClick = { showTemplateActions = true }) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_ph_dots_three),
-                                    contentDescription = stringResource(R.string.template_more_options),
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = showTemplateActions,
-                                onDismissRequest = { showTemplateActions = false },
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text(text = stringResource(R.string.action_delete)) },
-                                    onClick = {
-                                        showTemplateActions = false
-                                        deleteCandidate = selectedTemplate
-                                    },
-                                )
-                            }
+                        // Delete is the only action, and it asks before acting.
+                        IconButton(onClick = { deleteCandidate = selectedTemplate }) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_ph_trash),
+                                contentDescription = stringResource(R.string.action_delete),
+                                tint = MaterialTheme.colorScheme.error,
+                            )
                         }
                     }
                 },
@@ -355,7 +345,7 @@ private fun TemplateList(
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         val newAppTemplate = templates.firstOrNull {
             NewAppPolicyTemplate.isBuiltIn(it.id)
@@ -372,7 +362,7 @@ private fun TemplateList(
                     instant = instantNewAppRules,
                     onInstantChange = onInstantNewAppRulesChange,
                     onEdit = { onSelectTemplate(template.id) },
-                    modifier = Modifier.padding(horizontal = 20.dp),
+                    modifier = Modifier.padding(horizontal = 18.dp).padding(bottom = 12.dp),
                 )
             }
         }
@@ -391,11 +381,13 @@ private fun TemplateList(
                 )
             }
         }
-        items(customTemplates, key = PermissionTemplate::id) { template ->
+        itemsIndexed(customTemplates, key = { _, template -> template.id }) { index, template ->
             CustomTemplateCard(
                 template = template,
                 onEdit = { onSelectTemplate(template.id) },
-                modifier = Modifier.padding(horizontal = 20.dp),
+                index = index,
+                count = customTemplates.size,
+                modifier = Modifier.padding(horizontal = 18.dp),
             )
         }
     }
@@ -415,7 +407,7 @@ private fun NewAppPolicyCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -424,25 +416,14 @@ private fun NewAppPolicyCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                MainPageEntryIcon(
-                    iconRes = R.drawable.ic_ph_file_text,
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                Text(
+                    text = templateDisplayName(template),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = mainPageHeadingWeight(),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = templateDisplayName(template),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = stringResource(R.string.template_rule_count, template.rules.size),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
                 IconButton(onClick = onEdit) {
                     Icon(
                         painter = painterResource(R.drawable.ic_ph_pencil_simple),
@@ -451,12 +432,18 @@ private fun NewAppPolicyCard(
                     )
                 }
             }
+            // The count and the names in one line, rather than a line each saying the same thing.
             TemplateRulePreview(
                 template = template,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 56.dp),
+                prefix = stringResource(R.string.template_rule_count_compact, template.rules.size),
+                modifier = Modifier,
             )
-            Spacer(Modifier.height(10.dp))
+            // What the template holds above the line, how it is applied below.
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 12.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -468,12 +455,15 @@ private fun NewAppPolicyCard(
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Switch(
+                CompactSwitch(
                     checked = enabled,
                     onCheckedChange = onEnabledChange,
                 )
             }
-            if (enabled) {
+            // Depends on the switch above, so it dims while that is off. It stays
+            // on the same edge: the divider already groups the two.
+            val instantAlpha = if (enabled) 1f else DISABLED_CONTENT_ALPHA
+            Column(modifier = Modifier.padding(top = 12.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -482,18 +472,19 @@ private fun NewAppPolicyCard(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.template_new_app_instant),
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = instantAlpha),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         Text(
                             text = stringResource(R.string.template_new_app_instant_summary),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = instantAlpha),
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
-                    Switch(
+                    CompactSwitch(
                         checked = instant,
                         onCheckedChange = onInstantChange,
+                        enabled = enabled,
                     )
                 }
             }
@@ -505,11 +496,13 @@ private fun NewAppPolicyCard(
 private fun CustomTemplateCard(
     template: PermissionTemplate,
     onEdit: () -> Unit,
+    index: Int,
+    count: Int,
     modifier: Modifier = Modifier,
 ) {
     Card(
         modifier = modifier.fillMaxWidth().clickable(onClick = onEdit),
-        shape = RoundedCornerShape(18.dp),
+        shape = mainPageGroupShape(index, count),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
@@ -517,20 +510,18 @@ private fun CustomTemplateCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             MainPageEntryIcon(
                 iconRes = R.drawable.ic_ph_note_pencil,
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = templateDisplayName(template),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -541,7 +532,7 @@ private fun CustomTemplateCard(
             }
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                color = MaterialTheme.colorScheme.surface,
             ) {
                 Text(
                     text = stringResource(R.string.template_rule_count_compact, template.rules.size),
@@ -551,6 +542,7 @@ private fun CustomTemplateCard(
                 )
             }
         }
+        if (index < count - 1) MainPageGroupDivider()
     }
 }
 
@@ -559,6 +551,8 @@ private fun TemplateRulePreview(
     template: PermissionTemplate,
     color: Color,
     modifier: Modifier = Modifier,
+    /** Leads the names, such as the rule count. Shown alone when no name fits beside it. */
+    prefix: String? = null,
 ) {
     if (template.rules.isEmpty()) return
     val namesByOperation = remember {
@@ -577,11 +571,12 @@ private fun TemplateRulePreview(
         val preview = (names.size downTo 1).firstNotNullOfOrNull { visibleCount ->
             val visibleNames = names.take(visibleCount).joinToString(" · ")
             val hiddenCount = template.rules.size - visibleCount
-            val candidate = if (hiddenCount > 0) {
+            val listed = if (hiddenCount > 0) {
                 stringResource(R.string.template_preview_more, visibleNames, hiddenCount)
             } else {
                 visibleNames
             }
+            val candidate = prefix?.let { stringResource(R.string.template_rule_summary, it, listed) } ?: listed
             candidate.takeIf {
                 textMeasurer.measure(
                     text = it,
@@ -590,7 +585,7 @@ private fun TemplateRulePreview(
                     softWrap = false,
                 ).size.width <= availableWidth
             }
-        } ?: if (template.rules.size == 1) {
+        } ?: prefix ?: if (template.rules.size == 1) {
             names.first()
         } else {
             stringResource(R.string.template_preview_count_only, template.rules.size)
@@ -1149,3 +1144,6 @@ private fun modeLabel(mode: AppOpMode): String =
             AppOpMode.FOREGROUND -> R.string.app_op_mode_foreground
         },
     )
+
+/** Material's opacity for disabled content. */
+private const val DISABLED_CONTENT_ALPHA = 0.38f

@@ -8,6 +8,7 @@ import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.WatcherResponseCodec
 import dev.izumi.appopsnext.appops.command.AppOpsCommands
 import dev.izumi.appopsnext.appops.command.CommandExecutor
+import dev.izumi.appopsnext.apps.PackageTimesParser
 import dev.izumi.appopsnext.appops.model.ShellCommandResult
 import dev.izumi.appopsnext.history.AppOpsHistoryOutputExtractor
 import dev.izumi.appopsnext.shizuku.IPrivilegedAppOpsService
@@ -126,6 +127,11 @@ class AppOpsUserService : IPrivilegedAppOpsService.Stub {
 
     override fun listUsers(): ShellCommandResult =
         commandExecutor.execute(AppOpsCommands.listUsers())
+
+    override fun getPackageTimes(): ShellCommandResult {
+        val result = commandExecutor.execute(AppOpsCommands.getPackageTimes())
+        return result.copy(stdout = PackageTimesParser.compact(result.stdout))
+    }
 
     override fun listPackagesForUser(userId: Int): ShellCommandResult =
         commandExecutor.execute(AppOpsCommands.listPackagesForUser(userId))

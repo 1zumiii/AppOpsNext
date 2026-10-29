@@ -39,10 +39,8 @@ class BatchOperationsViewModel(
     private val adaptiveScopeExecutor = AdaptiveScopeModeChangeExecutor(
         writeMemory = getApplication<AppOpsNextApplication>().revokedCompatWriteMemory,
     ) { uid ->
-        getApplication<Application>().packageManager
-            .getPackagesForUid(uid)
-            ?.toList()
-            .orEmpty()
+        // Resolves UIDs of other users too, which the app's package manager cannot.
+        getApplication<AppOpsNextApplication>().userAppsRepository.packagesForUid(uid)
     }
     private val executor = BatchAppOpsExecutor { target ->
         val operation = AppOpIdentifier(
@@ -60,6 +58,7 @@ class BatchOperationsViewModel(
                         packageName = target.packageName,
                         operation = operation,
                         scope = scope,
+                        userId = target.userId,
                     )
                 },
                 revokedCompatRetry = RevokedCompatRetry(
@@ -71,6 +70,7 @@ class BatchOperationsViewModel(
                         operation = operation,
                         permissionName = permissionName,
                         requestedMode = target.requestedMode,
+                        userId = target.userId,
                     )
                 },
             ) { scope ->
@@ -79,6 +79,7 @@ class BatchOperationsViewModel(
                     operation = operation,
                     scope = scope,
                     requestedMode = target.requestedMode,
+                    userId = target.userId,
                 )
             }.also { appliedScopes[target] = it.appliedScope }.result
         }
@@ -109,6 +110,7 @@ class BatchOperationsViewModel(
                     stableOperationName = rule.stableOperationName,
                     preferredScope = AppOpScope.PACKAGE,
                     requestedMode = rule.mode,
+                    userId = app.userId,
                 )
             }
         }
@@ -146,6 +148,7 @@ class BatchOperationsViewModel(
                 ),
                 preferredScope = permission.scope,
                 requestedMode = requestedMode,
+                userId = app.userId,
             )
         }
         mutableUiState.value = BatchOperationUiState.Confirming(
@@ -161,10 +164,7 @@ class BatchOperationsViewModel(
     fun requestOperationBatch(title: String, targets: List<BatchOperationTarget>) {
         if (targets.isEmpty() || mutableUiState.value !is BatchOperationUiState.Idle) return
         val affectedPackages = unselectedSharedUidPackages(targets) { uid ->
-            getApplication<Application>().packageManager
-                .getPackagesForUid(uid)
-                ?.toList()
-                .orEmpty()
+            getApplication<AppOpsNextApplication>().userAppsRepository.packagesForUid(uid)
         }
         // A UID write already covers every selected sibling. Execute it once.
         val distinctTargets = targets.distinctBy {
@@ -210,7 +210,8 @@ class BatchOperationsViewModel(
 
     /** Keeps guarded settings at the mode the user just chose, so the guard does not take it for a drift. */
     private suspend fun recordGuardChanges(report: BatchOperationReport, guard: Boolean) {
-        val changed = report.results.mapNotNull { item ->
+        // The guard watches the user this app runs in only.
+        val changed = report.results.filter { it.target.userId == null }.mapNotNull { item ->
             val success = item.result as? AppOpModeChangeResult.Success ?: return@mapNotNull null
             GuardRule(
                 packageName = item.target.packageName,

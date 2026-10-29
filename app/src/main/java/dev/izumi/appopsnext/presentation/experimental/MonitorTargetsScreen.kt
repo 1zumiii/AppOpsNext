@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation.experimental
 
+import dev.izumi.appopsnext.presentation.components.topFadingEdge
 import dev.izumi.appopsnext.apps.AppSortOrder
 import dev.izumi.appopsnext.presentation.components.AppSortMenu
 import dev.izumi.appopsnext.presentation.components.ScrollToTopOnSortChange
@@ -28,7 +29,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
+import dev.izumi.appopsnext.presentation.components.CompactSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -63,8 +64,7 @@ fun MonitorTargetsScreen(
     apps: List<InstalledApp>,
     selectionByPackage: Map<String, Set<String>>,
     sortOrder: AppSortOrder,
-    /** Null for another user, whose apps are listed without install times. */
-    onSortOrderChange: ((AppSortOrder) -> Unit)?,
+    onSortOrderChange: (AppSortOrder) -> Unit,
     onBack: () -> Unit,
     onAppSelected: (InstalledApp) -> Unit,
     modifier: Modifier = Modifier,
@@ -98,7 +98,7 @@ fun MonitorTargetsScreen(
                     }
                 },
                 actions = {
-                    onSortOrderChange?.let { AppSortMenu(selected = sortOrder, onSelected = it) }
+                    AppSortMenu(selected = sortOrder, onSelected = onSortOrderChange)
                 },
             )
         },
@@ -106,7 +106,8 @@ fun MonitorTargetsScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(contentPadding),
+                .padding(contentPadding)
+                .topFadingEdge(listState),
             state = listState,
         ) {
             item {
@@ -361,14 +362,14 @@ fun MonitorOperationsScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape = RoundedCornerShape(18.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
                 ) {
                     ListItem(
                         modifier = Modifier.clickable { requestShowAll(!showAll) },
                         headlineContent = { Text(stringResource(R.string.monitor_all_ops_title)) },
                         supportingContent = { Text(stringResource(R.string.monitor_all_ops_summary)) },
                         trailingContent = {
-                            Switch(checked = showAll, onCheckedChange = requestShowAll)
+                            CompactSwitch(checked = showAll, onCheckedChange = requestShowAll)
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     )

@@ -70,6 +70,7 @@ class UserSettingsRepository(
                 savedHistoryOperations = preferences[Keys.SAVED_HISTORY_OPERATIONS],
                 appSortOrder = AppSortOrder.fromName(preferences[Keys.APP_SORT_ORDER])
                     ?: AppSortOrder.NAME,
+                appTheme = AppTheme.fromName(preferences[Keys.APP_THEME]) ?: AppTheme.SYSTEM,
                 instantNewAppRules =
                     preferences[Keys.INSTANT_NEW_APP_RULES]
                         ?: UserSettingsDefaults.INSTANT_NEW_APP_RULES,
@@ -85,6 +86,12 @@ class UserSettingsRepository(
     suspend fun setAppSortOrder(order: AppSortOrder) {
         dataStore.edit { preferences ->
             preferences[Keys.APP_SORT_ORDER] = order.name
+        }
+    }
+
+    suspend fun setAppTheme(theme: AppTheme) {
+        dataStore.edit { preferences ->
+            preferences[Keys.APP_THEME] = theme.name
         }
     }
 
@@ -193,6 +200,7 @@ class UserSettingsRepository(
         val SAVED_HISTORY_OPERATIONS = stringSetPreferencesKey("saved_history_operations")
         val HIDE_SYSTEM_APPS = booleanPreferencesKey("hide_system_apps")
         val APP_SORT_ORDER = stringPreferencesKey("app_sort_order")
+        val APP_THEME = stringPreferencesKey("app_theme")
         val SUPPRESS_DENY_FALLBACK_NOTICE =
             booleanPreferencesKey("suppress_deny_fallback_notice")
         val SUPPRESS_PERMISSION_FLAG_NOTICE =

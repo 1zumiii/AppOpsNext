@@ -50,5 +50,7 @@ interface IPrivilegedAppOpsService {
         String operationName,
         String mode
     ) = 20;
+    /** Only the time lines of `dumpsys package packages`, which in full exceeds a binder transaction. */
+    ShellCommandResult getPackageTimes() = 21;
     void destroy() = 16777114;
 }

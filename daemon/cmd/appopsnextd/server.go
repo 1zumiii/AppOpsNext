@@ -244,6 +244,14 @@ func parseCommand(request string) (appOpsCommand, error) {
 		}
 		return command("/system/bin/pm", "list", "users"), nil
 
+	case "GET_PACKAGE_TIMES":
+		// Install and update times of every user, which `pm list packages`
+		// does not print. The app reads only those lines of the dump.
+		if len(fields) != 1 {
+			return appOpsCommand{}, errors.New("invalid package time query")
+		}
+		return command("/system/bin/dumpsys", "package", "packages"), nil
+
 	case "LIST_PACKAGES_FOR_USER":
 		if len(fields) != 2 || !validUserID(fields[1]) {
 			return appOpsCommand{}, errors.New("invalid user package query")

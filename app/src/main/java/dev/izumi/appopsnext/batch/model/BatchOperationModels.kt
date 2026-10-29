@@ -11,6 +11,8 @@ data class BatchOperationTarget(
     val stableOperationName: String,
     val preferredScope: AppOpScope,
     val requestedMode: AppOpMode,
+    /** Null for the user this app runs in. */
+    val userId: Int? = null,
 )
 
 data class BatchOperationItemResult(

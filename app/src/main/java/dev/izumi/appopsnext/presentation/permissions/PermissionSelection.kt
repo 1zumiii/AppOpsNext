@@ -24,5 +24,6 @@ fun permissionBatchTargets(
         stableOperationName = AppOpNames.stableName(operation),
         preferredScope = effective.scope,
         requestedMode = requestedMode,
+        userId = app.userId,
     )
 }

@@ -1,5 +1,7 @@
 package dev.izumi.appopsnext.presentation.permissions
 
+import androidx.compose.foundation.lazy.rememberLazyListState
+import dev.izumi.appopsnext.presentation.components.topFadingEdge
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -50,11 +52,13 @@ fun PermissionListContent(
             onValueChange = onSearchQueryChange,
             label = stringResource(R.string.app_detail_search_label),
             modifier = Modifier.fillMaxWidth()
-                .padding(start = 20.dp, end = 20.dp, top = 12.dp),
+                .padding(start = 18.dp, end = 18.dp, top = 12.dp),
         )
+        val listState = rememberLazyListState()
         LazyColumn(
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(20.dp),
+            modifier = Modifier.weight(1f).topFadingEdge(listState),
+            state = listState,
+            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (permissions.isEmpty()) {

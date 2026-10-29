@@ -64,6 +64,7 @@ class UserAppsRepository(
             val result = gateway.listPackagesForUser(userId)
             check(!result.timedOut && result.exitCode == 0) { "Package list failed" }
             val labels = launcherLabels(userId)
+            val times = packageTimes(userId)
             val packageManager = context.packageManager
             val collator = Collator.getInstance(Locale.getDefault())
             UserPackageListParser.parse(result.stdout)
@@ -74,10 +75,24 @@ class UserAppsRepository(
                         uid = entry.uid,
                         isSystemApp = isSystemInCurrentUser(packageManager, entry.packageName),
                         userId = userId,
+                        firstInstallTimeMillis = times[entry.packageName]?.firstInstallTimeMillis,
+                        lastUpdateTimeMillis = times[entry.packageName]?.lastUpdateTimeMillis,
                     )
                 }
                 .sortedWith { left, right -> collator.compare(left.label, right.label) }
                 .also { apps -> appsByUser = appsByUser + (userId to apps) }
+        }
+
+    /** Empty when the dump fails: the list then shows no times and keeps name order. */
+    private suspend fun packageTimes(userId: Int): Map<String, PackageTimes> =
+        try {
+            val result = gateway.getPackageTimes()
+            if (result.timedOut || result.exitCode != 0) emptyMap()
+            else PackageTimesParser.parse(result.stdout, userId)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            emptyMap()
         }
 
     /** Packages that share [uid], read from the last list loaded for its user. */

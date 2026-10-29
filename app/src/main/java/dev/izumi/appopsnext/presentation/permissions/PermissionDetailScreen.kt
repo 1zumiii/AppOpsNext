@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation.permissions
 
+import dev.izumi.appopsnext.presentation.components.topFadingEdge
 import dev.izumi.appopsnext.apps.AppSortOrder
 import dev.izumi.appopsnext.presentation.components.AppSortMenu
 import dev.izumi.appopsnext.presentation.components.ScrollToTopOnSortChange
@@ -152,12 +153,8 @@ fun PermissionDetailScreen(
                     }
                 },
                 actions = {
-                    // Other users are listed without install times.
-                    if (appListState.selectedUserId == null) {
-                        AppSortMenu(selected = appListState.sortOrder, onSelected = onSortOrderChange)
-                    }
-                    // Batch changes apply to the current user only.
-                    if (appListState.selectedUserId == null) IconButton(
+                    AppSortMenu(selected = appListState.sortOrder, onSelected = onSortOrderChange)
+                    IconButton(
                         onClick = {
                             selecting = !selecting
                             selected = emptySet()
@@ -205,7 +202,7 @@ fun PermissionDetailScreen(
                 modifier = Modifier.weight(1f),
             ) {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().topFadingEdge(listState),
                     state = listState,
                     contentPadding = PaddingValues(20.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),

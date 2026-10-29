@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -21,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -45,7 +48,9 @@ internal fun BackupEntries(
     onOpen: (Uri) -> Unit,
     onConfirmImport: () -> Unit,
     onDismiss: () -> Unit,
+    compact: Boolean = false,
 ) {
+    var showActions by rememberSaveable { mutableStateOf(false) }
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument(BACKUP_MIME_TYPE),
     ) { uri -> uri?.let(onExport) }
@@ -55,27 +60,55 @@ internal fun BackupEntries(
     ) { uri -> uri?.let(onOpen) }
     val working = state == BackupUiState.Working
 
-    ListItem(
-        modifier = Modifier.clickable(enabled = !working) {
-            exportLauncher.launch("AppOpsNext-backup-${LocalDate.now()}.txt")
-        },
-        leadingContent = { MainPageEntryIcon(R.drawable.ic_ph_archive) },
-        headlineContent = { Text(text = stringResource(R.string.settings_backup_export)) },
-        supportingContent = { Text(text = stringResource(R.string.settings_backup_export_detail)) },
-        trailingContent = { MainPageChevron() },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-    )
-    Spacer(Modifier.height(4.dp))
-    ListItem(
-        modifier = Modifier.clickable(enabled = !working) {
-            importLauncher.launch(arrayOf("*/*"))
-        },
-        leadingContent = { MainPageEntryIcon(R.drawable.ic_ph_folder_simple) },
-        headlineContent = { Text(text = stringResource(R.string.settings_backup_import)) },
-        supportingContent = { Text(text = stringResource(R.string.settings_backup_import_detail)) },
-        trailingContent = { MainPageChevron() },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-    )
+    val entries: @Composable () -> Unit = {
+        ListItem(
+            modifier = Modifier.clickable(enabled = !working) {
+                // The picker's result opens its own sheet, so this one closes first.
+                showActions = false
+                exportLauncher.launch("AppOpsNext-backup-${LocalDate.now()}.txt")
+            },
+            leadingContent = { MainPageEntryIcon(R.drawable.ic_ph_archive) },
+            headlineContent = { Text(text = stringResource(R.string.settings_backup_export)) },
+            supportingContent = { Text(text = stringResource(R.string.settings_backup_export_detail)) },
+            trailingContent = { MainPageChevron() },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        )
+        Spacer(Modifier.height(4.dp))
+        ListItem(
+            modifier = Modifier.clickable(enabled = !working) {
+                showActions = false
+                importLauncher.launch(arrayOf("*/*"))
+            },
+            leadingContent = { MainPageEntryIcon(R.drawable.ic_ph_folder_simple) },
+            headlineContent = { Text(text = stringResource(R.string.settings_backup_import)) },
+            supportingContent = { Text(text = stringResource(R.string.settings_backup_import_detail)) },
+            trailingContent = { MainPageChevron() },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        )
+
+    }
+    if (compact) {
+        ListItem(
+            modifier = Modifier.clickable { showActions = true },
+            leadingContent = { MainPageEntryIcon(R.drawable.ic_ph_folder_simple) },
+            headlineContent = { Text(stringResource(R.string.settings_backup_section)) },
+            supportingContent = { Text(stringResource(R.string.settings_backup_summary)) },
+            trailingContent = { MainPageChevron() },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        )
+        if (showActions) {
+            AppBottomSheet(
+                onDismissRequest = { showActions = false },
+                title = { Text(stringResource(R.string.settings_backup_section)) },
+                text = { Column(Modifier.verticalScroll(rememberScrollState())) { entries() } },
+                confirmButton = {
+                    TextButton(onClick = { showActions = false }) { Text(stringResource(R.string.action_dismiss)) }
+                },
+            )
+        }
+    } else {
+        entries()
+    }
 
     when (state) {
         is BackupUiState.Preview -> BackupPreviewSheet(

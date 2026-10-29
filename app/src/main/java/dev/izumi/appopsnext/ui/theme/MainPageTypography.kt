@@ -9,17 +9,17 @@ import java.util.Locale
 
 private val MainChineseTypography = BalancedChineseTypography.copy(
     titleLarge = BalancedChineseTypography.titleLarge.copy(
-        fontSize = 20.5.sp,
+        fontSize = 24.sp,
         letterSpacing = 0.sp,
     ),
     titleMedium = BalancedChineseTypography.titleMedium.copy(letterSpacing = 0.sp),
     titleSmall = BalancedChineseTypography.titleSmall.copy(letterSpacing = 0.sp),
     bodyLarge = BalancedChineseTypography.bodyLarge.copy(
-        lineHeight = 25.sp,
+        lineHeight = 23.sp,
         letterSpacing = 0.sp,
     ),
     bodyMedium = BalancedChineseTypography.bodyMedium.copy(
-        lineHeight = 22.sp,
+        lineHeight = 20.sp,
         letterSpacing = 0.sp,
     ),
     bodySmall = BalancedChineseTypography.bodySmall.copy(
