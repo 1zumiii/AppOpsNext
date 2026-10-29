@@ -283,11 +283,13 @@
     <string name="templates_custom_empty">新建模板后，就能把同一组规则复用到多个应用。</string>
     <string name="template_create">新建</string>
     <string name="template_new_app_policy_title">新装应用默认模板</string>
-    <string name="template_new_app_policy_description">自动套用常见的隐私限制。模板不可删除。AppOpsNext 未运行时安装的应用，会由后台检查在约 15 分钟内处理，前提是 Shizuku 正在运行。获得通知权限后，每次处理完会发送结果通知。</string>
+    <string name="template_new_app_policy_description">自动套用常见的隐私限制。模板不可删除。开启“安装后立即处理”后，Shizuku 中常驻的进程会监听安装并唤醒 AppOpsNext，AppOpsNext 未运行时也能立即套用规则。Shizuku 重新启动后（例如重启手机后），该进程会随之恢复。其余情况由约每 15 分钟一次的后台检查兜底，前提是 Shizuku 正在运行。获得通知权限后，每次处理完会发送结果通知。</string>
     <string name="template_new_app_auto_apply">自动套用到新装应用</string>
     <string name="template_preview_more">%1$s +%2$d</string>
     <string name="template_preview_count_only">+%1$d</string>
     <string name="template_more_options">更多模板操作</string>
+    <string name="template_new_app_instant">安装后立即处理</string>
+    <string name="template_new_app_instant_summary">在 Shizuku 中常驻一个小进程，用于监听安装</string>
     <string name="template_new_app_policy_information">自动套用说明</string>
     <string name="new_app_policy_notification_channel">新装应用规则</string>
     <string name="new_app_policy_notification_title">已处理新装应用：%1$s</string>

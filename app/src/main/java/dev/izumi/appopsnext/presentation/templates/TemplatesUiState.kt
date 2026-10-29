@@ -6,4 +6,5 @@ data class TemplatesUiState(
     val templates: List<PermissionTemplate> = emptyList(),
     val selectedTemplate: PermissionTemplate? = null,
     val autoApplyNewAppTemplate: Boolean = false,
+    val instantNewAppRules: Boolean = true,
 )

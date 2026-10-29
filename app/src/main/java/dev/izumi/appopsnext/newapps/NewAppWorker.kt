@@ -6,9 +6,9 @@ import androidx.work.WorkerParameters
 import dev.izumi.appopsnext.AppOpsNextApplication
 
 /**
- * Looks for new apps every 15 minutes while automatic rules are on. The live
- * package receiver only works while the process runs, so this catches the
- * installs made while it did not.
+ * Looks for new apps. It runs every 15 minutes while automatic rules are on,
+ * which catches installs the live package receiver missed while the process was
+ * not running, and once more whenever [NewAppInstallReceiver] is woken.
  */
 class NewAppWorker(context: Context, parameters: WorkerParameters) : CoroutineWorker(context, parameters) {
     override suspend fun doWork(): Result {

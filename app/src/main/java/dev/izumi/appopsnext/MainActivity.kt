@@ -198,6 +198,8 @@ class MainActivity : ComponentActivity() {
                         templatesViewModel::setRuleOrder,
                     onAutoApplyNewAppTemplateChange =
                         templatesViewModel::setAutoApplyNewAppTemplate,
+                    onInstantNewAppRulesChange =
+                        templatesViewModel::setInstantNewAppRules,
                     onTemplateApplyRequested =
                         batchOperationsViewModel::requestTemplateApplication,
                     onPermissionBatchRequested =

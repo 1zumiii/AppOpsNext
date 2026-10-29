@@ -100,6 +100,7 @@ fun TemplatesScreen(
     onRuleSelectionChange: (List<String>) -> Unit,
     onRuleOrderChange: (List<String>) -> Unit,
     onAutoApplyNewAppTemplateChange: (Boolean) -> Unit,
+    onInstantNewAppRulesChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
 ) {
@@ -223,6 +224,8 @@ fun TemplatesScreen(
                     uiState.autoApplyNewAppTemplate,
                 onAutoApplyNewAppTemplateChange =
                     onAutoApplyNewAppTemplateChange,
+                instantNewAppRules = uiState.instantNewAppRules,
+                onInstantNewAppRulesChange = onInstantNewAppRulesChange,
                 onSelectTemplate = onSelectTemplate,
                 modifier = Modifier
                     .fillMaxSize()
@@ -320,6 +323,8 @@ private fun TemplateList(
     templates: List<PermissionTemplate>,
     autoApplyNewAppTemplate: Boolean,
     onAutoApplyNewAppTemplateChange: (Boolean) -> Unit,
+    instantNewAppRules: Boolean,
+    onInstantNewAppRulesChange: (Boolean) -> Unit,
     onSelectTemplate: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -364,6 +369,8 @@ private fun TemplateList(
                     template = template,
                     enabled = autoApplyNewAppTemplate,
                     onEnabledChange = onAutoApplyNewAppTemplateChange,
+                    instant = instantNewAppRules,
+                    onInstantChange = onInstantNewAppRulesChange,
                     onEdit = { onSelectTemplate(template.id) },
                     modifier = Modifier.padding(horizontal = 20.dp),
                 )
@@ -399,6 +406,8 @@ private fun NewAppPolicyCard(
     template: PermissionTemplate,
     enabled: Boolean,
     onEnabledChange: (Boolean) -> Unit,
+    instant: Boolean,
+    onInstantChange: (Boolean) -> Unit,
     onEdit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -463,6 +472,30 @@ private fun NewAppPolicyCard(
                     checked = enabled,
                     onCheckedChange = onEnabledChange,
                 )
+            }
+            if (enabled) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.template_new_app_instant),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Text(
+                            text = stringResource(R.string.template_new_app_instant_summary),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    Switch(
+                        checked = instant,
+                        onCheckedChange = onInstantChange,
+                    )
+                }
             }
         }
     }
