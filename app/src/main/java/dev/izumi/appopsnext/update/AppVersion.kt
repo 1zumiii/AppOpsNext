@@ -6,11 +6,15 @@ package dev.izumi.appopsnext.update
  * Numeric segments are compared as numbers, so 1.3.10 sorts after 1.3.9, which
  * a plain string comparison would get backwards. Anything that is not a plain
  * number is treated as older than the same version without it, so `1.4.0-rc1`
- * does not present itself as newer than `1.4.0`.
+ * does not present itself as newer than `1.4.0`. A number inside a suffix is
+ * compared as a number too, so `beta10` follows `beta9`.
  */
 object AppVersion {
     fun isNewer(candidate: String, current: String): Boolean =
         compare(candidate, current) > 0
+
+    /** Whether the version carries a suffix such as `-beta2`, which marks a test build. */
+    fun isPrerelease(version: String): Boolean = segments(version).any { !it.isNumeric }
 
     internal fun compare(left: String, right: String): Int {
         val leftParts = segments(left)
@@ -43,11 +47,14 @@ object AppVersion {
             .removePrefix("V")
             .split('.', '-', '+', '_')
             .filter(String::isNotEmpty)
+            .flatMap { part -> LETTERS_AND_DIGITS.findAll(part).map { it.value }.toList() }
             .map { part ->
                 val number = part.toLongOrNull()
                 if (number != null) Segment(number, part, true)
                 else Segment(0, part, false)
             }
+
+    private val LETTERS_AND_DIGITS = Regex("[0-9]+|[^0-9]+")
 
     private data class Segment(
         val number: Long,
