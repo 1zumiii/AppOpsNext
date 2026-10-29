@@ -6,6 +6,7 @@ import java.net.URL
 import java.net.URLDecoder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
@@ -19,15 +20,20 @@ import org.json.JSONObject
  * The API allows 60 requests an hour for each address, which a carrier or VPN
  * address shared by many people uses up quickly. When it is used up, the
  * redirect of the public "latest release" page names the same release.
+ *
+ * A beta build is offered the next beta as well as the next release, so it
+ * reads the recent releases instead of the latest one, which skips prereleases.
+ * The redirect fallback names releases only.
  */
 class UpdateChecker(
     private val currentVersion: String = BuildConfig.VERSION_NAME,
-    private val endpoint: String = LATEST_RELEASE_ENDPOINT,
+    private val includePrereleases: Boolean = AppVersion.isPrerelease(currentVersion),
 ) {
     suspend fun check(): UpdateState = withContext(Dispatchers.IO) {
         runCatching {
-            val (code, body) = fetch()
+            val (code, body) = fetch(if (includePrereleases) RECENT_RELEASES_ENDPOINT else LATEST_RELEASE_ENDPOINT)
             when {
+                body != null && includePrereleases -> fromRecent(JSONArray(body))
                 body != null -> fromApi(JSONObject(body))
                 code == HTTP_FORBIDDEN || code == HTTP_TOO_MANY_REQUESTS -> fromLatestPage()
                 else -> UpdateState.Failed
@@ -42,6 +48,20 @@ class UpdateChecker(
         val tag = json.optString("tag_name").takeIf(String::isNotBlank)
             ?: return UpdateState.Failed
         return fromTag(tag, json.optString("html_url").takeIf(String::isNotBlank))
+    }
+
+    private fun fromRecent(json: JSONArray): UpdateState {
+        val releases = (0 until json.length()).mapNotNull { index ->
+            val release = json.optJSONObject(index) ?: return@mapNotNull null
+            val tag = release.optString("tag_name").takeIf(String::isNotBlank) ?: return@mapNotNull null
+            PublishedRelease(
+                tag = tag,
+                url = release.optString("html_url").takeIf(String::isNotBlank),
+                draft = release.optBoolean("draft"),
+            )
+        }
+        val newest = newestRelease(releases) ?: return UpdateState.UpToDate
+        return fromTag(newest.tag, newest.url)
     }
 
     /** The page skips drafts and prereleases itself, as the API endpoint does. */
@@ -62,7 +82,7 @@ class UpdateChecker(
         }
 
     /** The status code, and the body when the request succeeded. */
-    private fun fetch(): Pair<Int?, String?> {
+    private fun fetch(endpoint: String): Pair<Int?, String?> {
         val connection = URL(endpoint).openConnection() as HttpURLConnection
         return try {
             connection.requestMethod = "GET"
@@ -104,12 +124,21 @@ class UpdateChecker(
             "https://github.com/1zumiii/AppOpsNext/releases/latest"
         private const val LATEST_RELEASE_ENDPOINT =
             "https://api.github.com/repos/1zumiii/AppOpsNext/releases/latest"
+        /** Newest first. Ten reaches past any run of betas this project has published. */
+        private const val RECENT_RELEASES_ENDPOINT =
+            "https://api.github.com/repos/1zumiii/AppOpsNext/releases?per_page=10"
         private const val USER_AGENT = "AppOpsNext"
         private const val TIMEOUT_MILLIS = 10_000
         private const val MAX_BODY_BYTES = 512 * 1024
         private const val HTTP_FORBIDDEN = 403
         private const val HTTP_TOO_MANY_REQUESTS = 429
         private const val RELEASE_TAG_PATH = "/1zumiii/AppOpsNext/releases/tag/"
+
+        /** The highest published version, beta or not. Drafts are skipped. */
+        internal fun newestRelease(releases: List<PublishedRelease>): PublishedRelease? =
+            releases
+                .filterNot(PublishedRelease::draft)
+                .maxWithOrNull { left, right -> AppVersion.compare(left.tag, right.tag) }
 
         /** The tag a release page of this repository names, or null for any other address. */
         internal fun tagOfReleaseUrl(url: String): String? {
@@ -124,3 +153,9 @@ class UpdateChecker(
         }
     }
 }
+
+internal data class PublishedRelease(
+    val tag: String,
+    val url: String?,
+    val draft: Boolean,
+)

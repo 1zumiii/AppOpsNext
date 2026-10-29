@@ -37,6 +37,20 @@ class AppVersionTest {
         assertTrue(AppVersion.isNewer("1.4.1", "1.4"))
     }
 
+    @Test fun `numbers inside a suffix compare as numbers`() {
+        assertTrue(AppVersion.isNewer("1.6.6-beta10", "1.6.6-beta9"))
+        assertTrue(AppVersion.isNewer("1.6.6-beta2", "1.6.6-beta1"))
+        assertTrue(AppVersion.isNewer("1.6.6", "1.6.6-beta2"))
+        assertTrue(AppVersion.isNewer("1.6.7-beta1", "1.6.6"))
+    }
+
+    @Test fun `only a version with a suffix is a prerelease`() {
+        assertTrue(AppVersion.isPrerelease("1.6.6-beta2"))
+        assertTrue(AppVersion.isPrerelease("v1.4.0-rc1"))
+        assertFalse(AppVersion.isPrerelease("1.6.5"))
+        assertFalse(AppVersion.isPrerelease("v1.6.5"))
+    }
+
     @Test fun `unparsable input never claims an update is available`() {
         assertFalse(AppVersion.isNewer("", "1.3.3"))
         assertFalse(AppVersion.isNewer("nightly", "1.3.3"))
