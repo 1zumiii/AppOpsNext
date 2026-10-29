@@ -1,5 +1,10 @@
 package dev.izumi.appopsnext.presentation.experimental
 
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -68,6 +73,7 @@ fun MonitorLogScreen(
     var operationFilter by rememberSaveable { mutableStateOf<String?>(null) }
     var filterDialog by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmingClear by remember { mutableStateOf(false) }
+    var showDetails by remember { mutableStateOf(false) }
     val appsByPackage = remember(apps) { apps.associateBy(InstalledApp::packageName) }
     val zoneId = remember { ZoneId.systemDefault() }
     // Up to fifty thousand entries are sorted into days, which is not work for the main thread.
@@ -94,6 +100,12 @@ fun MonitorLogScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showDetails = true }) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_ph_info),
+                            contentDescription = stringResource(R.string.monitor_log_details_title),
+                        )
+                    }
                     IconButton(onClick = { confirmingClear = true }, enabled = entries.isNotEmpty()) {
                         Icon(
                             painter = painterResource(R.drawable.ic_ph_trash),
@@ -112,11 +124,13 @@ fun MonitorLogScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                // What to look at, then which outcome: the second row holds
+                // options that exclude each other, so they get a row of their own.
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                        .padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     FilterChip(
@@ -132,6 +146,14 @@ fun MonitorLogScreen(
                             AppOpDisplayCatalog.labelResOf(operation)?.let { stringResource(it) } ?: operation
                         } ?: stringResource(R.string.filter_all_permissions)) },
                     )
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     MonitorOutcomes.entries.forEach { option ->
                         FilterChip(
                             selected = option == outcome,
@@ -192,6 +214,16 @@ fun MonitorLogScreen(
             onDismiss = { filterDialog = null },
         )
     }
+    if (showDetails) {
+        AlertDialog(
+            onDismissRequest = { showDetails = false },
+            title = { Text(stringResource(R.string.monitor_log_details_title)) },
+            text = { Text(stringResource(R.string.monitor_log_details)) },
+            confirmButton = {
+                TextButton(onClick = { showDetails = false }) { Text(stringResource(R.string.action_dismiss)) }
+            },
+        )
+    }
     if (confirmingClear) {
         AppBottomSheet(
             onDismissRequest = { confirmingClear = false },
@@ -244,31 +276,42 @@ private fun AccessRow(
     val time = remember(entry.timeMillis, zoneId) {
         Instant.ofEpochMilli(entry.timeMillis).atZone(zoneId).toLocalTime().format(TIME_FORMAT)
     }
-    ExperimentalListRow(
-        modifier = if (app != null) Modifier.clickable { onOpenApp(app) } else Modifier,
-        leadingContent = { AppIcon(packageName = entry.packageName, appLabel = label) },
-        headlineContent = { Text(text = label) },
-        supportingContent = {
+    // Denser than a list item: the log runs to thousands of rows.
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (app != null) Modifier.clickable { onOpenApp(app) } else Modifier)
+            .padding(horizontal = 32.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        AppIcon(packageName = entry.packageName, appLabel = label, size = 32.dp)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             Text(
                 text = stringResource(
                     if (entry.allowed) R.string.monitor_access_allowed else R.string.monitor_access_refused,
                     operation,
                 ),
+                style = MaterialTheme.typography.bodySmall,
                 color = if (entry.allowed) {
                     MaterialTheme.colorScheme.onSurfaceVariant
                 } else {
                     MaterialTheme.colorScheme.error
                 },
             )
-        },
-        trailingContent = {
-            Text(
-                text = time,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
-    )
+        }
+        Text(
+            text = time,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 private sealed interface LogRow {

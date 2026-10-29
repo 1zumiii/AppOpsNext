@@ -4,12 +4,14 @@ import dev.izumi.appopsnext.history.HistoryArchiveProblem
 import dev.izumi.appopsnext.history.HistoryArchiveRecorder
 import dev.izumi.appopsnext.history.HistoryArchiveStore
 import dev.izumi.appopsnext.settings.AppLanguage
+import dev.izumi.appopsnext.settings.AppTheme
 import dev.izumi.appopsnext.update.UpdateState
 import dev.izumi.appopsnext.settings.UserSettingsDefaults
 
 data class SettingsUiState(
     val hideSystemApps: Boolean = UserSettingsDefaults.HIDE_SYSTEM_APPS,
     val appLanguage: AppLanguage = AppLanguage.SYSTEM,
+    val appTheme: AppTheme = AppTheme.SYSTEM,
     val updateState: UpdateState = UpdateState.Idle,
     val saveIndividualHistory: Boolean = UserSettingsDefaults.SAVE_INDIVIDUAL_HISTORY,
     /** The operations chosen for saving, among [HistoryArchiveRecorder.SAVEABLE_OPERATIONS]. */

@@ -168,6 +168,9 @@ internal class NativeDaemonGateway(
     override suspend fun listUsers(): ShellCommandResult =
         connection.execute(NativeDaemonCommand(verb = "LIST_USERS"))
 
+    override suspend fun getPackageTimes(): ShellCommandResult =
+        connection.execute(NativeDaemonCommand(verb = "GET_PACKAGE_TIMES"))
+
     override suspend fun listPackagesForUser(userId: Int): ShellCommandResult {
         requireUserId(userId)
         return connection.execute(

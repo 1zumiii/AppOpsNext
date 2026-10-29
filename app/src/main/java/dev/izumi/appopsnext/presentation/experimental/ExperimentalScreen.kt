@@ -23,7 +23,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
+import dev.izumi.appopsnext.presentation.components.CompactSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -144,7 +145,7 @@ fun ExperimentalScreen(
                             val summary = if (uiState.targetCount == 0) {
                                 stringResource(R.string.monitor_targets_empty)
                             } else {
-                                stringResource(R.string.monitor_targets_summary, uiState.targetCount)
+                                pluralStringResource(R.plurals.monitor_targets_summary, uiState.targetCount, uiState.targetCount)
                             }
                             Text(
                                 text = if (locked) stringResource(R.string.monitor_targets_locked, summary) else summary,
@@ -245,14 +246,14 @@ private fun MonitorFeature(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
             shape = RoundedCornerShape(18.dp),
-            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
         ) {
             ListItem(
                 leadingContent = { MainPageEntryIcon(R.drawable.ic_ph_eye) },
                 headlineContent = { Text(text = stringResource(R.string.monitor_title)) },
                 supportingContent = { Text(text = stringResource(R.string.monitor_summary)) },
                 trailingContent = {
-                    Switch(
+                    CompactSwitch(
                         checked = uiState.monitorEnabled,
                         enabled = !uiState.monitorBusy && uiState.targetCount > 0,
                         onCheckedChange = onMonitorChange,

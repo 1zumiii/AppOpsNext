@@ -442,6 +442,13 @@ class PrivilegedServiceClient(
                 ?: throw IllegalStateException("Privileged service is unavailable")
         }
 
+    override suspend fun getPackageTimes(): ShellCommandResult =
+        withContext(Dispatchers.IO) {
+            executeNative { it.getPackageTimes() }
+                ?: service?.getPackageTimes()
+                ?: throw IllegalStateException("Privileged service is unavailable")
+        }
+
     override suspend fun listPackagesForUser(
         userId: Int,
     ): ShellCommandResult =

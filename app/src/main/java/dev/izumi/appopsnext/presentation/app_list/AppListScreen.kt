@@ -1,26 +1,28 @@
 package dev.izumi.appopsnext.presentation.app_list
 
+import dev.izumi.appopsnext.presentation.components.topFadingEdge
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.FilterChip
 import dev.izumi.appopsnext.apps.model.AndroidUser
 import dev.izumi.appopsnext.apps.AppSortOrder
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -29,6 +31,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.runtime.LaunchedEffect
@@ -41,6 +46,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
@@ -58,6 +64,8 @@ import dev.izumi.appopsnext.presentation.components.AppSortMenu
 import dev.izumi.appopsnext.presentation.components.ScrollToTopOnSortChange
 import dev.izumi.appopsnext.presentation.components.appSortTimeText
 import dev.izumi.appopsnext.presentation.components.CompactSearchField
+import dev.izumi.appopsnext.presentation.components.mainPageGroupShape
+import dev.izumi.appopsnext.presentation.components.MainPageGroupDivider
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
 import dev.izumi.appopsnext.presentation.batch.BatchOperationUiState
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -112,19 +120,32 @@ fun AppListScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = stringResource(R.string.app_list_title),
-                        fontWeight = mainPageHeadingWeight(),
-                    )
+                    // Which space is listed reads as part of the title, apart from
+                    // the tabs, which choose how it is browsed.
+                    Column {
+                        Text(
+                            text = stringResource(R.string.app_list_title),
+                            fontWeight = mainPageHeadingWeight(),
+                        )
+                        if (uiState.users.size > 1) {
+                            UserPicker(
+                                users = uiState.users,
+                                selectedUserId = uiState.selectedUserId ?: uiState.currentUserId,
+                                onUserSelected = { id ->
+                                    batchSelectionMode = false
+                                    selectedPackages = emptySet()
+                                    onUserSelected(id.takeIf { it != uiState.currentUserId })
+                                },
+                            )
+                        }
+                    }
                 },
                 actions = {
-                    // Other users are listed without install times.
-                    if (!permissionTab && uiState.selectedUserId == null) {
+                    if (!permissionTab) {
                         AppSortMenu(selected = uiState.sortOrder, onSelected = onSortOrderChange)
                     }
                     if (!permissionTab) {
-                        // Templates and batch changes apply to the current user only.
-                        if (uiState.selectedUserId == null) IconButton(
+                        IconButton(
                             onClick = {
                                 batchSelectionMode = !batchSelectionMode
                                 selectedPackages = emptySet()
@@ -158,30 +179,21 @@ fun AppListScreen(
         bottomBar = bottomBar,
     ) { contentPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
-            if (uiState.users.size > 1) {
-                UserPicker(
-                    users = uiState.users,
-                    currentUserId = uiState.currentUserId,
-                    selectedUserId = uiState.selectedUserId ?: uiState.currentUserId,
-                    onUserSelected = { id ->
-                        batchSelectionMode = false
-                        selectedPackages = emptySet()
-                        onUserSelected(id.takeIf { it != uiState.currentUserId })
-                    },
-                )
-            }
-            TabRow(selectedTabIndex = if (permissionTab) 1 else 0) {
+            TabRow(
+                selectedTabIndex = if (permissionTab) 1 else 0,
+                containerColor = MaterialTheme.colorScheme.surface,
+            ) {
                 Tab(
                     selected = !permissionTab,
                     onClick = { onPermissionTabChange(false) },
                     unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    text = { Text(stringResource(R.string.browse_by_app)) },
+                    text = { Text(stringResource(R.string.browse_by_app), style = MaterialTheme.typography.labelLarge) },
                 )
                 Tab(
                     selected = permissionTab,
                     onClick = { onPermissionTabChange(true) },
                     unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    text = { Text(stringResource(R.string.browse_by_permission)) },
+                    text = { Text(stringResource(R.string.browse_by_permission), style = MaterialTheme.typography.labelLarge) },
                 )
             }
             if (permissionTab) {
@@ -260,7 +272,7 @@ private fun AppListContent(
             label = stringResource(R.string.app_list_search_label),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 20.dp, end = 20.dp, top = 12.dp),
+                .padding(start = 18.dp, end = 18.dp, top = 12.dp),
         )
         if (uiState.searchQuery.isNotBlank() || uiState.visibleApps.size != uiState.totalAppCount) {
             Text(
@@ -269,8 +281,8 @@ private fun AppListContent(
                     uiState.visibleApps.size,
                     uiState.totalAppCount,
                 ),
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
-                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -280,11 +292,11 @@ private fun AppListContent(
             modifier = Modifier.weight(1f),
         ) {
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().topFadingEdge(listState),
                 state = listState,
                 contentPadding = PaddingValues(
-                    start = 20.dp,
-                    end = 20.dp,
+                    start = 18.dp,
+                    end = 18.dp,
                     top = 8.dp,
                     bottom = 16.dp,
                 ),
@@ -361,51 +373,53 @@ private fun InstalledAppListItem(
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 11.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            AppIcon(
-                packageName = app.packageName,
-                appLabel = app.label,
-                size = 40.dp,
-                userId = app.userId,
-            )
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 11.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = app.label,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                AppIcon(
+                    packageName = app.packageName,
+                    appLabel = app.label,
+                    size = 40.dp,
+                    userId = app.userId,
                 )
-                Text(
-                    text = app.packageName,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                appSortTimeText(app, sortOrder)?.let { time ->
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
                     Text(
-                        text = time,
+                        text = app.label,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = app.packageName,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    appSortTimeText(app, sortOrder)?.let { time ->
+                        Text(
+                            text = time,
+                            maxLines = 1,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
-            }
-            selectedForBatch?.let { selected ->
-                Checkbox(
-                    checked = selected,
-                    onCheckedChange = onBatchSelectionChange,
-                )
+                selectedForBatch?.let { selected ->
+                    Checkbox(
+                        checked = selected,
+                        onCheckedChange = onBatchSelectionChange,
+                    )
+                }
             }
         }
     }
@@ -414,33 +428,90 @@ private fun InstalledAppListItem(
 @Composable
 private fun UserPicker(
     users: List<AndroidUser>,
-    currentUserId: Int,
     selectedUserId: Int,
     onUserSelected: (Int) -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        users.forEach { user ->
-            FilterChip(
-                selected = user.id == selectedUserId,
-                onClick = { onUserSelected(user.id) },
-                label = {
-                    Text(
-                        text = if (user.name.isBlank()) {
-                            stringResource(R.string.user_unnamed, user.id)
-                        } else {
-                            stringResource(R.string.user_named, user.name, user.id)
-                        },
-                    )
-                },
+    var expanded by remember { mutableStateOf(false) }
+    val selectedUser = users.firstOrNull { it.id == selectedUserId }
+    Box {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .clickable { expanded = true }
+                .padding(vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_ph_user),
+                contentDescription = null,
+                modifier = Modifier.padding(end = 4.dp).size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = selectedUser?.let { userDisplayName(it) }
+                    ?: stringResource(R.string.user_unnamed, selectedUserId),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Icon(
+                painter = painterResource(R.drawable.ic_ph_caret_right),
+                contentDescription = stringResource(R.string.user_select_space),
+                modifier = Modifier.padding(start = 4.dp).size(14.dp).rotate(90f),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            shape = RoundedCornerShape(16.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ) {
+            users.forEach { user ->
+                DropdownMenuItem(
+                    onClick = { expanded = false; onUserSelected(user.id) },
+                    text = {
+                        Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                            Text(
+                                text = userDisplayName(user),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                            Text(
+                                text = stringResource(R.string.user_id, user.id),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    },
+                    // On the trailing side, like the sort menu, so every name starts at one edge.
+                    trailingIcon = if (user.id == selectedUserId) {
+                        {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_ph_check_circle),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    } else {
+                        null
+                    },
+                )
+            }
+        }
     }
+}
+
+/**
+ * The system names some profiles in English whatever the language, so the
+ * names it is known to use are shown in the app's language instead.
+ */
+@Composable
+private fun userDisplayName(user: AndroidUser): String = when (user.name.trim()) {
+    "" -> stringResource(R.string.user_unnamed, user.id)
+    "Private space" -> stringResource(R.string.user_private_space)
+    "Work profile" -> stringResource(R.string.user_work_profile)
+    else -> user.name
 }
 
 @Composable

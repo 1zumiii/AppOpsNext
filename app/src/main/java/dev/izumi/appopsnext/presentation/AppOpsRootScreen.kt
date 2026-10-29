@@ -63,6 +63,7 @@ import dev.izumi.appopsnext.history.model.HistoryPermission
 import dev.izumi.appopsnext.presentation.settings.SettingsScreen
 import dev.izumi.appopsnext.presentation.settings.SettingsUiState
 import dev.izumi.appopsnext.settings.AppLanguage
+import dev.izumi.appopsnext.settings.AppTheme
 import dev.izumi.appopsnext.presentation.templates.TemplatesScreen
 import dev.izumi.appopsnext.presentation.templates.TemplatesUiState
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
@@ -147,6 +148,7 @@ fun AppOpsRootScreen(
     onMonitorShowAllOperationsChange: (Boolean) -> Unit,
     onMonitorSuppressAllOperationsWarning: () -> Unit,
     onAppLanguageChange: (AppLanguage) -> Unit,
+    onAppThemeChange: (AppTheme) -> Unit,
     onCreateTemplate: (String) -> Unit,
     onSelectTemplate: (String) -> Unit,
     onCloseTemplateEditor: () -> Unit,
@@ -355,7 +357,7 @@ fun AppOpsRootScreen(
                 apps = appListUiState.allApps,
                 selectionByPackage = experimentalUiState.selectionByPackage,
                 sortOrder = appListUiState.sortOrder,
-                onSortOrderChange = onAppSortOrderChange.takeIf { appListUiState.selectedUserId == null },
+                onSortOrderChange = onAppSortOrderChange,
                 onBack = { experimentalRoute = ROUTE_MONITOR_SETTINGS },
                 onAppSelected = { app -> monitorAppPackage = app.packageName },
             )
@@ -633,6 +635,7 @@ fun AppOpsRootScreen(
                     onOpenExperimental = { experimentalRoute = ROUTE_EXPERIMENTAL },
                     onCheckForUpdate = onCheckForUpdate,
                     onAppLanguageChange = onAppLanguageChange,
+                    onAppThemeChange = onAppThemeChange,
                     onShizukuAction = onShizukuAction,
                     onPrivilegedServiceRetry = onPrivilegedServiceRetry,
                     onClearDiagnosticLog = onClearDiagnosticLog,

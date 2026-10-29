@@ -24,7 +24,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
+import dev.izumi.appopsnext.presentation.components.CompactSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -121,7 +121,7 @@ fun MonitorPointDetailScreen(
                         Text(text = stringResource(R.string.monitor_point_throttle_summary))
                     },
                     trailingContent = {
-                        Switch(
+                        CompactSwitch(
                             checked = point.settings.throttleSeconds != null,
                             enabled = enabled,
                             onCheckedChange = { on ->
@@ -173,7 +173,7 @@ fun MonitorPointDetailScreen(
                         Text(text = stringResource(R.string.monitor_point_background_summary))
                     },
                     trailingContent = {
-                        Switch(
+                        CompactSwitch(
                             checked = point.settings.backgroundOnly,
                             enabled = enabled,
                             onCheckedChange = onBackgroundOnlyChange,

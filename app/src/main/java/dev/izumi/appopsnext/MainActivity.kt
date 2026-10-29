@@ -186,6 +186,7 @@ class MainActivity : ComponentActivity() {
                     onDismissBackup = settingsViewModel::dismissBackup,
                     onAppLanguageChange =
                         settingsViewModel::setAppLanguage,
+                    onAppThemeChange = settingsViewModel::setAppTheme,
                     onCreateTemplate = templatesViewModel::createTemplate,
                     onSelectTemplate = templatesViewModel::selectTemplate,
                     onCloseTemplateEditor = templatesViewModel::closeEditor,
