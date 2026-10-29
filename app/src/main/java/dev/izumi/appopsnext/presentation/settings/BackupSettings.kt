@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.presentation.experimental.modeTitle
 import dev.izumi.appopsnext.backup.BackupPreview
 import dev.izumi.appopsnext.backup.BackupProblem
 import dev.izumi.appopsnext.presentation.components.AppBottomSheet
@@ -156,6 +157,15 @@ private fun BackupPreviewSheet(
                             preview.monitorPointCount ?: 0,
                         ),
                     )
+                }
+                preview.guard?.let { guard ->
+                    Text(text = stringResource(R.string.backup_preview_guard, guard.backup.rules.size))
+                    guard.backup.mode?.let { mode ->
+                        Text(text = stringResource(R.string.backup_preview_guard_mode, stringResource(modeTitle(mode))))
+                    }
+                    if (guard.skipped > 0) {
+                        Text(text = stringResource(R.string.backup_preview_guard_skipped, guard.skipped))
+                    }
                 }
                 if (backup.skippedSections.isNotEmpty()) {
                     Text(text = stringResource(R.string.backup_preview_skipped))

@@ -319,7 +319,7 @@ private fun GuardRuleRow(
     )
 }
 
-private fun modeTitle(mode: GuardMode): Int = when (mode) {
+internal fun modeTitle(mode: GuardMode): Int = when (mode) {
     GuardMode.OFF -> R.string.guard_mode_off
     GuardMode.PERIODIC -> R.string.guard_mode_periodic
     GuardMode.REALTIME -> R.string.guard_mode_realtime

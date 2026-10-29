@@ -1,6 +1,7 @@
 package dev.izumi.appopsnext
 
 import android.app.Application
+import android.content.pm.PackageManager
 import dev.izumi.appopsnext.appops.AppOpsReadCapabilities
 import dev.izumi.appopsnext.appops.AppOpsReadProbe
 import dev.izumi.appopsnext.appops.AppOpsRepository
@@ -182,7 +183,13 @@ class AppOpsNextApplication : Application() {
             templateRepository = permissionTemplateRepository,
             settingsRepository = userSettingsRepository,
             monitorTargetsRepository = monitorTargetsRepository,
+            guardRepository = guardRepository,
             appVersion = BuildConfig.VERSION_NAME,
+            packageUid = { packageName ->
+                runCatching {
+                    packageManager.getPackageUid(packageName, PackageManager.PackageInfoFlags.of(0))
+                }.getOrNull()
+            },
         )
     }
 

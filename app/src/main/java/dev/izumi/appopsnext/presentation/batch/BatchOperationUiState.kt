@@ -10,6 +10,8 @@ data class BatchOperationRequest(
     val targets: List<BatchOperationTarget>,
     val affectedPackages: List<String> = emptyList(),
     val previewTargets: List<BatchOperationTarget> = targets,
+    /** Whether the confirmation offers to guard what the batch sets, which needs the guard to be on. */
+    val offerGuard: Boolean = false,
 )
 
 sealed interface BatchOperationUiState {

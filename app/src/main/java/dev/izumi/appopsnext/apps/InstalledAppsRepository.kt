@@ -2,6 +2,7 @@ package dev.izumi.appopsnext.apps
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import java.text.Collator
@@ -31,10 +32,10 @@ class InstalledAppsRepository(
                     now - cachedAtNanos < 60_000_000_000L) return@withLock previous
                 val labelCollator = Collator.getInstance(Locale.getDefault())
                 val loaded = packageManager
-                    .getInstalledApplications(
-                        PackageManager.ApplicationInfoFlags.of(0),
+                    .getInstalledPackages(
+                        PackageManager.PackageInfoFlags.of(0),
                     )
-                    .map(::toInstalledApp)
+                    .mapNotNull(::toInstalledApp)
                     .sortedWith { left, right ->
                         labelCollator.compare(left.label, right.label)
                     }
@@ -45,7 +46,8 @@ class InstalledAppsRepository(
             }
         }
 
-    private fun toInstalledApp(applicationInfo: ApplicationInfo): InstalledApp {
+    private fun toInstalledApp(packageInfo: PackageInfo): InstalledApp? {
+        val applicationInfo = packageInfo.applicationInfo ?: return null
         val label = runCatching {
             applicationInfo.loadLabel(packageManager).toString()
         }.getOrDefault(applicationInfo.packageName)
@@ -58,6 +60,8 @@ class InstalledAppsRepository(
                 ApplicationInfo.FLAG_SYSTEM or
                     ApplicationInfo.FLAG_UPDATED_SYSTEM_APP,
             ),
+            firstInstallTimeMillis = packageInfo.firstInstallTime,
+            lastUpdateTimeMillis = packageInfo.lastUpdateTime,
         )
     }
 

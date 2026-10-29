@@ -144,6 +144,7 @@ class MainActivity : ComponentActivity() {
                     onClearDiagnosticLog =
                         diagnosticsViewModel::clearDiagnosticLog,
                     onAppSearchQueryChange = appListViewModel::updateSearchQuery,
+                    onAppSortOrderChange = appListViewModel::setSortOrder,
                     onRefreshApps = appListViewModel::refresh,
                     onUserSelected = appListViewModel::selectUser,
                     onRefreshHistory = historyViewModel::refresh,

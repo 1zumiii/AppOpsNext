@@ -6,8 +6,10 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import dev.izumi.appopsnext.apps.AppSortOrder
 import dev.izumi.appopsnext.backup.UserSettingsBackup
 import java.io.IOException
 import kotlinx.coroutines.flow.Flow
@@ -66,12 +68,20 @@ class UserSettingsRepository(
                     preferences[Keys.SAVE_INDIVIDUAL_HISTORY]
                         ?: UserSettingsDefaults.SAVE_INDIVIDUAL_HISTORY,
                 savedHistoryOperations = preferences[Keys.SAVED_HISTORY_OPERATIONS],
+                appSortOrder = AppSortOrder.fromName(preferences[Keys.APP_SORT_ORDER])
+                    ?: AppSortOrder.NAME,
             )
         }
 
     suspend fun setHideSystemApps(hidden: Boolean) {
         dataStore.edit { preferences ->
             preferences[Keys.HIDE_SYSTEM_APPS] = hidden
+        }
+    }
+
+    suspend fun setAppSortOrder(order: AppSortOrder) {
+        dataStore.edit { preferences ->
+            preferences[Keys.APP_SORT_ORDER] = order.name
         }
     }
 
@@ -164,6 +174,7 @@ class UserSettingsRepository(
             backup.savedHistoryOperations?.let {
                 preferences[Keys.SAVED_HISTORY_OPERATIONS] = it
             }
+            backup.appSortOrder?.let { preferences[Keys.APP_SORT_ORDER] = it.name }
         }
     }
 
@@ -171,6 +182,7 @@ class UserSettingsRepository(
         val SAVE_INDIVIDUAL_HISTORY = booleanPreferencesKey("save_individual_history")
         val SAVED_HISTORY_OPERATIONS = stringSetPreferencesKey("saved_history_operations")
         val HIDE_SYSTEM_APPS = booleanPreferencesKey("hide_system_apps")
+        val APP_SORT_ORDER = stringPreferencesKey("app_sort_order")
         val SUPPRESS_DENY_FALLBACK_NOTICE =
             booleanPreferencesKey("suppress_deny_fallback_notice")
         val SUPPRESS_PERMISSION_FLAG_NOTICE =

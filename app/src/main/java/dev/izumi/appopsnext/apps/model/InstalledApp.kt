@@ -7,4 +7,7 @@ data class InstalledApp(
     val isSystemApp: Boolean,
     /** Null for the user this app runs in. */
     val userId: Int? = null,
+    /** Unknown for other users, whose packages are listed by the shell. */
+    val firstInstallTimeMillis: Long? = null,
+    val lastUpdateTimeMillis: Long? = null,
 )

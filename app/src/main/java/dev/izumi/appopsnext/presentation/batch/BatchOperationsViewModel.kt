@@ -9,17 +9,21 @@ import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeExecutor
 import dev.izumi.appopsnext.appops.RevokedCompatRetry
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
+import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
 import dev.izumi.appopsnext.appops.model.AppOpNames
 import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.batch.BatchAppOpsExecutor
 import dev.izumi.appopsnext.batch.model.BatchOperationReport
 import dev.izumi.appopsnext.batch.model.BatchOperationTarget
+import dev.izumi.appopsnext.guard.GuardMode
+import dev.izumi.appopsnext.guard.GuardRule
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
 import dev.izumi.appopsnext.templates.NewAppPolicyTemplate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class BatchOperationsViewModel(
@@ -27,6 +31,11 @@ class BatchOperationsViewModel(
 ) : AndroidViewModel(application) {
     private val repository =
         getApplication<AppOpsNextApplication>().appOpsRepository
+    private val guardRepository =
+        getApplication<AppOpsNextApplication>().guardRepository
+
+    /** The scope each target was written in, which can fall back from the preferred one. */
+    private val appliedScopes = mutableMapOf<BatchOperationTarget, AppOpScope>()
     private val adaptiveScopeExecutor = AdaptiveScopeModeChangeExecutor(
         writeMemory = getApplication<AppOpsNextApplication>().revokedCompatWriteMemory,
     ) { uid ->
@@ -71,7 +80,7 @@ class BatchOperationsViewModel(
                     scope = scope,
                     requestedMode = target.requestedMode,
                 )
-            }.result
+            }.also { appliedScopes[target] = it.appliedScope }.result
         }
     }
     private val mutableUiState =
@@ -84,6 +93,13 @@ class BatchOperationsViewModel(
         apps: List<InstalledApp>,
     ) {
         if (apps.isEmpty() || template.rules.isEmpty()) return
+        viewModelScope.launch { confirmTemplate(template, apps) }
+    }
+
+    private suspend fun confirmTemplate(
+        template: PermissionTemplate,
+        apps: List<InstalledApp>,
+    ) {
         val targets = apps.flatMap { app ->
             template.rules.map { rule ->
                 BatchOperationTarget(
@@ -108,6 +124,8 @@ class BatchOperationsViewModel(
                 targetCount = apps.size,
                 operationCount = targets.size,
                 targets = targets,
+                offerGuard = guardRepository.mode.first() != GuardMode.OFF &&
+                    apps.all { it.userId == null },
             ),
         )
     }
@@ -164,7 +182,8 @@ class BatchOperationsViewModel(
         )
     }
 
-    fun confirm() {
+    /** With [guard] every setting the batch wrote is guarded at its new mode. */
+    fun confirm(guard: Boolean = false) {
         val request =
             (mutableUiState.value as? BatchOperationUiState.Confirming)
                 ?.request
@@ -184,8 +203,26 @@ class BatchOperationsViewModel(
                     )
                 },
             )
+            recordGuardChanges(report, guard)
             mutableUiState.value = BatchOperationUiState.Finished(report)
         }
+    }
+
+    /** Keeps guarded settings at the mode the user just chose, so the guard does not take it for a drift. */
+    private suspend fun recordGuardChanges(report: BatchOperationReport, guard: Boolean) {
+        val changed = report.results.mapNotNull { item ->
+            val success = item.result as? AppOpModeChangeResult.Success ?: return@mapNotNull null
+            GuardRule(
+                packageName = item.target.packageName,
+                uid = item.target.uid,
+                stableOperationName = item.target.stableOperationName,
+                scope = appliedScopes[item.target] ?: item.target.preferredScope,
+                expectedMode = success.appliedMode,
+                autoRestore = false,
+            )
+        }
+        appliedScopes.clear()
+        if (changed.isNotEmpty()) guardRepository.applyBatch(changed, guardNew = guard)
     }
 
     private var deferredReport: BatchOperationReport? = null
