@@ -5,6 +5,7 @@ import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.apps.AppListFilter
+import dev.izumi.appopsnext.apps.AppSortOrder
 import dev.izumi.appopsnext.apps.model.AndroidUser
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.settings.UserSettings
@@ -55,11 +56,14 @@ class AppListViewModel(
         @Suppress("UNCHECKED_CAST")
         val allUsers = values[5] as List<AndroidUser>
         val selectedUserId = values[6] as Int?
-        val eligibleApps = if (settings.hideSystemApps) {
+        val filteredApps = if (settings.hideSystemApps) {
             apps.filterNot(InstalledApp::isSystemApp)
         } else {
             apps
         }
+        // Other users are listed without install times, so they stay in name order.
+        val sortOrder = if (selectedUserId == null) settings.appSortOrder else AppSortOrder.NAME
+        val eligibleApps = sortOrder.sort(filteredApps)
         AppListUiState(
             searchQuery = query,
             totalAppCount = apps.size,
@@ -73,6 +77,7 @@ class AppListViewModel(
             users = allUsers,
             selectedUserId = selectedUserId,
             currentUserId = userApps.currentUserId,
+            sortOrder = sortOrder,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -108,6 +113,10 @@ class AppListViewModel(
         // A user that disappeared, such as a removed clone, falls back to the owner.
         val selected = userApps.selectedUserId.value
         if (selected != null && loaded.none { it.id == selected }) selectUser(null)
+    }
+
+    fun setSortOrder(order: AppSortOrder) {
+        viewModelScope.launch { settingsRepository.setAppSortOrder(order) }
     }
 
     fun updateSearchQuery(query: String) {

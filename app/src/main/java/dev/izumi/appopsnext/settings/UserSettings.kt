@@ -1,5 +1,7 @@
 package dev.izumi.appopsnext.settings
 
+import dev.izumi.appopsnext.apps.AppSortOrder
+
 object UserSettingsDefaults {
     const val HIDE_SYSTEM_APPS = true
     const val SUPPRESS_DENY_FALLBACK_NOTICE = false
@@ -39,4 +41,5 @@ data class UserSettings(
      * which copies the history page's selection once.
      */
     val savedHistoryOperations: Set<String>? = null,
+    val appSortOrder: AppSortOrder = AppSortOrder.NAME,
 )

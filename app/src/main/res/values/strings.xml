@@ -79,6 +79,12 @@
     <string name="navigation_settings">Settings</string>
     <string name="app_list_title">App permissions</string>
     <string name="app_list_search_label">Search app name or package</string>
+    <string name="app_list_sort">Sort</string>
+    <string name="app_list_sort_name">Name</string>
+    <string name="app_list_sort_install_time">Install time</string>
+    <string name="app_list_sort_update_time">Update time</string>
+    <string name="app_list_installed_at">Installed %1$s</string>
+    <string name="app_list_updated_at">Updated %1$s</string>
     <string name="app_list_count">Showing %1$d of %2$d apps</string>
     <string name="app_list_load_failed">Could not load installed apps</string>
     <string name="app_list_empty_search">No matching apps</string>

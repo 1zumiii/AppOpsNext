@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation.app_list
 
+import dev.izumi.appopsnext.apps.AppSortOrder
 import dev.izumi.appopsnext.apps.model.AndroidUser
 import dev.izumi.appopsnext.apps.model.InstalledApp
 
@@ -15,4 +16,5 @@ data class AppListUiState(
     /** Null while the user this app runs in is selected. */
     val selectedUserId: Int? = null,
     val currentUserId: Int = 0,
+    val sortOrder: AppSortOrder = AppSortOrder.NAME,
 )

@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.backup
 
+import dev.izumi.appopsnext.apps.AppSortOrder
 import dev.izumi.appopsnext.guard.GuardCodec
 import dev.izumi.appopsnext.guard.GuardMode
 import dev.izumi.appopsnext.guard.GuardRule
@@ -28,6 +29,7 @@ data class UserSettingsBackup(
     val suppressAllOperationsWarning: Boolean? = null,
     val saveIndividualHistory: Boolean? = null,
     val savedHistoryOperations: Set<String>? = null,
+    val appSortOrder: AppSortOrder? = null,
 )
 
 /**
@@ -178,6 +180,7 @@ private object SettingsLines {
     private const val SUPPRESS_ALL_OPERATIONS_WARNING = "suppress_all_operations_warning_noise_rom"
     private const val SAVE_INDIVIDUAL_HISTORY = "save_individual_history"
     private const val SAVED_HISTORY_OPERATIONS = "saved_history_operations"
+    private const val APP_SORT_ORDER = "app_sort_order"
 
     fun encode(settings: UserSettingsBackup): List<String> =
         buildList {
@@ -196,6 +199,7 @@ private object SettingsLines {
             settings.savedHistoryOperations?.let {
                 add("$SAVED_HISTORY_OPERATIONS=${it.sorted().joinToString(",")}")
             }
+            settings.appSortOrder?.let { add("$APP_SORT_ORDER=${it.name}") }
         }
 
     fun decode(lines: List<String>): UserSettingsBackup {
@@ -216,6 +220,7 @@ private object SettingsLines {
                 ?.map(String::trim)
                 ?.filter(String::isNotEmpty)
                 ?.toSet(),
+            appSortOrder = AppSortOrder.fromName(fields[APP_SORT_ORDER]),
         )
     }
 }

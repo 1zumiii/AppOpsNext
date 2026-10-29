@@ -77,6 +77,12 @@
     <string name="navigation_settings">设置</string>
     <string name="app_list_title">应用权限</string>
     <string name="app_list_search_label">搜索应用名称或包名</string>
+    <string name="app_list_sort">排序</string>
+    <string name="app_list_sort_name">按名称</string>
+    <string name="app_list_sort_install_time">按安装时间</string>
+    <string name="app_list_sort_update_time">按更新时间</string>
+    <string name="app_list_installed_at">安装于 %1$s</string>
+    <string name="app_list_updated_at">更新于 %1$s</string>
     <string name="app_list_count">显示 %1$d 个，共 %2$d 个应用</string>
     <string name="app_list_load_failed">无法读取已安装应用</string>
     <string name="app_list_empty_search">没有匹配的应用</string>

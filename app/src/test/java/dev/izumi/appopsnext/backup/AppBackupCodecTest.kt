@@ -1,6 +1,7 @@
 package dev.izumi.appopsnext.backup
 
 import dev.izumi.appopsnext.appops.command.AppOpMode
+import dev.izumi.appopsnext.apps.AppSortOrder
 import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.guard.GuardMode
 import dev.izumi.appopsnext.guard.GuardRule
@@ -33,6 +34,7 @@ class AppBackupCodecTest {
             hideSystemApps = false,
             autoApplyNewAppTemplate = true,
             savedHistoryOperations = setOf("android:camera", "android:coarse_location"),
+            appSortOrder = AppSortOrder.INSTALL_TIME,
         ),
         monitorTargets = listOf(MonitorTarget("dev.izumi.one", setOf("android:camera"))),
         monitorPoints = listOf(
