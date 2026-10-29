@@ -46,6 +46,7 @@ class AppBackupService(
                     suppressDenyFallbackNotice = settings.suppressDenyFallbackNotice,
                     suppressPermissionFlagNotice = settings.suppressPermissionFlagNotice,
                     autoApplyNewAppTemplate = settings.autoApplyNewAppTemplate,
+                    instantNewAppRules = settings.instantNewAppRules,
                     monitorHeadsUp = settings.monitorHeadsUp,
                     suppressBatteryNotice = settings.suppressBatteryNotice,
                     showAllMonitorOperations = settings.showAllMonitorOperations,

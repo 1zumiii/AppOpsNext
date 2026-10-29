@@ -56,6 +56,16 @@
                 android:value="Watches AppOps mode changes through Shizuku for the settings the user chose to guard, while realtime guarding is enabled." />
         </service>
 
+        <!-- Woken by the install watcher running in Shizuku. Only the shell or root can send it. -->
+        <receiver
+            android:name=".newapps.NewAppInstallReceiver"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL">
+            <intent-filter>
+                <action android:name="dev.izumi.appopsnext.action.INSTALL_FINISHED" />
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name="rikka.shizuku.ShizukuProvider"
             android:authorities="${applicationId}.shizuku"
