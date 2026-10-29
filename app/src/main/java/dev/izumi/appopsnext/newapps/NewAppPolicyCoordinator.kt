@@ -52,6 +52,8 @@ class NewAppPolicyCoordinator(
         InstalledPackageScanner(context),
     private val notifier: NewAppPolicyNotifier =
         NewAppPolicyNotifier(context),
+    private val watcher: NewAppWatcherClient =
+        NewAppWatcherClient(context, diagnosticLog),
 ) {
     private val workMutex = Mutex()
     private val adaptiveScopeExecutor = AdaptiveScopeModeChangeExecutor(writeMemory) { uid ->
@@ -157,6 +159,12 @@ class NewAppPolicyCoordinator(
                         }
                     }
                 }
+        }
+        scope.launch {
+            settingsRepository.settings
+                .map { it.autoApplyNewAppTemplate && it.instantNewAppRules }
+                .distinctUntilChanged()
+                .collect(watcher::setWanted)
         }
         scope.launch {
             privilegedServiceClient.state

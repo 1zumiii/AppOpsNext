@@ -32,6 +32,7 @@ class TemplatesViewModel(
             templates = templates,
             selectedTemplate = templates.firstOrNull { it.id == selectedId },
             autoApplyNewAppTemplate = settings.autoApplyNewAppTemplate,
+            instantNewAppRules = settings.instantNewAppRules,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -81,6 +82,12 @@ class TemplatesViewModel(
     fun setAutoApplyNewAppTemplate(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setAutoApplyNewAppTemplate(enabled)
+        }
+    }
+
+    fun setInstantNewAppRules(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setInstantNewAppRules(enabled)
         }
     }
 

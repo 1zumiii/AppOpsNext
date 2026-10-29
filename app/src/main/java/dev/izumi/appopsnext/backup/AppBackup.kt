@@ -23,6 +23,7 @@ data class UserSettingsBackup(
     val suppressDenyFallbackNotice: Boolean? = null,
     val suppressPermissionFlagNotice: Boolean? = null,
     val autoApplyNewAppTemplate: Boolean? = null,
+    val instantNewAppRules: Boolean? = null,
     val monitorHeadsUp: Boolean? = null,
     val suppressBatteryNotice: Boolean? = null,
     val showAllMonitorOperations: Boolean? = null,
@@ -174,6 +175,7 @@ private object SettingsLines {
     private const val SUPPRESS_DENY_FALLBACK_NOTICE = "suppress_deny_fallback_notice"
     private const val SUPPRESS_PERMISSION_FLAG_NOTICE = "suppress_permission_flag_notice"
     private const val AUTO_APPLY_NEW_APP_TEMPLATE = "auto_apply_new_app_template"
+    private const val INSTANT_NEW_APP_RULES = "instant_new_app_rules"
     private const val MONITOR_HEADS_UP = "monitor_heads_up"
     private const val SUPPRESS_BATTERY_NOTICE = "suppress_battery_notice"
     private const val SHOW_ALL_MONITOR_OPERATIONS = "show_all_monitor_operations"
@@ -191,6 +193,7 @@ private object SettingsLines {
             put(SUPPRESS_DENY_FALLBACK_NOTICE, settings.suppressDenyFallbackNotice)
             put(SUPPRESS_PERMISSION_FLAG_NOTICE, settings.suppressPermissionFlagNotice)
             put(AUTO_APPLY_NEW_APP_TEMPLATE, settings.autoApplyNewAppTemplate)
+            put(INSTANT_NEW_APP_RULES, settings.instantNewAppRules)
             put(MONITOR_HEADS_UP, settings.monitorHeadsUp)
             put(SUPPRESS_BATTERY_NOTICE, settings.suppressBatteryNotice)
             put(SHOW_ALL_MONITOR_OPERATIONS, settings.showAllMonitorOperations)
@@ -210,6 +213,7 @@ private object SettingsLines {
             suppressDenyFallbackNotice = flag(SUPPRESS_DENY_FALLBACK_NOTICE),
             suppressPermissionFlagNotice = flag(SUPPRESS_PERMISSION_FLAG_NOTICE),
             autoApplyNewAppTemplate = flag(AUTO_APPLY_NEW_APP_TEMPLATE),
+            instantNewAppRules = flag(INSTANT_NEW_APP_RULES),
             monitorHeadsUp = flag(MONITOR_HEADS_UP),
             suppressBatteryNotice = flag(SUPPRESS_BATTERY_NOTICE),
             showAllMonitorOperations = flag(SHOW_ALL_MONITOR_OPERATIONS),

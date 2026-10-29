@@ -70,6 +70,9 @@ class UserSettingsRepository(
                 savedHistoryOperations = preferences[Keys.SAVED_HISTORY_OPERATIONS],
                 appSortOrder = AppSortOrder.fromName(preferences[Keys.APP_SORT_ORDER])
                     ?: AppSortOrder.NAME,
+                instantNewAppRules =
+                    preferences[Keys.INSTANT_NEW_APP_RULES]
+                        ?: UserSettingsDefaults.INSTANT_NEW_APP_RULES,
             )
         }
 
@@ -100,6 +103,12 @@ class UserSettingsRepository(
     suspend fun setAutoApplyNewAppTemplate(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[Keys.AUTO_APPLY_NEW_APP_TEMPLATE] = enabled
+        }
+    }
+
+    suspend fun setInstantNewAppRules(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[Keys.INSTANT_NEW_APP_RULES] = enabled
         }
     }
 
@@ -166,6 +175,7 @@ class UserSettingsRepository(
             put(Keys.SUPPRESS_DENY_FALLBACK_NOTICE, backup.suppressDenyFallbackNotice)
             put(Keys.SUPPRESS_PERMISSION_FLAG_NOTICE, backup.suppressPermissionFlagNotice)
             put(Keys.AUTO_APPLY_NEW_APP_TEMPLATE, backup.autoApplyNewAppTemplate)
+            put(Keys.INSTANT_NEW_APP_RULES, backup.instantNewAppRules)
             put(Keys.MONITOR_HEADS_UP, backup.monitorHeadsUp)
             put(Keys.SUPPRESS_BATTERY_NOTICE, backup.suppressBatteryNotice)
             put(Keys.SHOW_ALL_MONITOR_OPERATIONS, backup.showAllMonitorOperations)
@@ -189,6 +199,7 @@ class UserSettingsRepository(
             booleanPreferencesKey("suppress_permission_flag_notice")
         val AUTO_APPLY_NEW_APP_TEMPLATE =
             booleanPreferencesKey("auto_apply_new_app_template")
+        val INSTANT_NEW_APP_RULES = booleanPreferencesKey("instant_new_app_rules")
         val BACKGROUND_MONITOR = booleanPreferencesKey("background_monitor")
         val MONITOR_HEADS_UP = booleanPreferencesKey("monitor_heads_up")
         val SUPPRESS_BATTERY_NOTICE =

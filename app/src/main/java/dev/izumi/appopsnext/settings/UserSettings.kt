@@ -13,6 +13,7 @@ object UserSettingsDefaults {
     const val SHOW_ALL_MONITOR_OPERATIONS = false
     const val SUPPRESS_ALL_OPERATIONS_WARNING = false
     const val SAVE_INDIVIDUAL_HISTORY = false
+    const val INSTANT_NEW_APP_RULES = true
 }
 
 data class UserSettings(
@@ -42,4 +43,6 @@ data class UserSettings(
      */
     val savedHistoryOperations: Set<String>? = null,
     val appSortOrder: AppSortOrder = AppSortOrder.NAME,
+    /** Watches installs from a Shizuku daemon, so new-app rules apply right away. */
+    val instantNewAppRules: Boolean = UserSettingsDefaults.INSTANT_NEW_APP_RULES,
 )

@@ -1,5 +1,10 @@
 package dev.izumi.appopsnext.presentation.experimental
 
+import dev.izumi.appopsnext.apps.AppSortOrder
+import dev.izumi.appopsnext.presentation.components.AppSortMenu
+import dev.izumi.appopsnext.presentation.components.ScrollToTopOnSortChange
+import dev.izumi.appopsnext.presentation.components.appSortTimeText
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -57,6 +62,9 @@ import dev.izumi.appopsnext.presentation.components.AppIcon
 fun MonitorTargetsScreen(
     apps: List<InstalledApp>,
     selectionByPackage: Map<String, Set<String>>,
+    sortOrder: AppSortOrder,
+    /** Null for another user, whose apps are listed without install times. */
+    onSortOrderChange: ((AppSortOrder) -> Unit)?,
     onBack: () -> Unit,
     onAppSelected: (InstalledApp) -> Unit,
     modifier: Modifier = Modifier,
@@ -69,6 +77,8 @@ fun MonitorTargetsScreen(
         AppListFilter.apply(apps = apps, query = query)
             .partition { selectionByPackage[it.packageName].orEmpty().isNotEmpty() }
     }
+    val listState = rememberLazyListState()
+    ScrollToTopOnSortChange(sortOrder, listState)
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -87,6 +97,9 @@ fun MonitorTargetsScreen(
                         )
                     }
                 },
+                actions = {
+                    onSortOrderChange?.let { AppSortMenu(selected = sortOrder, onSelected = it) }
+                },
             )
         },
     ) { contentPadding ->
@@ -94,6 +107,7 @@ fun MonitorTargetsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(contentPadding),
+            state = listState,
         ) {
             item {
                 Text(
@@ -138,6 +152,7 @@ fun MonitorTargetsScreen(
                             R.string.monitor_selected_count,
                             selectionByPackage[app.packageName].orEmpty().size,
                         ),
+                        time = appSortTimeText(app, sortOrder),
                         first = index == 0,
                         last = index == watched.lastIndex,
                         onClick = { onAppSelected(app) },
@@ -154,6 +169,7 @@ fun MonitorTargetsScreen(
                     TargetRow(
                         app = app,
                         detail = app.packageName,
+                        time = appSortTimeText(app, sortOrder),
                         first = index == 0,
                         last = index == others.lastIndex,
                         onClick = { onAppSelected(app) },
@@ -179,6 +195,7 @@ private fun TargetsSectionHeader(text: String) {
 private fun TargetRow(
     app: InstalledApp,
     detail: String,
+    time: String?,
     first: Boolean,
     last: Boolean,
     onClick: () -> Unit,
@@ -203,11 +220,14 @@ private fun TargetRow(
                     Text(text = app.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 },
                 supportingContent = {
-                    Text(
-                        text = detail,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Column {
+                        Text(
+                            text = detail,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        time?.let { Text(text = it, maxLines = 1) }
+                    }
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
             )
