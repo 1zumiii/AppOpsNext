@@ -8,7 +8,9 @@ import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.backup.BackupFormatException
 import dev.izumi.appopsnext.backup.BackupProblem
 import dev.izumi.appopsnext.settings.AppLanguage
+import dev.izumi.appopsnext.settings.AppTheme
 import dev.izumi.appopsnext.settings.ApplicationLanguageManager
+import dev.izumi.appopsnext.settings.ApplicationThemeManager
 import dev.izumi.appopsnext.update.UpdateChecker
 import dev.izumi.appopsnext.update.UpdateState
 import dev.izumi.appopsnext.history.ArchivedHistory
@@ -32,6 +34,7 @@ class SettingsViewModel(
     private val languageManager = ApplicationLanguageManager(application)
     private val appLanguage =
         MutableStateFlow(languageManager.currentLanguage())
+    private val themeManager = ApplicationThemeManager(application)
     private val updateChecker = UpdateChecker()
     private val updateState = MutableStateFlow<UpdateState>(UpdateState.Idle)
     private val archiveStore =
@@ -53,6 +56,7 @@ class SettingsViewModel(
             SettingsUiState(
                 hideSystemApps = settings.hideSystemApps,
                 appLanguage = language,
+                appTheme = settings.appTheme,
                 updateState = update,
                 saveIndividualHistory = settings.saveIndividualHistory,
                 savedHistoryOperations = settings.savedHistoryOperations.orEmpty(),
@@ -125,6 +129,12 @@ class SettingsViewModel(
         if (appLanguage.value == language) return
         appLanguage.value = language
         languageManager.setLanguage(language)
+    }
+
+    fun setAppTheme(theme: AppTheme) {
+        if (uiState.value.appTheme == theme) return
+        themeManager.setTheme(theme)
+        viewModelScope.launch { repository.setAppTheme(theme) }
     }
 
     fun exportBackup(uri: Uri) {

@@ -11,12 +11,13 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
+import dev.izumi.appopsnext.presentation.components.CompactSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -80,8 +81,9 @@ fun MonitorSettingsScreen(
                             text = if (uiState.targetCount == 0) {
                                 stringResource(R.string.monitor_targets_empty)
                             } else {
-                                stringResource(
-                                    R.string.monitor_targets_summary,
+                                pluralStringResource(
+                                    R.plurals.monitor_targets_summary,
+                                    uiState.targetCount,
                                     uiState.targetCount,
                                 )
                             },
@@ -101,8 +103,9 @@ fun MonitorSettingsScreen(
                             text = if (uiState.points.isEmpty()) {
                                 stringResource(R.string.monitor_points_none)
                             } else {
-                                stringResource(
-                                    R.string.monitor_points_summary,
+                                pluralStringResource(
+                                    R.plurals.monitor_points_summary,
+                                    uiState.points.size,
                                     uiState.points.size,
                                 )
                             },
@@ -132,7 +135,7 @@ fun MonitorSettingsScreen(
                         Text(text = stringResource(R.string.monitor_heads_up_summary))
                     },
                     trailingContent = {
-                        Switch(
+                        CompactSwitch(
                             checked = uiState.headsUp,
                             onCheckedChange = onHeadsUpChange,
                         )

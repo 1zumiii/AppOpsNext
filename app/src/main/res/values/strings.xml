@@ -88,7 +88,10 @@
     <string name="app_list_count">Showing %1$d of %2$d apps</string>
     <string name="app_list_load_failed">Could not load installed apps</string>
     <string name="app_list_empty_search">No matching apps</string>
-    <string name="user_named">%1$s (%2$d)</string>
+    <string name="user_select_space">Select user space</string>
+    <string name="user_id">User ID %1$d</string>
+    <string name="user_private_space">Private space</string>
+    <string name="user_work_profile">Work profile</string>
     <string name="user_unnamed">User %1$d</string>
     <string name="app_icon_description">App icon for %1$s</string>
     <string name="app_type_system">System app · UID %1$d</string>
@@ -153,27 +156,33 @@
     <string name="action_remove">Remove</string>
     <string name="settings_title">Settings</string>
     <string name="settings_preferences">Display and language</string>
+    <string name="settings_records_automation">Records and automation</string>
+    <string name="settings_data_support">Data and support</string>
+    <string name="settings_about_app">About AppOpsNext</string>
+    <string name="settings_experimental_summary">Access monitoring and setting guard</string>
     <string name="settings_hide_system_apps">Hide system apps</string>
-    <string name="settings_hide_system_apps_detail">Show only user-installed apps in the app list and in history.</string>
+    <string name="settings_hide_system_apps_detail">Only user apps in lists and history</string>
     <string name="settings_language">App language</string>
     <string name="settings_language_system">Follow system</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
     <string name="settings_language_chinese" translatable="false">中文</string>
     <string name="settings_language_english" translatable="false">English</string>
-    <string name="settings_diagnostics">Connection and diagnostics</string>
     <string name="settings_connection_summary_title">Connection</string>
     <string name="settings_connection_connected">Connected · %1$s</string>
-    <string name="settings_connection_show_details">Details</string>
-    <string name="settings_connection_hide_details">Hide</string>
-    <string name="settings_testing">Testing and logs</string>
     <string name="diagnostic_log_title">Diagnostic report</string>
     <string name="diagnostic_log_summary">Device environment, connection state, and the latest %1$d app events</string>
+    <plurals name="diagnostic_log_compact_summary">
+        <item quantity="one">Last %1$d app event</item>
+        <item quantity="other">Last %1$d app events</item>
+    </plurals>
     <string name="diagnostic_report_title">Shareable diagnostic report</string>
     <string name="diagnostic_report_privacy_warning">This report may contain the device model, OS and build details, Shizuku version, UID and PID values, package names of installed apps, and error messages. Review it and remove anything you do not want to share.</string>
     <string name="diagnostic_report_copy">Copy report</string>
     <string name="diagnostic_log_clear">Clear event log</string>
     <string name="diagnostic_report_clip_label">AppOpsNext diagnostic report</string>
     <string name="diagnostic_report_copied">Report copied. Redact it before sharing.</string>
-    <string name="settings_about">About</string>
     <string name="settings_app_version">App version</string>
     <string name="settings_app_version_value">%1$s (%2$d)</string>
     <string name="settings_developer">Developer</string>
@@ -198,7 +207,6 @@
     <string name="history_failure_timeout">Reading permission history timed out. Try again later.</string>
     <string name="history_distribution_title">Records by permission</string>
     <string name="history_permission_list_title">Browse by permission</string>
-    <string name="history_permission_summary">%1$d accesses · %3$d denied · %2$d apps</string>
     <string name="history_latest_record">Latest record: %1$s</string>
     <string name="history_never_recorded">None</string>
     <string name="history_system_records">Accesses</string>
@@ -224,7 +232,6 @@
     <string name="history_range_week">7 days</string>
     <string name="history_range_month">30 days</string>
     <string name="history_range_all">All</string>
-    <string name="settings_history_section">History</string>
     <string name="settings_save_history">Save history records</string>
     <string name="settings_save_history_short">Keep individual records on this device</string>
     <string name="settings_save_history_detail">Android keeps individual records for 7 days. Saving keeps them available after that.</string>
@@ -233,7 +240,8 @@
     <string name="settings_saved_history_operations_hint">Only permissions the system keeps individual records for are listed.</string>
     <string name="settings_saved_history_operations_none">None selected</string>
     <string name="settings_saved_history">Manage saved records</string>
-    <string name="settings_saved_history_summary">%1$d saved · %2$s – %3$s</string>
+    <string name="settings_saved_history_count">%1$d saved</string>
+    <string name="settings_saved_history_range">%1$s – %2$s</string>
     <string name="settings_saved_history_usage">%1$s of %2$s records · %3$s</string>
     <string name="settings_saved_history_nearly_full">Nearly full. Once the limit is reached, the oldest records are removed.</string>
     <string name="settings_saved_history_empty">No saved records</string>
@@ -287,13 +295,12 @@
     <string name="templates_custom_empty">Create a template to reuse the same rules across apps.</string>
     <string name="template_create">New</string>
     <string name="template_new_app_policy_title">New app defaults</string>
-    <string name="template_new_app_policy_description">Automatically applies common privacy controls. This template cannot be deleted. With \"Handle right after install\" on, a process kept in Shizuku watches installs and wakes AppOpsNext, so rules apply even while AppOpsNext is not running. Shizuku brings the process back when it starts again, for example after a reboot. A background check about every 15 minutes covers the rest while Shizuku is running. A brief result notification is sent when notification permission is available.</string>
+    <string name="template_new_app_policy_description">Automatically applies common privacy controls. This template cannot be deleted. With \"Apply right after install\" on, a process kept in Shizuku watches installs and wakes AppOpsNext, so rules apply even while AppOpsNext is not running. Shizuku brings the process back when it starts again, for example after a reboot. A background check about every 15 minutes covers the rest while Shizuku is running. A brief result notification is sent when notification permission is available.</string>
     <string name="template_new_app_auto_apply">Automatically apply to new apps</string>
     <string name="template_preview_more">%1$s +%2$d</string>
     <string name="template_preview_count_only">+%1$d</string>
-    <string name="template_more_options">More template actions</string>
-    <string name="template_new_app_instant">Handle right after install</string>
-    <string name="template_new_app_instant_summary">Keeps a small process running in Shizuku to watch installs</string>
+    <string name="template_new_app_instant">Apply right after install</string>
+    <string name="template_new_app_instant_summary">A background process in Shizuku watches for installs</string>
     <string name="template_new_app_policy_information">About automatic application</string>
     <string name="new_app_policy_notification_channel">New app policy</string>
     <string name="new_app_policy_notification_title">Processed new app: %1$s</string>
@@ -304,6 +311,7 @@
     <string name="templates_empty_detail">New templates include common camera, microphone, location, clipboard, notification, and contacts rules in the system-default mode.</string>
     <string name="template_rule_count">%1$d permission rules</string>
     <string name="template_rule_count_compact">%1$d rules</string>
+    <string name="template_rule_summary">%1$s: %2$s</string>
     <string name="template_editor_detail">When a template is applied, AppOpsNext writes each rule per app or per UID, whichever the permission accepts.</string>
     <string name="template_reorder_hint">Long-press and drag a permission to change its order.</string>
     <string name="template_reorder_action">Long-press and drag to reorder</string>
@@ -403,7 +411,6 @@
     <string name="new_app_policy_notification_pending_title">Rules pending: %1$s</string>
     <string name="history_not_loaded">History not loaded yet</string>
     <string name="history_snapshot_updated">Updated %1$s</string>
-    <string name="settings_experimental">Experimental features</string>
     <string name="monitor_title">Access monitor</string>
     <string name="monitor_summary">Notifies you when the chosen apps use the chosen permissions, and records every access.</string>
     <string name="monitor_notification_required">Notification permission must be enabled to receive monitoring alerts. Keep the monitoring notification channels enabled too.</string>
@@ -422,7 +429,9 @@
     <string name="monitor_log_title">Monitor log</string>
     <string name="monitor_log_summary">%1$d entries</string>
     <string name="monitor_log_summary_empty">Every access reported to a monitoring point</string>
-    <string name="monitor_log_hint">Every access reported to a monitoring point is kept here, whether or not it was notified. Up to 50,000 entries, oldest removed first. Tap an entry to open that app\'s permissions.</string>
+    <string name="monitor_log_hint">Tap an entry to open that app\'s permissions.</string>
+    <string name="monitor_log_details_title">About the monitor log</string>
+    <string name="monitor_log_details">Every access reported to a monitoring point is kept here, whether or not it was notified. Up to 50,000 entries, oldest removed first.</string>
     <string name="monitor_log_empty">Nothing recorded yet. Entries appear while the monitor is running.</string>
     <string name="monitor_log_empty_filtered">No entries match this filter.</string>
     <string name="monitor_log_clear">Clear monitor log</string>
@@ -462,7 +471,10 @@
     <string name="experimental_title">Experimental features</string>
     <string name="experimental_caption">Features whose compatibility has not been verified. They may not work on every device.</string>
     <string name="monitor_targets_title">Watched apps</string>
-    <string name="monitor_targets_summary">%1$d app(s) selected</string>
+    <plurals name="monitor_targets_summary">
+        <item quantity="one">%1$d app selected</item>
+        <item quantity="other">%1$d apps selected</item>
+    </plurals>
     <string name="monitor_targets_empty">No apps selected yet</string>
     <string name="monitor_targets_hint">Pick the apps you want to be told about, then choose which permissions to watch for each one. Nothing is watched until you choose something.</string>
     <string name="monitor_targets_search">Search apps</string>
@@ -483,9 +495,11 @@
     <string name="monitor_targets_other_header">Not watched</string>
     <string name="monitor_targets_operations">%1$s</string>
     <string name="update_available">Version %1$s available</string>
-    <string name="update_up_to_date">Up to date · check again</string>
+    <string name="update_up_to_date">Up to date</string>
+    <string name="update_check_again">Check again</string>
     <string name="update_checking">Checking…</string>
-    <string name="update_failed">Check failed · retry</string>
+    <string name="update_failed">Check failed</string>
+    <string name="update_retry">Retry</string>
     <string name="update_available_description">A new version is available</string>
     <string name="monitor_not_running">Not running · retried the next time you open the app</string>
     <string name="monitor_access_count">%1$s · ×%2$d</string>
@@ -517,7 +531,10 @@
     <string name="monitor_example_every_30_seconds">Every 30 sec</string>
     <string name="monitor_points_title">Monitoring points</string>
     <string name="monitor_points_none">Every access is reported</string>
-    <string name="monitor_points_summary">%1$d points configured</string>
+    <plurals name="monitor_points_summary">
+        <item quantity="one">%1$d point configured</item>
+        <item quantity="other">%1$d points configured</item>
+    </plurals>
     <string name="monitor_points_hint">Set what each monitoring point reports, how loudly, and how often.</string>
     <string name="monitor_points_empty">Nothing is being watched yet.</string>
     <string name="monitor_points_retained_header">Kept, not in use</string>
@@ -579,7 +596,10 @@
     <string name="guard_section">Setting guard</string>
     <string name="guard_title">Setting guard</string>
     <string name="guard_entry_summary">Notify when a chosen setting changes</string>
-    <string name="guard_caption">AppOpsNext compares the target mode of each guarded setting with the actual mode and notifies you when it changes. With Restore automatically on, it tries to restore the target mode. Each rule gets at most 3 restore attempts in 24 hours.</string>
+    <string name="guard_caption">Notifies you when a guarded setting changes, and can restore it.</string>
+    <string name="guard_details_title">About setting guard</string>
+    <string name="guard_details">AppOpsNext compares the target mode of each guarded setting with the actual mode and notifies you when it changes. With Restore automatically on, it tries to restore the target mode. Each rule gets at most 3 restore attempts in 24 hours.</string>
+    <string name="guard_rule_remove_message">After you stop guarding it, changes to this setting are not reported or restored.</string>
     <string name="guard_mode_section">Check mode</string>
     <string name="guard_mode_off">Off</string>
     <string name="guard_mode_off_summary">Settings are not checked</string>
@@ -622,6 +642,7 @@
 
     <!-- Backup -->
     <string name="settings_backup_section">Backup and migration</string>
+    <string name="settings_backup_summary">Export or import your setup</string>
     <string name="settings_backup_export">Export backup</string>
     <string name="settings_backup_export_detail">Saves templates, preferences, the Access monitor setup and Setting guard rules to a file</string>
     <string name="settings_backup_import">Import backup</string>

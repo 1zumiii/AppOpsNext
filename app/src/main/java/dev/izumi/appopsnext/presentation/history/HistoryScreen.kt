@@ -36,7 +36,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -79,7 +78,9 @@ import dev.izumi.appopsnext.history.model.HistoryPermission
 import dev.izumi.appopsnext.presentation.components.AppIcon
 import dev.izumi.appopsnext.presentation.components.MainPageSectionTitle
 import dev.izumi.appopsnext.presentation.components.MainPageEntryIcon
+import dev.izumi.appopsnext.presentation.components.MainPageChevron
 import java.text.DateFormat
+import java.text.NumberFormat
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
@@ -213,8 +214,6 @@ private fun HistoryOverviewContent(
     }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
-    val maximumRecordCount = displayedPermissions.maxOfOrNull { it.recordCount }
-        ?.coerceAtLeast(1) ?: 1
     LaunchedEffect(uiState.permissions) {
         if (draggedOperationName == null) {
             displayedPermissions = uiState.permissions
@@ -425,7 +424,6 @@ private fun HistoryOverviewContent(
                             draggedOperationName
                     PermissionHistoryCard(
                         history = history,
-                        maximumRecordCount = maximumRecordCount,
                         onClick = {
                             if (history.lastUpdatedAtMillis != null) {
                                 onPermissionSelected(history.permission)
@@ -699,13 +697,13 @@ fun PermissionHistoryDetailScreen(
 @Composable
 private fun PermissionHistoryCard(
     history: PermissionHistory,
-    maximumRecordCount: Int,
     onClick: () -> Unit,
     isDragging: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val locale = LocalConfiguration.current.locales[0]
         ?: Locale.getDefault()
+    val numberFormat = remember(locale) { NumberFormat.getIntegerInstance(locale) }
     val visual = HistoryPermissionIconCatalog.visualFor(
         history.permission.shellOperationName,
     )
@@ -747,7 +745,7 @@ private fun PermissionHistoryCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -766,11 +764,11 @@ private fun PermissionHistoryCard(
                     Text(
                         text = history.permission.displayName(),
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Medium,
                     )
                 }
+                MainPageChevron()
             }
-            Spacer(Modifier.height(2.dp))
             history.failureReason?.let { failureReason ->
                 Text(
                     text = historyFailureMessage(failureReason),
@@ -778,32 +776,34 @@ private fun PermissionHistoryCard(
                     color = MaterialTheme.colorScheme.error,
                 )
             }
-            Text(
-                text = if (history.lastUpdatedAtMillis == null) {
-                    stringResource(R.string.history_not_loaded)
-                } else stringResource(
-                    R.string.history_permission_summary,
-                    history.recordCount,
-                    history.appCount,
-                    history.rejectCount,
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            if (history.lastUpdatedAtMillis != null) {
-                LinearProgressIndicator(
-                    progress = {
-                        history.recordCount.toFloat() / maximumRecordCount.toFloat()
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp)),
-                    trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    color = accentColor,
-                    gapSize = 0.dp,
-                    drawStopIndicator = {},
+            if (history.lastUpdatedAtMillis == null) {
+                Text(
+                    text = stringResource(R.string.history_not_loaded),
+                    style = MaterialTheme.typography.bodyMedium,
                 )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    HistoryOverviewMetric(
+                        value = numberFormat.format(history.recordCount),
+                        label = stringResource(R.string.history_system_records),
+                        modifier = Modifier.weight(1f),
+                    )
+                    HistoryOverviewMetric(
+                        value = numberFormat.format(history.rejectCount),
+                        label = stringResource(R.string.history_rejections),
+                        modifier = Modifier.weight(1f),
+                    )
+                    HistoryOverviewMetric(
+                        value = numberFormat.format(history.appCount),
+                        label = stringResource(R.string.history_apps_involved),
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
             Text(
                 text = stringResource(
                     R.string.history_latest_record,
@@ -813,6 +813,22 @@ private fun PermissionHistoryCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+@Composable
+private fun HistoryOverviewMetric(
+    value: String,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(text = value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Medium)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -1208,8 +1224,8 @@ private fun historyFailureMessage(
 )
 
 internal val HistoryContentPadding = PaddingValues(
-    horizontal = 20.dp,
-    vertical = 14.dp,
+    horizontal = 18.dp,
+    vertical = 12.dp,
 )
 
 private fun historyPermissionItemKey(operationName: String): String =

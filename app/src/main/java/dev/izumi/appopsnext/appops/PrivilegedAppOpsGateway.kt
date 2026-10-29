@@ -44,6 +44,10 @@ interface PrivilegedAppOpsGateway {
     suspend fun listUsers(): ShellCommandResult =
         error("User listing is not implemented by this gateway")
 
+    /** `dumpsys package packages`, or only its time lines from the UserService. */
+    suspend fun getPackageTimes(): ShellCommandResult =
+        error("Package times are not implemented by this gateway")
+
     suspend fun listPackagesForUser(userId: Int): ShellCommandResult =
         error("Per-user package listing is not implemented by this gateway")
 

@@ -2,6 +2,11 @@ package dev.izumi.appopsnext.presentation.experimental
 
 import android.app.Application
 import android.text.format.DateUtils
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -16,7 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
+import dev.izumi.appopsnext.presentation.components.CompactSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -104,6 +109,8 @@ fun GuardScreen(
     val rules by viewModel.rules.collectAsStateWithLifecycle()
     val events by viewModel.events.collectAsStateWithLifecycle()
     val checking by viewModel.checking.collectAsStateWithLifecycle()
+    var showDetails by remember { mutableStateOf(false) }
+    var removeCandidate by remember { mutableStateOf<Pair<GuardRule, String>?>(null) }
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -114,6 +121,14 @@ fun GuardScreen(
                         Icon(
                             painter = painterResource(R.drawable.ic_ph_arrow_left),
                             contentDescription = stringResource(R.string.action_back),
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showDetails = true }) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_ph_info),
+                            contentDescription = stringResource(R.string.guard_details_title),
                         )
                     }
                 },
@@ -184,7 +199,7 @@ fun GuardScreen(
                             GuardRuleRow(
                                 rule = rule,
                                 onAutoRestoreChange = { viewModel.setAutoRestore(rule, it) },
-                                onRemove = { viewModel.remove(rule) },
+                                onOpen = { title -> removeCandidate = rule to title },
                             )
                         }
                     }
@@ -227,6 +242,37 @@ fun GuardScreen(
                 }
             }
         }
+    }
+
+    if (showDetails) {
+        AlertDialog(
+            onDismissRequest = { showDetails = false },
+            title = { Text(stringResource(R.string.guard_details_title)) },
+            text = { Text(stringResource(R.string.guard_details)) },
+            confirmButton = {
+                TextButton(onClick = { showDetails = false }) { Text(stringResource(R.string.action_dismiss)) }
+            },
+        )
+    }
+    removeCandidate?.let { (rule, title) ->
+        AlertDialog(
+            onDismissRequest = { removeCandidate = null },
+            title = { Text(title) },
+            text = { Text(stringResource(R.string.guard_rule_remove_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        removeCandidate = null
+                        viewModel.remove(rule)
+                    },
+                ) {
+                    Text(stringResource(R.string.guard_rule_remove), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { removeCandidate = null }) { Text(stringResource(R.string.action_cancel)) }
+            },
+        )
     }
 }
 
@@ -276,7 +322,7 @@ private fun GuardEventRow(event: GuardEvent, notifier: GuardNotifier) {
 private fun GuardRuleRow(
     rule: GuardRule,
     onAutoRestoreChange: (Boolean) -> Unit,
-    onRemove: () -> Unit,
+    onOpen: (title: String) -> Unit,
 ) {
     val context = LocalContext.current
     val appLabel = remember(rule.packageName) {
@@ -290,30 +336,33 @@ private fun GuardRuleRow(
     }
     val shellName = AppOpNames.shellName(rule.stableOperationName)
     val operationLabel = AppOpDisplayCatalog.labelResOf(shellName)?.let { stringResource(it) } ?: shellName
+    val title = "$appLabel · $operationLabel"
+    // Removing sits behind a tap on the row, away from the switch beside it.
     ExperimentalGroupRow(
-        headlineContent = { Text("$appLabel · $operationLabel") },
+        modifier = Modifier.clickable { onOpen(title) },
+        headlineContent = { Text(title) },
         supportingContent = {
-            val expected = stringResource(
-                if (rule.scope == AppOpScope.UID) R.string.guard_rule_expected_uid else R.string.guard_rule_expected,
-                stringResource(GuardNotifier.modeLabelRes(rule.expectedMode)),
+            Text(
+                stringResource(
+                    if (rule.scope == AppOpScope.UID) R.string.guard_rule_expected_uid else R.string.guard_rule_expected,
+                    stringResource(GuardNotifier.modeLabelRes(rule.expectedMode)),
+                ),
             )
-            val autoRestore = stringResource(R.string.guard_rule_auto_restore)
-            Text(if (rule.autoRestore) "$expected · $autoRestore" else expected)
         },
         trailingContent = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val autoRestoreLabel = stringResource(R.string.guard_rule_auto_restore)
-                Switch(
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.guard_rule_auto_restore),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                CompactSwitch(
                     checked = rule.autoRestore,
                     onCheckedChange = onAutoRestoreChange,
-                    modifier = Modifier.semantics { contentDescription = autoRestoreLabel },
                 )
-                IconButton(onClick = onRemove) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_ph_trash),
-                        contentDescription = stringResource(R.string.guard_rule_remove),
-                    )
-                }
             }
         },
     )

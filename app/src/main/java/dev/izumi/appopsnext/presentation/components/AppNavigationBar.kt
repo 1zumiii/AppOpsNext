@@ -2,12 +2,15 @@ package dev.izumi.appopsnext.presentation.components
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -55,13 +58,8 @@ fun AppNavigationBar(
                 onClick = { onDestinationSelected(destination) },
                 icon = {
                     Icon(
-                        painter = painterResource(
-                            if (destination == selectedDestination) {
-                                destination.selectedIconRes
-                            } else {
-                                destination.iconRes
-                            },
-                        ),
+                        painter = painterResource(destination.iconRes),
+                        modifier = Modifier.size(22.dp),
                         contentDescription = stringResource(
                             destination.labelRes,
                         ),
@@ -70,6 +68,11 @@ fun AppNavigationBar(
                 label = {
                     Text(text = stringResource(destination.labelRes))
                 },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                ),
             )
         }
     }

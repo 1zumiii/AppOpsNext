@@ -3,6 +3,7 @@ package dev.izumi.appopsnext.presentation.settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -93,22 +94,41 @@ private fun UpdateStatus(state: UpdateState) {
         }
 
         UpdateState.Checking -> StatusLabel(stringResource(R.string.update_checking))
-        UpdateState.UpToDate -> StatusLabel(stringResource(R.string.update_up_to_date))
-        UpdateState.Failed -> StatusLabel(stringResource(R.string.update_failed))
+        UpdateState.UpToDate -> StatusLabel(
+            stringResource(R.string.update_up_to_date),
+            stringResource(R.string.update_check_again),
+        )
+
+        UpdateState.Failed -> StatusLabel(
+            stringResource(R.string.update_failed),
+            stringResource(R.string.update_retry),
+        )
         UpdateState.Idle -> Unit
     }
 }
 
+/** The result on one line and what a tap does on the next, so neither wraps mid-phrase. */
 @Composable
-private fun StatusLabel(text: String) {
-    // Wraps on its own instead of squeezing the version number beside it.
-    Text(
-        text = text,
+private fun StatusLabel(text: String, action: String? = null) {
+    Column(
         modifier = Modifier.widthIn(max = 150.dp),
-        textAlign = TextAlign.End,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+        horizontalAlignment = Alignment.End,
+    ) {
+        Text(
+            text = text,
+            textAlign = TextAlign.End,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (action != null) {
+            Text(
+                text = action,
+                textAlign = TextAlign.End,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
 }
 
 /** Amber reads as "worth a look" without the alarm of the error colour. */

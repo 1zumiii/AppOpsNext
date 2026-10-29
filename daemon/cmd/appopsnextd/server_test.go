@@ -253,6 +253,7 @@ func TestParseRejectsMalformedRevokedCompatRequests(t *testing.T) {
 func TestParseUserScopedCommands(t *testing.T) {
 	for request, expected := range map[string][]string{
 		"LIST_USERS": {"/system/bin/pm", "list", "users"},
+		"GET_PACKAGE_TIMES": {"/system/bin/dumpsys", "package", "packages"},
 		"LIST_PACKAGES_FOR_USER 10": {
 			"/system/bin/pm", "list", "packages", "--user", "10", "-U",
 		},
@@ -282,6 +283,7 @@ func TestParseUserScopedCommands(t *testing.T) {
 func TestParseRejectsMalformedUserScopedCommands(t *testing.T) {
 	for _, request := range []string{
 		"LIST_USERS 0",
+		"GET_PACKAGE_TIMES 10",
 		"LIST_PACKAGES_FOR_USER",
 		"LIST_PACKAGES_FOR_USER -1",
 		"LIST_PACKAGES_FOR_USER 010",

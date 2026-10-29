@@ -61,8 +61,7 @@ class AppListViewModel(
         } else {
             apps
         }
-        // Other users are listed without install times, so they stay in name order.
-        val sortOrder = if (selectedUserId == null) settings.appSortOrder else AppSortOrder.NAME
+        val sortOrder = settings.appSortOrder
         val eligibleApps = sortOrder.sort(filteredApps)
         AppListUiState(
             searchQuery = query,
