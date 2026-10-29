@@ -33,6 +33,8 @@ internal fun PermissionAppListItem(
     app: InstalledApp,
     state: EffectiveOpState,
     runtimeGranted: Boolean?,
+    /** The time the list is sorted by, if it is sorted by one. */
+    sortTime: String?,
     editEnabled: Boolean,
     isApplying: Boolean,
     selectedForBatch: Boolean?,
@@ -91,6 +93,14 @@ internal fun PermissionAppListItem(
                         ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+                sortTime?.let { time ->
+                    Text(
+                        text = time,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
                     )
                 }
                 if (runtimeGranted != null && state.mode == AppOpMode.IGNORE) {

@@ -6,10 +6,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.FilterChip
 import dev.izumi.appopsnext.apps.model.AndroidUser
 import dev.izumi.appopsnext.apps.AppSortOrder
-import android.text.format.DateFormat
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,6 +54,9 @@ import dev.izumi.appopsnext.presentation.batch.TemplatePickerDialog
 import dev.izumi.appopsnext.presentation.batch.BatchSelectionControls
 import dev.izumi.appopsnext.presentation.batch.toggleVisibleSelection
 import dev.izumi.appopsnext.presentation.components.AppIcon
+import dev.izumi.appopsnext.presentation.components.AppSortMenu
+import dev.izumi.appopsnext.presentation.components.ScrollToTopOnSortChange
+import dev.izumi.appopsnext.presentation.components.appSortTimeText
 import dev.izumi.appopsnext.presentation.components.CompactSearchField
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
 import dev.izumi.appopsnext.presentation.batch.BatchOperationUiState
@@ -121,7 +120,7 @@ fun AppListScreen(
                 actions = {
                     // Other users are listed without install times.
                     if (!permissionTab && uiState.selectedUserId == null) {
-                        SortMenu(selected = uiState.sortOrder, onSelected = onSortOrderChange)
+                        AppSortMenu(selected = uiState.sortOrder, onSelected = onSortOrderChange)
                     }
                     if (!permissionTab) {
                         // Templates and batch changes apply to the current user only.
@@ -251,16 +250,7 @@ private fun AppListContent(
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
-    // The list keeps the first visible app in view when its order changes, which
-    // lands in the middle of a new order. A new order starts from the top instead.
-    // Saved, so coming back to the list or rotating keeps the position.
-    var listedOrder by rememberSaveable { mutableStateOf(uiState.sortOrder) }
-    LaunchedEffect(uiState.sortOrder) {
-        if (uiState.sortOrder != listedOrder) {
-            listedOrder = uiState.sortOrder
-            listState.scrollToItem(0)
-        }
-    }
+    ScrollToTopOnSortChange(uiState.sortOrder, listState)
     Column(
         modifier = modifier,
     ) {
@@ -402,7 +392,7 @@ private fun InstalledAppListItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                sortTimeText(app, sortOrder)?.let { time ->
+                appSortTimeText(app, sortOrder)?.let { time ->
                     Text(
                         text = time,
                         maxLines = 1,
@@ -497,63 +487,4 @@ private fun EmptySearchContent(modifier: Modifier = Modifier) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
-}
-
-@Composable
-private fun SortMenu(
-    selected: AppSortOrder,
-    onSelected: (AppSortOrder) -> Unit,
-) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { open = true }) {
-            Icon(
-                painter = painterResource(R.drawable.ic_ph_sort_descending),
-                contentDescription = stringResource(R.string.app_list_sort),
-            )
-        }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            AppSortOrder.entries.forEach { order ->
-                DropdownMenuItem(
-                    text = { Text(text = stringResource(order.labelRes())) },
-                    onClick = {
-                        open = false
-                        onSelected(order)
-                    },
-                    trailingIcon = if (order == selected) {
-                        {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_ph_check_circle),
-                                contentDescription = null,
-                            )
-                        }
-                    } else {
-                        null
-                    },
-                )
-            }
-        }
-    }
-}
-
-private fun AppSortOrder.labelRes(): Int = when (this) {
-    AppSortOrder.NAME -> R.string.app_list_sort_name
-    AppSortOrder.INSTALL_TIME -> R.string.app_list_sort_install_time
-    AppSortOrder.UPDATE_TIME -> R.string.app_list_sort_update_time
-}
-
-/** The time the list is sorted by, so the order explains itself. */
-@Composable
-private fun sortTimeText(app: InstalledApp, sortOrder: AppSortOrder): String? {
-    val (millis, label) = when (sortOrder) {
-        AppSortOrder.NAME -> return null
-        AppSortOrder.INSTALL_TIME -> app.firstInstallTimeMillis to R.string.app_list_installed_at
-        AppSortOrder.UPDATE_TIME -> app.lastUpdateTimeMillis to R.string.app_list_updated_at
-    }
-    if (millis == null) return null
-    val context = LocalContext.current
-    val date = remember(millis) {
-        "${DateFormat.getMediumDateFormat(context).format(millis)} ${DateFormat.getTimeFormat(context).format(millis)}"
-    }
-    return stringResource(label, date)
 }

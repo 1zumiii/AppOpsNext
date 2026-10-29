@@ -354,6 +354,8 @@ fun AppOpsRootScreen(
             experimentalRoute == ROUTE_MONITOR_TARGETS -> MonitorTargetsScreen(
                 apps = appListUiState.allApps,
                 selectionByPackage = experimentalUiState.selectionByPackage,
+                sortOrder = appListUiState.sortOrder,
+                onSortOrderChange = onAppSortOrderChange.takeIf { appListUiState.selectedUserId == null },
                 onBack = { experimentalRoute = ROUTE_MONITOR_SETTINGS },
                 onAppSelected = { app -> monitorAppPackage = app.packageName },
             )
@@ -478,6 +480,7 @@ fun AppOpsRootScreen(
                 onShowInfo = { showPermissionInfo = true },
                 onModeChangeRequested = onPermissionModeChangeRequested,
                 onBatchRequested = onOperationBatchRequested,
+                onSortOrderChange = onAppSortOrderChange,
             )
         }
     } else if (selectedApp != null) {

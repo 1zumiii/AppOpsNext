@@ -1,5 +1,10 @@
 package dev.izumi.appopsnext.presentation.permissions
 
+import dev.izumi.appopsnext.apps.AppSortOrder
+import dev.izumi.appopsnext.presentation.components.AppSortMenu
+import dev.izumi.appopsnext.presentation.components.ScrollToTopOnSortChange
+import dev.izumi.appopsnext.presentation.components.appSortTimeText
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -68,6 +73,7 @@ fun PermissionDetailScreen(
     onShowInfo: () -> Unit,
     onModeChangeRequested: (InstalledApp, AppOpMode) -> Unit,
     onBatchRequested: (String, List<BatchOperationTarget>) -> Unit,
+    onSortOrderChange: (AppSortOrder) -> Unit,
 ) {
     val operation = uiState.operation ?: return
     val title = permissionLabel(operation)
@@ -131,6 +137,8 @@ fun PermissionDetailScreen(
         )
     }.orEmpty()
 
+    val listState = rememberLazyListState()
+    ScrollToTopOnSortChange(appListState.sortOrder, listState)
     Scaffold(
         topBar = {
             TopAppBar(
@@ -144,6 +152,10 @@ fun PermissionDetailScreen(
                     }
                 },
                 actions = {
+                    // Other users are listed without install times.
+                    if (appListState.selectedUserId == null) {
+                        AppSortMenu(selected = appListState.sortOrder, onSelected = onSortOrderChange)
+                    }
                     // Batch changes apply to the current user only.
                     if (appListState.selectedUserId == null) IconButton(
                         onClick = {
@@ -194,6 +206,7 @@ fun PermissionDetailScreen(
             ) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
+                    state = listState,
                     contentPadding = PaddingValues(20.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -229,6 +242,7 @@ fun PermissionDetailScreen(
                                 app = app,
                                 state = uiState.states.effective(app.uid, app.packageName),
                                 runtimeGranted = uiState.runtimeGrants[app.packageName],
+                                sortTime = appSortTimeText(app, appListState.sortOrder),
                                 editEnabled = canEdit,
                                 isApplying = (modeChangeState as? AppOpModeChangeUiState.Applying)
                                     ?.request?.packageName == app.packageName,
