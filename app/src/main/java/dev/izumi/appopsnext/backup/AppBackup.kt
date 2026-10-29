@@ -1,5 +1,8 @@
 package dev.izumi.appopsnext.backup
 
+import dev.izumi.appopsnext.guard.GuardCodec
+import dev.izumi.appopsnext.guard.GuardMode
+import dev.izumi.appopsnext.guard.GuardRule
 import dev.izumi.appopsnext.monitor.MonitorPointSettings
 import dev.izumi.appopsnext.monitor.MonitorPointSettingsCodec
 import dev.izumi.appopsnext.monitor.MonitorTarget
@@ -39,13 +42,24 @@ data class AppBackup(
     val settings: UserSettingsBackup? = null,
     val monitorTargets: List<MonitorTarget>? = null,
     val monitorPoints: List<MonitorPointSettings>? = null,
+    val guard: GuardBackup? = null,
     /** Sections passed over because this build does not know them or their version. */
     val skippedSections: List<String> = emptyList(),
 ) {
     val hasContent: Boolean
         get() = templates != null || settings != null ||
-            monitorTargets != null || monitorPoints != null
+            monitorTargets != null || monitorPoints != null || guard != null
 }
+
+/**
+ * Guarded settings and how they are checked. Rules keep the UID of the device
+ * that exported them, so an import looks each package up again. What the guard
+ * saw and restored stays on the device, like the history.
+ */
+data class GuardBackup(
+    val mode: GuardMode?,
+    val rules: List<GuardRule>,
+)
 
 object AppBackupCodec {
     private const val ABOUT = "about"
@@ -53,10 +67,12 @@ object AppBackupCodec {
     private const val SETTINGS = "settings"
     private const val MONITOR_TARGETS = "monitor_targets"
     private const val MONITOR_POINTS = "monitor_points"
+    private const val GUARD = "guard"
     private const val VERSION = 1
 
     private const val APP = "app"
     private const val CREATED = "created"
+    private const val GUARD_MODE = "mode"
 
     fun encode(backup: AppBackup): String =
         BackupContainer.encode(
@@ -77,6 +93,11 @@ object AppBackupCodec {
                 }
                 backup.monitorPoints?.let {
                     add(BackupSection(MONITOR_POINTS, VERSION, MonitorPointSettingsCodec.encode(it).bodyLines()))
+                }
+                backup.guard?.let { guard ->
+                    val lines = listOfNotNull(guard.mode?.let { "$GUARD_MODE=${it.name}" }) +
+                        guard.rules.map(GuardCodec::encodeRule)
+                    add(BackupSection(GUARD, VERSION, lines))
                 }
             },
         )
@@ -106,6 +127,7 @@ object AppBackupCodec {
                 MONITOR_POINTS -> backup.copy(
                     monitorPoints = MonitorPointSettingsCodec.decode(section.lines.joinToString("\n")),
                 )
+                GUARD -> backup.copy(guard = decodeGuard(section.lines))
                 else -> {
                     skipped += section.name
                     backup
@@ -123,6 +145,15 @@ object AppBackupCodec {
             throw BackupFormatException(BackupProblem.CORRUPT)
         }
         return PermissionTemplateCodec.decode(lines.joinToString("\n"))
+    }
+
+    /** A rule record never holds `=`, so the mode line cannot be taken for one. */
+    private fun decodeGuard(lines: List<String>): GuardBackup {
+        val modeName = lines.keyValues()[GUARD_MODE]
+        return GuardBackup(
+            mode = GuardMode.entries.firstOrNull { it.name == modeName },
+            rules = lines.filterNot { '=' in it }.mapNotNull(GuardCodec::decodeRule),
+        )
     }
 
     private fun String.bodyLines(): List<String> = lines().filter(String::isNotEmpty)

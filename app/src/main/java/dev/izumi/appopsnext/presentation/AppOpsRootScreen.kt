@@ -160,7 +160,7 @@ fun AppOpsRootScreen(
         List<PermissionBatchSelection>,
         AppOpMode,
     ) -> Unit,
-    onBatchOperationConfirm: () -> Unit,
+    onBatchOperationConfirm: (guard: Boolean) -> Unit,
     onBatchOperationDismiss: () -> Unit,
 ) {
     var selectedDestination by rememberSaveable {

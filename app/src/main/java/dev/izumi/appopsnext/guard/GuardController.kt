@@ -1,7 +1,6 @@
 package dev.izumi.appopsnext.guard
 
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.SystemClock
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
@@ -32,8 +31,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeoutOrNull
-import rikka.shizuku.Shizuku
 
 /**
  * Runs guard checks and keeps the chosen trigger running.
@@ -189,10 +186,10 @@ class GuardController(
 
     private suspend fun readMode(rule: GuardRule): AppOpMode? =
         appOpsRepository.readMode(rule.packageName, rule.identifier, rule.scope)
-            ?: if (ensureBackend()) appOpsRepository.readMode(rule.packageName, rule.identifier, rule.scope) else null
+            ?: if (privilegedServiceClient.ensureConnected()) appOpsRepository.readMode(rule.packageName, rule.identifier, rule.scope) else null
 
     private suspend fun restore(rule: GuardRule): Boolean {
-        if (!ensureBackend()) return false
+        if (!privilegedServiceClient.ensureConnected()) return false
         val operation = rule.identifier
         val outcome = appOpsRepository.withWriteTransaction { transaction ->
             adaptiveScopeExecutor.execute(
@@ -227,22 +224,6 @@ class GuardController(
         return outcome.result is AppOpModeChangeResult.Success
     }
 
-    /** Connects the backend from the background when Shizuku is up and allows it. */
-    private suspend fun ensureBackend(): Boolean {
-        if (privilegedServiceClient.state.value is PrivilegedServiceState.Connected) return true
-        val shizukuReady = runCatching {
-            Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
-        }.getOrDefault(false)
-        if (!shizukuReady) return false
-        privilegedServiceClient.connect()
-        val state = withTimeoutOrNull(BACKEND_TIMEOUT_MILLIS) {
-            privilegedServiceClient.state.first {
-                it is PrivilegedServiceState.Connected || it is PrivilegedServiceState.Failure
-            }
-        }
-        return state is PrivilegedServiceState.Connected
-    }
-
     private val GuardRule.identifier: AppOpIdentifier
         get() = AppOpIdentifier(
             stableName = stableOperationName,
@@ -252,6 +233,5 @@ class GuardController(
     private companion object {
         const val LOG_SOURCE = "Guard"
         const val WORK_NAME = "guard_periodic_check"
-        const val BACKEND_TIMEOUT_MILLIS = 20_000L
     }
 }

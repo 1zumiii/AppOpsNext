@@ -173,7 +173,7 @@ class SettingsViewModel(
         val preview = (backupState.value as? BackupUiState.Preview)?.preview ?: return
         backupState.value = BackupUiState.Working
         viewModelScope.launch {
-            val outcome = runCatching { backupService.import(preview.backup) }.fold(
+            val outcome = runCatching { backupService.import(preview.backup, preview.guard) }.fold(
                 onSuccess = { BackupOutcome.IMPORTED },
                 onFailure = { BackupOutcome.IMPORT_FAILED },
             )

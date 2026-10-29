@@ -65,6 +65,44 @@ class GuardRepository(context: Context) {
         }
     }
 
+    /**
+     * Records the settings a batch wrote, each as a rule for its new mode. A setting
+     * that was guarded keeps its rule at the new mode and its automatic restore. One
+     * that was not is guarded only with [guardNew].
+     */
+    suspend fun applyBatch(changed: List<GuardRule>, guardNew: Boolean) {
+        rulesStore.edit { preferences ->
+            val current = preferences[RULES].orEmpty().mapNotNull(GuardCodec::decodeRule)
+            val bySetting = current.groupBy { it.packageName to it.stableOperationName }
+            val updates = changed.mapNotNull { rule ->
+                val existing = bySetting[rule.packageName to rule.stableOperationName]
+                when {
+                    existing != null -> rule.copy(autoRestore = existing.any { it.autoRestore })
+                    guardNew -> rule
+                    else -> null
+                }
+            }.associateBy { it.packageName to it.stableOperationName }
+            if (updates.isEmpty()) return@edit
+            val kept = current.filter { (it.packageName to it.stableOperationName) !in updates }
+            preferences[RULES] = (kept + updates.values).map(GuardCodec::encodeRule).toSet()
+        }
+    }
+
+    /**
+     * Adds imported rules. An imported rule takes the place of the local rules of
+     * the same setting, and the others stay. A null [mode] leaves the mode alone.
+     */
+    suspend fun import(mode: GuardMode?, imported: List<GuardRule>) {
+        val settings = imported.mapTo(mutableSetOf()) { it.packageName to it.stableOperationName }
+        rulesStore.edit { preferences ->
+            val kept = preferences[RULES].orEmpty().filter { encoded ->
+                GuardCodec.decodeRule(encoded)?.let { (it.packageName to it.stableOperationName) in settings } != true
+            }
+            preferences[RULES] = (kept + imported.map(GuardCodec::encodeRule)).toSet()
+            mode?.let { preferences[MODE] = it.name }
+        }
+    }
+
     suspend fun remove(ruleId: String) {
         rulesStore.edit { preferences ->
             preferences[RULES] = preferences[RULES].orEmpty().filter { GuardCodec.decodeRule(it)?.id != ruleId }.toSet()
