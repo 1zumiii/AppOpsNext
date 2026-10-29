@@ -3,6 +3,7 @@ package dev.izumi.appopsnext.shizuku
 import android.content.ComponentName
 import android.content.Context
 import android.content.ServiceConnection
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -22,6 +23,7 @@ import dev.izumi.appopsnext.shizuku.service.AppOpsUserService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +31,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import rikka.shizuku.Shizuku
 
 class PrivilegedServiceClient(
@@ -126,6 +129,22 @@ class PrivilegedServiceClient(
                 message = "UserService disconnected.",
             )
         }
+    }
+
+    /** Connects from the background when Shizuku is up and allows it, as guard checks and new-app rules need. */
+    suspend fun ensureConnected(timeoutMillis: Long = BACKGROUND_CONNECT_TIMEOUT_MILLIS): Boolean {
+        if (mutableState.value is PrivilegedServiceState.Connected) return true
+        val shizukuReady = runCatching {
+            Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+        }.getOrDefault(false)
+        if (!shizukuReady) return false
+        connect()
+        val state = withTimeoutOrNull(timeoutMillis) {
+            mutableState.first {
+                it is PrivilegedServiceState.Connected || it is PrivilegedServiceState.Failure
+            }
+        }
+        return state is PrivilegedServiceState.Connected
     }
 
     fun connect() {
@@ -510,5 +529,6 @@ class PrivilegedServiceClient(
         const val NATIVE_LOG_SOURCE = "NativeBackend"
         const val USER_SERVICE_PROCESS_SUFFIX = "appops"
         const val CONNECTION_TIMEOUT_MILLIS = 12_000L
+        const val BACKGROUND_CONNECT_TIMEOUT_MILLIS = 20_000L
     }
 }

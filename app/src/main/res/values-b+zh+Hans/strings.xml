@@ -77,6 +77,12 @@
     <string name="navigation_settings">设置</string>
     <string name="app_list_title">应用权限</string>
     <string name="app_list_search_label">搜索应用名称或包名</string>
+    <string name="app_list_sort">排序</string>
+    <string name="app_list_sort_name">按名称</string>
+    <string name="app_list_sort_install_time">按安装时间</string>
+    <string name="app_list_sort_update_time">按更新时间</string>
+    <string name="app_list_installed_at">安装于 %1$s</string>
+    <string name="app_list_updated_at">更新于 %1$s</string>
     <string name="app_list_count">显示 %1$d 个，共 %2$d 个应用</string>
     <string name="app_list_load_failed">无法读取已安装应用</string>
     <string name="app_list_empty_search">没有匹配的应用</string>
@@ -277,7 +283,7 @@
     <string name="templates_custom_empty">新建模板后，就能把同一组规则复用到多个应用。</string>
     <string name="template_create">新建</string>
     <string name="template_new_app_policy_title">新装应用默认模板</string>
-    <string name="template_new_app_policy_description">自动套用常见的隐私限制。模板不可删除。AppOpsNext 未运行时安装的应用，会在下次打开后补处理。获得通知权限后，每次处理完会发送结果通知。</string>
+    <string name="template_new_app_policy_description">自动套用常见的隐私限制。模板不可删除。AppOpsNext 未运行时安装的应用，会由后台检查在约 15 分钟内处理，前提是 Shizuku 正在运行。获得通知权限后，每次处理完会发送结果通知。</string>
     <string name="template_new_app_auto_apply">自动套用到新装应用</string>
     <string name="template_preview_more">%1$s +%2$d</string>
     <string name="template_preview_count_only">+%1$d</string>
@@ -305,6 +311,7 @@
     <string name="batch_confirm_title">确认批量修改</string>
     <string name="batch_confirm_template">操作：%1$s</string>
     <string name="batch_confirm_summary">将修改 %1$d 个应用中的 %2$d 项权限。</string>
+    <string name="batch_guard_option">应用后守护这些设置</string>
     <string name="batch_confirm_warning">批量操作会逐项写入并回读验证，失败的项目会尝试恢复原值。</string>
     <string name="batch_running_title">正在批量修改</string>
     <string name="batch_running_progress">已完成 %1$d / %2$d</string>
@@ -608,7 +615,7 @@
     <!-- Backup -->
     <string name="settings_backup_section">备份与迁移</string>
     <string name="settings_backup_export">导出备份</string>
-    <string name="settings_backup_export_detail">将模板、偏好设置和访问监测配置保存为文件</string>
+    <string name="settings_backup_export_detail">将模板、偏好设置、访问监测配置和设置守护规则保存为文件</string>
     <string name="settings_backup_import">导入备份</string>
     <string name="settings_backup_import_detail">导入前先显示将要更改的内容</string>
     <string name="backup_preview_title">导入备份</string>
@@ -618,13 +625,16 @@
     <string name="backup_preview_new_app_defaults">新应用默认设置：替换为备份中的规则</string>
     <string name="backup_preview_settings">偏好设置：将替换为备份中的设置</string>
     <string name="backup_preview_monitor">访问监测：%1$d 个应用、%2$d 项监测点设置，将替换当前配置</string>
+    <string name="backup_preview_guard">设置守护：%1$d 条规则，将与现有规则合并</string>
+    <string name="backup_preview_guard_mode">守护检查方式：%1$s</string>
+    <string name="backup_preview_guard_skipped">%1$d 条规则对应的应用未安装，将被跳过</string>
     <string name="backup_preview_skipped">当前版本不支持的部分内容将被跳过</string>
     <string name="backup_import_action">导入</string>
     <string name="backup_details">详情</string>
     <string name="backup_details_title">关于备份</string>
-    <string name="backup_details_contents">备份包含模板、偏好设置，以及访问监测中选择的应用和监测点配置。</string>
-    <string name="backup_details_merge">导入的模板会追加到现有模板之后，名称和规则均相同的模板不会重复添加。新应用默认设置采用备份中的规则。偏好设置和访问监测配置会替换为备份中的内容。</string>
-    <string name="backup_details_excluded">备份不包含已保存的历史记录和设置守护规则。导入不会自动开启访问监测，可在“监测设置”中开启。</string>
+    <string name="backup_details_contents">备份包含模板、偏好设置、访问监测中选择的应用和监测点配置，以及设置守护的规则和检查方式。</string>
+    <string name="backup_details_merge">导入的模板会追加到现有模板之后，名称和规则均相同的模板不会重复添加。新应用默认设置采用备份中的规则。偏好设置和访问监测配置会替换为备份中的内容。备份中的守护规则会替换同一设置的现有规则，其他规则保留。本机未安装的应用对应的规则会被跳过。</string>
+    <string name="backup_details_excluded">备份不包含已保存的历史记录和设置守护发现的改动。导入不会自动开启访问监测，可在“监测设置”中开启。</string>
     <string name="backup_rejected_title">无法导入</string>
     <string name="backup_rejected_foreign">此文件不是 AppOpsNext 备份。</string>
     <string name="backup_rejected_newer">此备份来自更新版本的 AppOpsNext。请更新应用后再导入。</string>

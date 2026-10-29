@@ -1,7 +1,10 @@
 package dev.izumi.appopsnext.backup
 
 import dev.izumi.appopsnext.appops.command.AppOpMode
+import dev.izumi.appopsnext.apps.AppSortOrder
 import dev.izumi.appopsnext.appops.model.AppOpScope
+import dev.izumi.appopsnext.guard.GuardMode
+import dev.izumi.appopsnext.guard.GuardRule
 import dev.izumi.appopsnext.monitor.MonitorOutcomes
 import dev.izumi.appopsnext.monitor.MonitorPointSettings
 import dev.izumi.appopsnext.monitor.MonitorTarget
@@ -31,6 +34,7 @@ class AppBackupCodecTest {
             hideSystemApps = false,
             autoApplyNewAppTemplate = true,
             savedHistoryOperations = setOf("android:camera", "android:coarse_location"),
+            appSortOrder = AppSortOrder.INSTALL_TIME,
         ),
         monitorTargets = listOf(MonitorTarget("dev.izumi.one", setOf("android:camera"))),
         monitorPoints = listOf(
@@ -39,6 +43,13 @@ class AppBackupCodecTest {
                 operationName = "android:camera",
                 throttleSeconds = 60,
                 outcomes = MonitorOutcomes.REFUSED,
+            ),
+        ),
+        guard = GuardBackup(
+            mode = GuardMode.PERIODIC,
+            rules = listOf(
+                GuardRule("dev.izumi.one", 10_123, "android:camera", AppOpScope.PACKAGE, AppOpMode.IGNORE, true),
+                GuardRule("dev.izumi.two", 10_124, "android:coarse_location", AppOpScope.UID, AppOpMode.DENY, false),
             ),
         ),
     )
@@ -55,6 +66,12 @@ class AppBackupCodecTest {
         assertNull(decoded.settings)
         assertNull(decoded.monitorPoints)
         assertEquals(backup.monitorTargets, decoded.monitorTargets)
+    }
+
+    @Test fun `a guard section without a mode leaves the mode alone`() {
+        val rules = backup.guard!!.rules
+        val decoded = AppBackupCodec.decode(AppBackupCodec.encode(AppBackup(guard = GuardBackup(null, rules))))
+        assertEquals(GuardBackup(null, rules), decoded.guard)
     }
 
     @Test fun `unknown sections and newer section versions are skipped`() {

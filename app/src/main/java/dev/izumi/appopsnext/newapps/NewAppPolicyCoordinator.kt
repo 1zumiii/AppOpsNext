@@ -4,6 +4,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeOutcome
 import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeExecutor
 import dev.izumi.appopsnext.appops.AppOpsRepository
@@ -23,6 +26,7 @@ import dev.izumi.appopsnext.shizuku.PrivilegedServiceClient
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
 import dev.izumi.appopsnext.templates.NewAppPolicyTemplate
 import dev.izumi.appopsnext.templates.PermissionTemplateRepository
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -142,6 +146,7 @@ class NewAppPolicyCoordinator(
                 .map { it.autoApplyNewAppTemplate }
                 .distinctUntilChanged()
                 .collect { enabled ->
+                    schedulePeriodicCheck(enabled)
                     runSafely("setting_changed") {
                         workMutex.withLock {
                             if (enabled) {
@@ -169,6 +174,26 @@ class NewAppPolicyCoordinator(
             runSafely("app_foreground") {
                 reconcileAndProcess("app_foreground")
             }
+        }
+    }
+
+    /** The periodic check of [NewAppWorker], which also covers installs while the process was not running. */
+    suspend fun runPeriodicCheck() {
+        runSafely("periodic") {
+            reconcileAndProcess("periodic")
+        }
+    }
+
+    private fun schedulePeriodicCheck(enabled: Boolean) {
+        val workManager = WorkManager.getInstance(context)
+        if (enabled) {
+            workManager.enqueueUniquePeriodicWork(
+                WORK_NAME,
+                ExistingPeriodicWorkPolicy.KEEP,
+                PeriodicWorkRequestBuilder<NewAppWorker>(PERIODIC_CHECK_MINUTES, TimeUnit.MINUTES).build(),
+            )
+        } else {
+            workManager.cancelUniqueWork(WORK_NAME)
         }
     }
 
@@ -217,14 +242,17 @@ class NewAppPolicyCoordinator(
     private suspend fun processPendingLocked(
         installedApps: List<InstalledPackageRecord>,
     ) {
-        if (
-            privilegedServiceClient.state.value
-            !is PrivilegedServiceState.Connected
-        ) {
-            return
-        }
         val pending = stateRepository.pending()
         if (pending.isEmpty()) return
+        // Installs seen from the background connect the backend themselves,
+        // so the rules do not wait for the app to be opened.
+        if (!privilegedServiceClient.ensureConnected()) {
+            diagnosticLog.info(
+                source = LOG_SOURCE,
+                message = "New-app rules wait for the backend. pending=${pending.size}",
+            )
+            return
+        }
         val appsByFingerprint = installedApps.associateBy { it.fingerprint }
         val template = templateRepository.templates.first().first {
             NewAppPolicyTemplate.isBuiltIn(it.id)
@@ -273,7 +301,11 @@ class NewAppPolicyCoordinator(
             }
             val report = BatchOperationReport(app.label, targets.mapNotNull { results[it.stableOperationName]?.item })
             if (complete) stateRepository.markProcessed(fingerprint)
-            if (report.results.isNotEmpty()) {
+            // A rule that keeps waiting is retried by every periodic check. Only a
+            // run that changed an outcome is worth another heads-up notification.
+            val outcomeChanged = previous.associate { it.item.target.stableOperationName to it.item.result } !=
+                results.mapValues { it.value.item.result }
+            if (report.results.isNotEmpty() && outcomeChanged) {
                 notifier.notifyCompleted(
                     packageName = fingerprint.packageName,
                     firstInstallTimeMillis = fingerprint.firstInstallTimeMillis,
@@ -343,5 +375,9 @@ class NewAppPolicyCoordinator(
     private companion object {
         const val LOG_SOURCE = "NewAppPolicy"
         const val NEW_PACKAGE_SETTLE_DELAY_MS = 2_000L
+        const val WORK_NAME = "new_app_periodic_check"
+
+        /** The shortest interval WorkManager allows; a scan of installed packages costs little. */
+        const val PERIODIC_CHECK_MINUTES = 15L
     }
 }

@@ -2,6 +2,12 @@ package dev.izumi.appopsnext.presentation.batch
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.Checkbox
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -37,9 +43,10 @@ import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 @Composable
 fun BatchOperationDialog(
     state: BatchOperationUiState,
-    onConfirm: () -> Unit,
+    onConfirm: (guard: Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    var guard by rememberSaveable((state as? BatchOperationUiState.Confirming)?.request) { mutableStateOf(false) }
     when (state) {
         BatchOperationUiState.Idle -> Unit
 
@@ -86,6 +93,22 @@ fun BatchOperationDialog(
                             )
                         }
                     }
+                    if (state.request.offerGuard) {
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .toggleable(value = guard, role = Role.Checkbox, onValueChange = { guard = it }),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Checkbox(checked = guard, onCheckedChange = null)
+                                Text(
+                                    text = stringResource(R.string.batch_guard_option),
+                                    modifier = Modifier.padding(start = 8.dp),
+                                )
+                            }
+                        }
+                    }
                     item {
                         state.request.previewTargets.map { it.requestedMode }.distinct()
                             .singleOrNull()?.let { mode ->
@@ -113,7 +136,7 @@ fun BatchOperationDialog(
                 }
             },
             confirmButton = {
-                Button(onClick = onConfirm) {
+                Button(onClick = { onConfirm(state.request.offerGuard && guard) }) {
                     Text(text = stringResource(R.string.action_apply))
                 }
             },

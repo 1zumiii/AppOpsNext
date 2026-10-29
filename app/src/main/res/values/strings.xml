@@ -79,6 +79,12 @@
     <string name="navigation_settings">Settings</string>
     <string name="app_list_title">App permissions</string>
     <string name="app_list_search_label">Search app name or package</string>
+    <string name="app_list_sort">Sort</string>
+    <string name="app_list_sort_name">Name</string>
+    <string name="app_list_sort_install_time">Install time</string>
+    <string name="app_list_sort_update_time">Update time</string>
+    <string name="app_list_installed_at">Installed %1$s</string>
+    <string name="app_list_updated_at">Updated %1$s</string>
     <string name="app_list_count">Showing %1$d of %2$d apps</string>
     <string name="app_list_load_failed">Could not load installed apps</string>
     <string name="app_list_empty_search">No matching apps</string>
@@ -281,7 +287,7 @@
     <string name="templates_custom_empty">Create a template to reuse the same rules across apps.</string>
     <string name="template_create">New</string>
     <string name="template_new_app_policy_title">New app defaults</string>
-    <string name="template_new_app_policy_description">Automatically applies common privacy controls. This template cannot be deleted. Installs made while AppOpsNext was not running are handled the next time it opens. A brief result notification is sent when notification permission is available.</string>
+    <string name="template_new_app_policy_description">Automatically applies common privacy controls. This template cannot be deleted. Installs made while AppOpsNext was not running are found by a background check about every 15 minutes, while Shizuku is running. A brief result notification is sent when notification permission is available.</string>
     <string name="template_new_app_auto_apply">Automatically apply to new apps</string>
     <string name="template_preview_more">%1$s +%2$d</string>
     <string name="template_preview_count_only">+%1$d</string>
@@ -309,6 +315,7 @@
     <string name="batch_confirm_title">Confirm batch changes</string>
     <string name="batch_confirm_template">Operation: %1$s</string>
     <string name="batch_confirm_summary">This will modify %2$d permissions across %1$d apps.</string>
+    <string name="batch_guard_option">Guard these settings after applying</string>
     <string name="batch_confirm_warning">Each change is written and read back. A failed item is restored to its original value where possible.</string>
     <string name="batch_running_title">Applying batch changes</string>
     <string name="batch_running_progress">Completed %1$d / %2$d</string>
@@ -614,7 +621,7 @@
     <!-- Backup -->
     <string name="settings_backup_section">Backup and migration</string>
     <string name="settings_backup_export">Export backup</string>
-    <string name="settings_backup_export_detail">Saves templates, preferences and the Access monitor setup to a file</string>
+    <string name="settings_backup_export_detail">Saves templates, preferences, the Access monitor setup and Setting guard rules to a file</string>
     <string name="settings_backup_import">Import backup</string>
     <string name="settings_backup_import_detail">Shows what will change before anything is imported</string>
     <string name="backup_preview_title">Import backup</string>
@@ -624,13 +631,16 @@
     <string name="backup_preview_new_app_defaults">New app defaults: replaced by the rules in the backup</string>
     <string name="backup_preview_settings">Preferences: replaced by the ones in the backup</string>
     <string name="backup_preview_monitor">Access monitor: %1$d apps and %2$d monitoring point settings replace the current setup</string>
+    <string name="backup_preview_guard">Setting guard: %1$d rules are added to the current rules</string>
+    <string name="backup_preview_guard_mode">Guard check method: %1$s</string>
+    <string name="backup_preview_guard_skipped">%1$d rules are skipped because their apps are not installed</string>
     <string name="backup_preview_skipped">Parts that this version does not support will be skipped</string>
     <string name="backup_import_action">Import</string>
     <string name="backup_details">Details</string>
     <string name="backup_details_title">About backups</string>
-    <string name="backup_details_contents">A backup holds templates, preferences, and the apps and monitoring point settings chosen in Access monitor.</string>
-    <string name="backup_details_merge">Imported templates are added after the existing ones. A template with the same name and rules as an existing one is not added again. The new app defaults take the rules from the backup. Preferences and the Access monitor setup are replaced by the backup.</string>
-    <string name="backup_details_excluded">A backup does not include saved history or Setting guard rules. An import does not switch on Access monitor. Switch it on in Monitor settings.</string>
+    <string name="backup_details_contents">A backup holds templates, preferences, the apps and monitoring point settings chosen in Access monitor, and the Setting guard rules and check method.</string>
+    <string name="backup_details_merge">Imported templates are added after the existing ones. A template with the same name and rules as an existing one is not added again. The new app defaults take the rules from the backup. Preferences and the Access monitor setup are replaced by the backup. A guard rule from the backup replaces the current rule for the same setting, and other rules stay. Rules for apps that are not installed on this device are skipped.</string>
+    <string name="backup_details_excluded">A backup does not include saved history or the changes found by Setting guard. An import does not switch on Access monitor. Switch it on in Monitor settings.</string>
     <string name="backup_rejected_title">Cannot import</string>
     <string name="backup_rejected_foreign">This file is not an AppOpsNext backup.</string>
     <string name="backup_rejected_newer">This backup comes from a newer version of AppOpsNext. Update the app, then import again.</string>

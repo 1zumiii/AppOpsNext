@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation
 
+import dev.izumi.appopsnext.apps.AppSortOrder
 import android.net.Uri
 import dev.izumi.appopsnext.presentation.experimental.GuardScreen
 import dev.izumi.appopsnext.presentation.experimental.GuardViewModel
@@ -94,6 +95,7 @@ fun AppOpsRootScreen(
     onPrivilegedServiceRetry: () -> Unit,
     onClearDiagnosticLog: () -> Unit,
     onAppSearchQueryChange: (String) -> Unit,
+    onAppSortOrderChange: (AppSortOrder) -> Unit,
     onRefreshApps: () -> Unit,
     onUserSelected: (Int?) -> Unit,
     onRefreshHistory: () -> Unit,
@@ -160,7 +162,7 @@ fun AppOpsRootScreen(
         List<PermissionBatchSelection>,
         AppOpMode,
     ) -> Unit,
-    onBatchOperationConfirm: () -> Unit,
+    onBatchOperationConfirm: (guard: Boolean) -> Unit,
     onBatchOperationDismiss: () -> Unit,
 ) {
     var selectedDestination by rememberSaveable {
@@ -524,6 +526,7 @@ fun AppOpsRootScreen(
                         )
                     },
                     onSearchQueryChange = onAppSearchQueryChange,
+                    onSortOrderChange = onAppSortOrderChange,
                     onRefresh = onRefreshApps,
                     onUserSelected = onUserSelected,
                     onAppSelected = { app ->
