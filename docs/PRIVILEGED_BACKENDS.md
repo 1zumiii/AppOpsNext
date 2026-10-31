@@ -39,6 +39,7 @@ operation and permission names first, and the daemon validates them again.
 | `SET_UID` | `cmd appops set --uid <package> <op> <mode>` |
 | `GET_PACKAGE_PERMISSIONS` | `dumpsys package <package>` |
 | `LIST_USERS` | `pm list users` (no arguments) |
+| `GET_PACKAGE_TIMES` | `dumpsys package packages` (no arguments) |
 | `LIST_PACKAGES_FOR_USER` | `pm list packages --user <user> -U` |
 | `GET_USER_PACKAGE_OPS` | `cmd appops get --user <user> <package>` |
 | `GET_USER_PACKAGE_OP` | `cmd appops get --user <user> <package> <op>` |
