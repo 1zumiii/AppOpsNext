@@ -25,13 +25,16 @@ Official APKs are published **ONLY** on GitHub Releases. No guarantee is made fo
 
 - **Permission controls.** Set AppOps such as camera, location, and clipboard
   per app, then read back each change to verify it.
-- **Templates.** Apply saved rules to several apps or automatically to new installs.
+- **Templates.** Apply saved rules to several apps, or automatically to new apps
+  right after they are installed.
 - **History.** Filter by time and app, including counts of denied attempts. Save
   individual records on the device beyond Android's seven-day retention period.
 - **Access monitoring (experimental).** Watch chosen app permissions, get reports
   of allowed and denied accesses, and review them in a log.
 - **Permission change listeners (experimental).** See which processes are
   registered to watch for permission-setting changes.
+- **Setting guard (experimental).** Get a notification when the system, a vendor
+  policy, or another app changes a guarded setting, and optionally restore it.
 - **Limited privileged access.** Use a fixed set of AppOps and permission-flag commands,
   with no arbitrary shell execution. Records stay on the device; only the update
   check uses the network.
@@ -40,13 +43,14 @@ Official APKs are published **ONLY** on GitHub Releases. No guarantee is made fo
 
 | Area | Features |
 | --- | --- |
-| Applications | Browse current-user apps, search names and packages, and choose whether to show system apps. Switch to By permission to see the mode of every app for one operation and change it there. |
+| Applications | Browse apps, search names and packages, sort by name, install time, or update time, and choose whether to show system apps. On a device with several users, switch to another user such as a work profile or private space. Switch to By permission to see the mode of every app for one operation and change it there. |
 | AppOps | Inspect package and UID modes, search operations by localized or system name, and verify changes by reading them back. |
-| Templates and batches | Create reusable rules, reorder them, apply a template to multiple apps, or change several operations in one app. Multi-select lists offer Select all for the items shown. Batch confirmations list the target mode and the items to change. |
-| Newly installed apps | Opt in to automatic template application, catch up on pending installations, and inspect saved per-rule results. |
+| Templates and batches | Create reusable rules, reorder them, apply a template to multiple apps, or change several operations in one app. Multi-select lists offer Select all for the items shown. Batch confirmations list the target mode and the items to change. When Setting guard is on, a template batch can also guard the settings it applied. |
+| Newly installed apps | Opt in to automatic template application and inspect saved per-rule results. With Apply right after install, a process kept in Shizuku watches for installs, so the template applies without opening AppOpsNext. A periodic background check handles anything missed. |
 | History | Explore permission distribution, app statistics, and timelines by day range and app; choose and reorder the operations you follow. Optionally keep individual records past the seven days Android retains. |
-| Settings and diagnostics | Switch between English, Simplified Chinese, or the system language, inspect connection status and diagnostic reports, and see quietly whether a newer release exists. |
-| Experimental | Watch chosen operations for chosen apps, with per-point reporting intervals, outcome filters and off-screen-only reporting. Notification permission is required for alerts. A registry check reports confirmed or unconfirmed coverage. A monitor log keeps every reported access, allowed or refused, whatever the notification settings. Also inspect a snapshot of processes registered for permission mode changes. |
+| Settings and diagnostics | Switch between English, Simplified Chinese, or the system language. Choose a theme: follow system, light, or dark. Inspect connection status and diagnostic reports, and see quietly whether a newer release exists. |
+| Backup and migration | Export templates, preferences, the access monitor selection, and Setting guard rules to a file. An import shows a preview of the changes and applies them only after you confirm. |
+| Experimental | Watch chosen operations for chosen apps, with per-point reporting intervals, outcome filters and off-screen-only reporting. Notification permission is required for alerts. A registry check reports confirmed or unconfirmed coverage. A monitor log keeps every reported access, allowed or refused, whatever the notification settings. Setting guard checks guarded settings hourly or in real time, and each rule can restore its target mode automatically, at most 3 attempts in 24 hours. Also inspect a snapshot of processes registered for permission mode changes. |
 
 ## Install and get started
 
@@ -68,7 +72,8 @@ AppOpsNext still needs Shizuku for privileged operations.
 
 Use **Templates** for reusable rules and **History** to review system records.
 Automatic template application for newly installed apps is optional; configure
-its rules before enabling it. The first reconciliation establishes an existing-app
+its rules before enabling it. Apply right after install needs Shizuku to be
+running, and its process starts again when Shizuku restarts. The first reconciliation establishes an existing-app
 baseline; it does not retroactively apply the template to every installed app.
 
 For updates, install the new release APK over the existing app to retain its
@@ -178,10 +183,10 @@ target separately.
 | --- | --- |
 | `QUERY_ALL_PACKAGES` | An AppOps manager has to discover packages that are not known at build time. |
 | `INTERNET` | Only to check quietly whether a newer release exists. |
-| `POST_NOTIFICATIONS` | Results of automatic template application, and access reports from the experimental monitor. |
-| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE` | Keeps the experimental access monitor's callbacks reachable while it is switched on. |
+| `POST_NOTIFICATIONS` | Results of automatic template application, access reports from the experimental monitor, and Setting guard alerts. |
+| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE` | Keeps the callbacks of the experimental access monitor and of realtime Setting guard reachable while they are switched on. |
 
-The update check reads one public GitHub endpoint and nothing else. It never
+The update check reads public GitHub release information and nothing else. It never
 forces an update, never downloads or installs anything, and never shows a popup
 or a notification about it: an available version appears next to the app version
 in Settings and nowhere else. **No user data of any kind is uploaded.**
@@ -193,7 +198,7 @@ entirely your decision.
 ## Troubleshooting
 
 - **Cannot connect:** confirm Shizuku is running and AppOpsNext is authorized,
-  then check **Settings → Connection and diagnostics**. The app tries its
+  then check **Settings → Connection**. The app tries its
   bundled native backend first and Shizuku UserService if native startup fails.
 - **A mode will not apply:** check the Android runtime permission and the
   reported verification result. Some system restrictions cannot be overridden
@@ -285,7 +290,8 @@ Android packages live under `app/src/main/java/dev/izumi/appopsnext/`.
 | `appops/` | Commands, parsers, scope handling, and verified write transactions. |
 | `nativebackend/`, `shizuku/` | Privileged connections, native pipes, and UserService fallback. |
 | `apps/`, `settings/` | App discovery, metadata caching, and preferences. |
-| `templates/`, `newapps/`, `batch/` | Template persistence, installation detection, resumable rule execution, and batch targets. |
+| `templates/`, `newapps/`, `batch/` | Template persistence, installation detection and the install watcher, resumable rule execution, and batch targets. |
+| `guard/`, `backup/` | Experimental Setting guard, and export and import of the app's setup. |
 | `history/` | System-history parsing, refresh scheduling, local snapshots, and the saved individual-record archive. |
 | `diagnostics/` | Environment and connection reports. |
 | `monitor/` | Experimental access monitor: watch registration over a forwarded binder call, per-point reporting settings, event filtering, notifications, and the event log. |
