@@ -918,7 +918,7 @@ private fun ModeMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {
-            AppOpMode.entries.forEach { candidate ->
+            AppOpMode.standard.forEach { candidate ->
                 DropdownMenuItem(
                     text = { Text(text = modeLabel(candidate)) },
                     enabled = candidate != mode,
@@ -1142,6 +1142,7 @@ private fun modeLabel(mode: AppOpMode): String =
             AppOpMode.DENY -> R.string.app_op_mode_deny
             AppOpMode.DEFAULT -> R.string.app_op_mode_default
             AppOpMode.FOREGROUND -> R.string.app_op_mode_foreground
+            AppOpMode.ASK -> R.string.app_op_mode_ask
         },
     )
 

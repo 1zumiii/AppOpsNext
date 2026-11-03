@@ -1,6 +1,7 @@
 package dev.izumi.appopsnext.appops.parser
 
 import dev.izumi.appopsnext.appops.model.AppOpEntry
+import dev.izumi.appopsnext.appops.model.MiuiOps
 import dev.izumi.appopsnext.appops.model.PackageOpsSnapshot
 
 class PackageOpsParser {
@@ -29,7 +30,8 @@ class PackageOpsParser {
         val separatorIndex = entryText.indexOf(MODE_SEPARATOR)
         if (separatorIndex <= 0) return null
 
-        val name = entryText.substring(0, separatorIndex).trim()
+        val printedName = entryText.substring(0, separatorIndex).trim()
+        val name = MiuiOps.fromPrinted(printedName) ?: printedName
         if (!operationNamePattern.matches(name)) return null
 
         val modeAndDetails = entryText

@@ -129,6 +129,7 @@ internal fun AppOpListItem(
                         currentMode = currentMode,
                         enabled = editEnabled,
                         onModeSelected = onModeSelected,
+                        modes = AppOpMode.choicesFor(item.operationName),
                     )
                 } else {
                     Text(
@@ -165,6 +166,7 @@ internal fun EditableModeMenu(
     onModeSelected: (AppOpMode, AppOpMode) -> Unit,
     /** Replaces the spoken mode where the button picks a target, not a current value. */
     contentDescription: String? = null,
+    modes: List<AppOpMode> = AppOpMode.standard,
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box {
@@ -190,7 +192,7 @@ internal fun EditableModeMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {
-            AppOpMode.entries.forEach { mode ->
+            modes.forEach { mode ->
                 DropdownMenuItem(
                     text = { Text(text = modeLabel(mode)) },
                     enabled = mode != currentMode,
@@ -652,6 +654,7 @@ internal fun modeLabel(mode: AppOpMode): String =
             AppOpMode.DENY -> R.string.app_op_mode_deny
             AppOpMode.DEFAULT -> R.string.app_op_mode_default
             AppOpMode.FOREGROUND -> R.string.app_op_mode_foreground
+            AppOpMode.ASK -> R.string.app_op_mode_ask
         },
     )
 

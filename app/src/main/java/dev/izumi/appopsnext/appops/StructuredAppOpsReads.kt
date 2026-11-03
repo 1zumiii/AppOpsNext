@@ -8,6 +8,7 @@ import dev.izumi.appopsnext.appops.binder.StructuredOpsMapper
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpNames
 import dev.izumi.appopsnext.appops.model.AppOpScope
+import dev.izumi.appopsnext.appops.model.MiuiOps
 import dev.izumi.appopsnext.appops.model.PackageOpsSnapshot
 import dev.izumi.appopsnext.appops.parser.OpStates
 import dev.izumi.appopsnext.monitor.AppOpCodes
@@ -97,7 +98,7 @@ class StructuredAppOpsReads internal constructor(
                 packageName = packageName,
                 uidOps = uidOps(appUid),
                 packageOps = opsForPackage(appUid, packageName),
-                nameOf = names::get,
+                nameOf = { code -> names[code] ?: MiuiOps.nameOf(code) },
                 nowMillis = clock(),
             )
         } ?: error("Unnamed operation or mode in $packageName")
@@ -152,7 +153,7 @@ class StructuredAppOpsReads internal constructor(
     }
 
     private fun codeOf(operationName: String): Int =
-        checkNotNull(codeByName?.get(AppOpNames.shellName(operationName))) {
+        checkNotNull(codeByName?.get(AppOpNames.shellName(operationName)) ?: MiuiOps.codeOf(operationName)) {
             "Unknown operation $operationName"
         }
 

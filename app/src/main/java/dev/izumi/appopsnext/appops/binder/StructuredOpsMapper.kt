@@ -132,6 +132,7 @@ internal object StructuredOpsMapper {
         2 to AppOpMode.DENY.shellValue,
         3 to AppOpMode.DEFAULT.shellValue,
         4 to AppOpMode.FOREGROUND.shellValue,
+        5 to AppOpMode.ASK.shellValue,
     )
 
     /** Android's `UserHandle.PER_USER_RANGE`. */

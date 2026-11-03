@@ -1,5 +1,7 @@
 package dev.izumi.appopsnext.appops.command
 
+import dev.izumi.appopsnext.appops.model.MiuiOps
+
 object AppOpsCommands {
     fun getOpStates(operationName: String): List<String> {
         validateOperationName(operationName)
@@ -274,11 +276,21 @@ enum class AppOpMode(
     DENY("deny"),
     DEFAULT("default"),
     FOREGROUND("foreground"),
+
+    /** MIUI and HyperOS only: the security center asks the user. Offered for [MiuiOps] alone. */
+    ASK("ask"),
     ;
 
     companion object {
         fun fromShellValue(value: String): AppOpMode? =
             entries.firstOrNull { it.shellValue == value }
+
+        /** The modes every platform operation takes. */
+        val standard: List<AppOpMode> get() = entries - ASK
+
+        /** The modes a picker offers for [operationName]. */
+        fun choicesFor(operationName: String): List<AppOpMode> =
+            if (MiuiOps.isMiuiOp(operationName)) entries else standard
     }
 }
 
