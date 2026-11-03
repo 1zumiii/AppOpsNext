@@ -277,7 +277,7 @@ enum class AppOpMode(
     DEFAULT("default"),
     FOREGROUND("foreground"),
 
-    /** MIUI and HyperOS only: the security center asks the user. Offered for [MiuiOps] alone. */
+    /** MIUI and HyperOS only: the security center asks the user. See [MiuiOps.takesAsk]. */
     ASK("ask"),
     ;
 
@@ -288,9 +288,13 @@ enum class AppOpMode(
         /** The modes every platform operation takes. */
         val standard: List<AppOpMode> get() = entries - ASK
 
-        /** The modes a picker offers for [operationName]. */
-        fun choicesFor(operationName: String): List<AppOpMode> =
-            if (MiuiOps.isMiuiOp(operationName)) entries else standard
+        /**
+         * The modes a picker offers for [operationName]. Ask stays on offer
+         * where it is [currentMode], since some MIUI operations default to it,
+         * so a change can be undone.
+         */
+        fun choicesFor(operationName: String, currentMode: AppOpMode? = null): List<AppOpMode> =
+            if (MiuiOps.takesAsk(operationName) || currentMode == ASK) entries else standard
     }
 }
 

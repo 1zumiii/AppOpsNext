@@ -129,7 +129,7 @@ internal fun AppOpListItem(
                         currentMode = currentMode,
                         enabled = editEnabled,
                         onModeSelected = onModeSelected,
-                        modes = AppOpMode.choicesFor(item.operationName),
+                        modes = AppOpMode.choicesFor(item.operationName, currentMode),
                     )
                 } else {
                     Text(

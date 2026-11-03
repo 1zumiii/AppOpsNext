@@ -14,6 +14,10 @@ object MiuiOps {
     fun nameOf(code: Int): String? =
         code.takeIf { it in CODES }?.toString()
 
+    /** Whether the security center prompts for [operationName] when its mode is ask. */
+    fun takesAsk(operationName: String): Boolean =
+        codeOf(operationName) in ASK_CODES
+
     fun codeOf(operationName: String): Int? =
         AppOpNames.shellName(operationName).toIntOrNull()?.takeIf { it in CODES }
 
@@ -24,5 +28,8 @@ object MiuiOps {
     // The framework accepts codes up to 10056 and already notes 10036, past its
     // named constants, so the range is wider than the catalogued codes.
     private val CODES = 10_001..10_999
-    private val PRINTED_NAME = Regex("""MIUIOP\((\d+)\)""")
+    // The security center's AppOpsAdapter.askOp handles these MIUI codes, plus
+    // the storage operations 59 and 60 that Android 15 no longer applies.
+    private val ASK_CODES = setOf(10_022, 10_044, 10_051, 10_052)
+    private val PRINTED_NAME =Regex("""MIUIOP\((\d+)\)""")
 }

@@ -26,9 +26,18 @@ class MiuiOpsTest {
     }
 
     @Test
-    fun `ask is offered for MIUI operations only`() {
-        assertTrue(AppOpMode.ASK in AppOpMode.choicesFor("10033"))
+    fun `ask is offered where the security center prompts`() {
+        listOf("10022", "10044", "10051", "10052").forEach {
+            assertTrue(AppOpMode.ASK in AppOpMode.choicesFor(it))
+        }
+        assertFalse(AppOpMode.ASK in AppOpMode.choicesFor("10033"))
         assertFalse(AppOpMode.ASK in AppOpMode.choicesFor("CAMERA"))
         assertFalse(AppOpMode.ASK in AppOpMode.standard)
+    }
+
+    @Test
+    fun `ask stays on offer where it is the current mode`() {
+        assertTrue(AppOpMode.ASK in AppOpMode.choicesFor("10001", AppOpMode.ASK))
+        assertFalse(AppOpMode.ASK in AppOpMode.choicesFor("10001", AppOpMode.ALLOW))
     }
 }

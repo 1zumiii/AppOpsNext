@@ -172,9 +172,10 @@ object AppOpDisplayCatalog {
     private const val PRIORITY_OTHER = 100
 
     /**
-     * Labels for the MIUI operations the framework names in `MiuiHooks`. They
-     * label rows the device reports and add no default rows, since other
-     * devices lack these operations. The framework carries no descriptions, so
+     * Labels for the MIUI operations named in the framework's `MiuiHooks`
+     * (to 10035) and the security center's `AppOpsManagerCompat` (to 10053).
+     * They label rows the device reports and add no default rows, since other
+     * devices lack these operations. Neither source carries descriptions, so
      * each label is read from its constant name.
      */
     private val miuiLabels = mapOf(
@@ -213,6 +214,24 @@ object AppOpDisplayCatalog {
         10033 to R.string.miui_op_label_post_local_notification,
         10034 to R.string.miui_op_label_access_gallery,
         10035 to R.string.miui_op_label_access_sociality,
+        10036 to R.string.miui_op_label_access_location_real,
+        10037 to R.string.miui_op_label_get_oaid,
+        10038 to R.string.miui_op_label_get_oaid_user,
+        10039 to R.string.miui_op_label_get_phone_number_operator,
+        10040 to R.string.miui_op_label_sec_control_dns,
+        10041 to R.string.miui_op_label_can_be_recorded,
+        10042 to R.string.miui_op_label_media_projection,
+        10043 to R.string.miui_op_label_android_location_real,
+        10044 to R.string.miui_op_label_shake,
+        10045 to R.string.miui_op_label_live_wallpaper,
+        10046 to R.string.miui_op_label_record_voice_call,
+        10047 to R.string.miui_op_label_independent_storage,
+        10048 to R.string.miui_op_label_guide_install,
+        10049 to R.string.miui_op_label_forbidden_chain,
+        10050 to R.string.miui_op_label_device_id,
+        10051 to R.string.miui_op_label_read_record,
+        10052 to R.string.miui_op_label_read_note,
+        10053 to R.string.miui_op_label_auto_start_switch,
     )
 
     private val metadataByOperation = mapOf(
