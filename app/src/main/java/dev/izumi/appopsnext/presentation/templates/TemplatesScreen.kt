@@ -110,11 +110,11 @@ fun TemplatesScreen(
 ) {
     val selectedTemplate = uiState.selectedTemplate
     val pageStates = rememberSaveableStateHolder()
-    var showCreateDialog by remember { mutableStateOf(false) }
+    var showCreateDialog by rememberSaveable { mutableStateOf(false) }
     var deleteCandidate by remember {
         mutableStateOf<PermissionTemplate?>(null)
     }
-    var showNewAppPolicyInfo by remember { mutableStateOf(false) }
+    var showNewAppPolicyInfo by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -942,7 +942,7 @@ private fun CreateTemplateDialog(
     onCreate: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var name by remember { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf("") }
     AppBottomSheet(
         onDismissRequest = onDismiss,
         title = {
