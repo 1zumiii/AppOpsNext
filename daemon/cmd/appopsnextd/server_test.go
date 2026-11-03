@@ -306,3 +306,32 @@ func TestParseRejectsMalformedUserScopedCommands(t *testing.T) {
 		}
 	}
 }
+
+func TestParseAcceptsMiuiAskMode(t *testing.T) {
+	actual, err := parseCommand("SET_PACKAGE com.tencent.mm 10022 ask")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []string{"/system/bin/cmd", "appops", "set", "com.tencent.mm", "10022", "ask"}
+	if !reflect.DeepEqual(actual.arguments, expected) {
+		t.Fatalf("arguments = %#v, want %#v", actual.arguments, expected)
+	}
+}
+
+func TestServeAnswersRefusedRequestAndKeepsConnection(t *testing.T) {
+	reader := bufio.NewReader(strings.NewReader(
+		"SET_PACKAGE dev.izumi.appopsnext android:camera surprise\nPING\n",
+	))
+	var output strings.Builder
+	writer := bufio.NewWriter(&output)
+	if err := serve(reader, writer); err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSuffix(output.String(), "\n"), "\n")
+	if len(lines) != 2 || lines[1] != "PONG" {
+		t.Fatalf("lines = %q, want a result and PONG", lines)
+	}
+	if !strings.HasPrefix(lines[0], "RESULT|64|false|-|") || strings.HasSuffix(lines[0], "|-") {
+		t.Fatalf("result = %q, want exit 64 with the reason in stderr", lines[0])
+	}
+}

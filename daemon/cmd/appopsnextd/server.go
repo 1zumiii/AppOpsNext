@@ -19,8 +19,10 @@ const (
 	commandTimeout       = 10 * time.Second
 	timeoutExitCode      = -1
 	startFailureExitCode = -2
-	maxRequestLength     = 1024
-	maxResultBytes       = 16 * 1024 * 1024
+	// EX_USAGE, as for a command line the daemon refused to run.
+	rejectedExitCode = 64
+	maxRequestLength = 1024
+	maxResultBytes   = 16 * 1024 * 1024
 )
 
 var (
@@ -34,8 +36,12 @@ var (
 		"deny":       {},
 		"default":    {},
 		"foreground": {},
+		// MIUI and HyperOS: the security center prompts the user.
+		"ask": {},
 	}
 )
+
+var rejectedResult = commandResult{exitCode: rejectedExitCode}
 
 type appOpsCommand struct {
 	arguments []string
@@ -67,11 +73,16 @@ func serve(reader *bufio.Reader, writer *bufio.Writer) error {
 			return writeLine(writer, "BYE")
 		}
 
+		// A request this daemon refuses fails on its own. Closing the connection
+		// would drop the app's backend and stop the write from being undone.
+		result := rejectedResult
 		command, err := parseCommand(request)
-		if err != nil {
-			return err
+		if err == nil {
+			result = execute(command)
+		} else {
+			result.stderr = []byte(err.Error())
 		}
-		if err := writeResult(writer, execute(command)); err != nil {
+		if err := writeResult(writer, result); err != nil {
 			return err
 		}
 	}
