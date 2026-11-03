@@ -72,8 +72,8 @@ fun MonitorLogScreen(
     var packageFilter by rememberSaveable { mutableStateOf<String?>(null) }
     var operationFilter by rememberSaveable { mutableStateOf<String?>(null) }
     var filterDialog by rememberSaveable { mutableStateOf<String?>(null) }
-    var confirmingClear by remember { mutableStateOf(false) }
-    var showDetails by remember { mutableStateOf(false) }
+    var confirmingClear by rememberSaveable { mutableStateOf(false) }
+    var showDetails by rememberSaveable { mutableStateOf(false) }
     val appsByPackage = remember(apps) { apps.associateBy(InstalledApp::packageName) }
     val zoneId = remember { ZoneId.systemDefault() }
     // Up to fifty thousand entries are sorted into days, which is not work for the main thread.

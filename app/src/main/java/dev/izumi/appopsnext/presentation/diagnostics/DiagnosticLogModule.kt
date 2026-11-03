@@ -26,7 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -48,7 +48,7 @@ fun DiagnosticLogModule(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
 ) {
-    var showReport by remember { mutableStateOf(false) }
+    var showReport by rememberSaveable { mutableStateOf(false) }
     ListItem(
         modifier = modifier.clickable { showReport = true },
         leadingContent = {

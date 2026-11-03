@@ -69,6 +69,7 @@ import dev.izumi.appopsnext.presentation.components.MainPageGroupDivider
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
 import dev.izumi.appopsnext.presentation.batch.BatchOperationUiState
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import dev.izumi.appopsnext.presentation.batch.StringSelectionSaver
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -97,6 +98,7 @@ fun AppListScreen(
     }
     var showTemplatePicker by rememberSaveable { mutableStateOf(false) }
     var awaitingBatchResult by rememberSaveable { mutableStateOf(false) }
+    val tabStates = rememberSaveableStateHolder()
     LaunchedEffect(batchState) {
         if (awaitingBatchResult && batchState is BatchOperationUiState.Finished) {
             batchSelectionMode = false
@@ -196,34 +198,37 @@ fun AppListScreen(
                     text = { Text(stringResource(R.string.browse_by_permission), style = MaterialTheme.typography.labelLarge) },
                 )
             }
-            if (permissionTab) {
-                permissionContent()
-            } else {
-                when {
-                    uiState.isLoading && uiState.visibleApps.isEmpty() -> LoadingContent(
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                    uiState.loadFailed && uiState.visibleApps.isEmpty() -> LoadFailureContent(
-                        onRefresh = onRefresh,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                    else -> AppListContent(
-                        uiState = uiState,
-                        onRefresh = onRefresh,
-                        onSearchQueryChange = onSearchQueryChange,
-                        onAppSelected = onAppSelected,
-                        batchSelectionMode = batchSelectionMode,
-                        selectedPackages = selectedPackages,
-                        onBatchSelectionChange = { packageName, selected ->
-                            selectedPackages = if (selected) selectedPackages + packageName
-                            else selectedPackages - packageName
-                        },
-                        onApplyTemplate = { showTemplatePicker = true },
-                        onToggleAll = {
-                            selectedPackages = toggleVisibleSelection(selectedPackages, visiblePackages)
-                        },
-                        modifier = Modifier.fillMaxSize(),
-                    )
+            // Each tab keeps its own scroll when the other one is shown.
+            tabStates.SaveableStateProvider(permissionTab) {
+                if (permissionTab) {
+                    permissionContent()
+                } else {
+                    when {
+                        uiState.isLoading && uiState.visibleApps.isEmpty() -> LoadingContent(
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        uiState.loadFailed && uiState.visibleApps.isEmpty() -> LoadFailureContent(
+                            onRefresh = onRefresh,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        else -> AppListContent(
+                            uiState = uiState,
+                            onRefresh = onRefresh,
+                            onSearchQueryChange = onSearchQueryChange,
+                            onAppSelected = onAppSelected,
+                            batchSelectionMode = batchSelectionMode,
+                            selectedPackages = selectedPackages,
+                            onBatchSelectionChange = { packageName, selected ->
+                                selectedPackages = if (selected) selectedPackages + packageName
+                                else selectedPackages - packageName
+                            },
+                            onApplyTemplate = { showTemplatePicker = true },
+                            onToggleAll = {
+                                selectedPackages = toggleVisibleSelection(selectedPackages, visiblePackages)
+                            },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
                 }
             }
         }

@@ -54,6 +54,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import dev.izumi.appopsnext.presentation.batch.StringSelectionSaver
 import dev.izumi.appopsnext.presentation.batch.selectedFirstOrdering
 import androidx.compose.runtime.rememberCoroutineScope
@@ -108,11 +109,12 @@ fun TemplatesScreen(
     bottomBar: @Composable () -> Unit = {},
 ) {
     val selectedTemplate = uiState.selectedTemplate
-    var showCreateDialog by remember { mutableStateOf(false) }
+    val pageStates = rememberSaveableStateHolder()
+    var showCreateDialog by rememberSaveable { mutableStateOf(false) }
     var deleteCandidate by remember {
         mutableStateOf<PermissionTemplate?>(null)
     }
-    var showNewAppPolicyInfo by remember { mutableStateOf(false) }
+    var showNewAppPolicyInfo by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -207,30 +209,33 @@ fun TemplatesScreen(
         },
         bottomBar = bottomBar,
     ) { contentPadding ->
-        if (selectedTemplate == null) {
-            TemplateList(
-                templates = uiState.templates,
-                autoApplyNewAppTemplate =
-                    uiState.autoApplyNewAppTemplate,
-                onAutoApplyNewAppTemplateChange =
-                    onAutoApplyNewAppTemplateChange,
-                instantNewAppRules = uiState.instantNewAppRules,
-                onInstantNewAppRulesChange = onInstantNewAppRulesChange,
-                onSelectTemplate = onSelectTemplate,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(contentPadding),
-            )
-        } else {
-            TemplateEditor(
-                template = selectedTemplate,
-                onRuleModeChange = onRuleModeChange,
-                onRuleSelectionChange = onRuleSelectionChange,
-                onRuleOrderChange = onRuleOrderChange,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(contentPadding),
-            )
+        // The list keeps its scroll while a template is open in the editor.
+        pageStates.SaveableStateProvider(selectedTemplate?.id.orEmpty()) {
+            if (selectedTemplate == null) {
+                TemplateList(
+                    templates = uiState.templates,
+                    autoApplyNewAppTemplate =
+                        uiState.autoApplyNewAppTemplate,
+                    onAutoApplyNewAppTemplateChange =
+                        onAutoApplyNewAppTemplateChange,
+                    instantNewAppRules = uiState.instantNewAppRules,
+                    onInstantNewAppRulesChange = onInstantNewAppRulesChange,
+                    onSelectTemplate = onSelectTemplate,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(contentPadding),
+                )
+            } else {
+                TemplateEditor(
+                    template = selectedTemplate,
+                    onRuleModeChange = onRuleModeChange,
+                    onRuleSelectionChange = onRuleSelectionChange,
+                    onRuleOrderChange = onRuleOrderChange,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(contentPadding),
+                )
+            }
         }
     }
 
@@ -918,7 +923,7 @@ private fun ModeMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {
-            AppOpMode.entries.forEach { candidate ->
+            AppOpMode.standard.forEach { candidate ->
                 DropdownMenuItem(
                     text = { Text(text = modeLabel(candidate)) },
                     enabled = candidate != mode,
@@ -937,7 +942,7 @@ private fun CreateTemplateDialog(
     onCreate: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var name by remember { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf("") }
     AppBottomSheet(
         onDismissRequest = onDismiss,
         title = {
@@ -1142,6 +1147,7 @@ private fun modeLabel(mode: AppOpMode): String =
             AppOpMode.DENY -> R.string.app_op_mode_deny
             AppOpMode.DEFAULT -> R.string.app_op_mode_default
             AppOpMode.FOREGROUND -> R.string.app_op_mode_foreground
+            AppOpMode.ASK -> R.string.app_op_mode_ask
         },
     )
 

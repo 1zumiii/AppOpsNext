@@ -531,7 +531,7 @@ class AppOpsRepository(
         val revoke = when (requestedMode) {
             AppOpMode.IGNORE -> true
             AppOpMode.ALLOW, AppOpMode.FOREGROUND -> false
-            AppOpMode.DENY, AppOpMode.DEFAULT -> return null
+            AppOpMode.DENY, AppOpMode.DEFAULT, AppOpMode.ASK -> return null
         }
         val userId = uid / PER_USER_UID_RANGE
         val original = readPermissionState(packageName, userId, permissionName)

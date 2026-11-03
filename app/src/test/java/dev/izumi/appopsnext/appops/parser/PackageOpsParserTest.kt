@@ -30,6 +30,21 @@ class PackageOpsParserTest {
     }
 
     @Test
+    fun `keeps MIUI operations under the number cmd appops accepts`() {
+        val snapshot = parser.parse(
+            packageName = "com.tencent.mm",
+            rawOutput = """
+                MIUIOP(10001): ask
+                MIUIOP(10008): allow; time=+11m4s ago; rejectTime=+44d19h ago
+            """.trimIndent(),
+        )
+
+        assertEquals(listOf("10001", "10008"), snapshot.entries.map { it.name })
+        assertEquals(listOf("ask", "allow"), snapshot.entries.map { it.mode })
+        assertEquals("time=+11m4s ago; rejectTime=+44d19h ago", snapshot.entries[1].details)
+    }
+
+    @Test
     fun `returns an empty list for no operations`() {
         val snapshot = parser.parse(
             packageName = "dev.izumi.appopsnext",

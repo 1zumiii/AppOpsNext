@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -168,6 +169,7 @@ fun AppOpsRootScreen(
     onBatchOperationConfirm: (guard: Boolean) -> Unit,
     onBatchOperationDismiss: () -> Unit,
 ) {
+    val destinationStates = rememberSaveableStateHolder()
     var selectedDestination by rememberSaveable {
         mutableStateOf(MainDestination.APPS)
     }
@@ -334,125 +336,134 @@ fun AppOpsRootScreen(
         return
     }
     if (selectedApp == null && experimentalRoute != null) {
-        when {
-            // The detail page belongs to a row of the points list, so it takes
-            // precedence over the route that opened that list.
+        // Opening an app or a monitor point replaces these pages, so their lists
+        // and search fields are saved the same way as the main pages below.
+        val experimentalKey = listOfNotNull(
+            experimentalRoute,
+            monitorAppPackage,
+            monitorPointKey,
+        ).joinToString("/")
+        destinationStates.SaveableStateProvider(experimentalKey) {
+            when {
+                // The detail page belongs to a row of the points list, so it takes
+                // precedence over the route that opened that list.
 
-            monitorApp != null -> MonitorOperationsScreen(
-                app = monitorApp,
-                selected = experimentalUiState
-                    .selectionByPackage[monitorApp.packageName]
-                    .orEmpty(),
-                showAll = experimentalUiState.showAllOperations,
-                warningSuppressed = experimentalUiState.allOperationsWarningSuppressed,
-                onBack = { monitorAppPackage = null },
-                onSelectionChange = { operations ->
-                    onMonitorOperationsChange(monitorApp.packageName, operations)
-                },
-                onShowAllChange = onMonitorShowAllOperationsChange,
-                onSuppressWarning = onMonitorSuppressAllOperationsWarning,
-            )
+                monitorApp != null -> MonitorOperationsScreen(
+                    app = monitorApp,
+                    selected = experimentalUiState
+                        .selectionByPackage[monitorApp.packageName]
+                        .orEmpty(),
+                    showAll = experimentalUiState.showAllOperations,
+                    warningSuppressed = experimentalUiState.allOperationsWarningSuppressed,
+                    onBack = { monitorAppPackage = null },
+                    onSelectionChange = { operations ->
+                        onMonitorOperationsChange(monitorApp.packageName, operations)
+                    },
+                    onShowAllChange = onMonitorShowAllOperationsChange,
+                    onSuppressWarning = onMonitorSuppressAllOperationsWarning,
+                )
 
-            experimentalRoute == ROUTE_MONITOR_TARGETS -> MonitorTargetsScreen(
-                apps = appListUiState.allApps,
-                selectionByPackage = experimentalUiState.selectionByPackage,
-                sortOrder = appListUiState.sortOrder,
-                onSortOrderChange = onAppSortOrderChange,
-                onBack = { experimentalRoute = ROUTE_MONITOR_SETTINGS },
-                onAppSelected = { app -> monitorAppPackage = app.packageName },
-            )
+                experimentalRoute == ROUTE_MONITOR_TARGETS -> MonitorTargetsScreen(
+                    apps = appListUiState.allApps,
+                    selectionByPackage = experimentalUiState.selectionByPackage,
+                    sortOrder = appListUiState.sortOrder,
+                    onSortOrderChange = onAppSortOrderChange,
+                    onBack = { experimentalRoute = ROUTE_MONITOR_SETTINGS },
+                    onAppSelected = { app -> monitorAppPackage = app.packageName },
+                )
 
-            monitorPoint != null -> MonitorPointDetailScreen(
-                point = monitorPoint,
-                onBack = { monitorPointKey = null },
-                onThrottleChange = { seconds ->
-                    onMonitorThrottleChange(
-                        monitorPoint.packageName,
-                        monitorPoint.operationName,
-                        seconds,
-                    )
-                },
-                onHeadsUpChange = { headsUp ->
-                    onMonitorPointHeadsUpChange(
-                        monitorPoint.packageName,
-                        monitorPoint.operationName,
-                        headsUp,
-                    )
-                },
-                onOutcomesChange = { outcomes ->
-                    onMonitorPointOutcomesChange(
-                        monitorPoint.packageName,
-                        monitorPoint.operationName,
-                        outcomes,
-                    )
-                },
-                onBackgroundOnlyChange = { backgroundOnly ->
-                    onMonitorPointBackgroundOnlyChange(
-                        monitorPoint.packageName,
-                        monitorPoint.operationName,
-                        backgroundOnly,
-                    )
-                },
-            )
+                monitorPoint != null -> MonitorPointDetailScreen(
+                    point = monitorPoint,
+                    onBack = { monitorPointKey = null },
+                    onThrottleChange = { seconds ->
+                        onMonitorThrottleChange(
+                            monitorPoint.packageName,
+                            monitorPoint.operationName,
+                            seconds,
+                        )
+                    },
+                    onHeadsUpChange = { headsUp ->
+                        onMonitorPointHeadsUpChange(
+                            monitorPoint.packageName,
+                            monitorPoint.operationName,
+                            headsUp,
+                        )
+                    },
+                    onOutcomesChange = { outcomes ->
+                        onMonitorPointOutcomesChange(
+                            monitorPoint.packageName,
+                            monitorPoint.operationName,
+                            outcomes,
+                        )
+                    },
+                    onBackgroundOnlyChange = { backgroundOnly ->
+                        onMonitorPointBackgroundOnlyChange(
+                            monitorPoint.packageName,
+                            monitorPoint.operationName,
+                            backgroundOnly,
+                        )
+                    },
+                )
 
-            experimentalRoute == ROUTE_MONITOR_EXAMPLES -> MonitorExamplesScreen(
-                onBack = { experimentalRoute = ROUTE_MONITOR_SETTINGS },
-            )
+                experimentalRoute == ROUTE_MONITOR_EXAMPLES -> MonitorExamplesScreen(
+                    onBack = { experimentalRoute = ROUTE_MONITOR_SETTINGS },
+                )
 
-            experimentalRoute == ROUTE_MONITOR_POINTS -> MonitorPointsScreen(
-                points = monitorPointRows,
-                onBack = { experimentalRoute = ROUTE_MONITOR_SETTINGS },
-                onPointSelected = { row ->
-                    monitorPointKey = "${row.packageName}\n${row.operationName}"
-                },
-            )
+                experimentalRoute == ROUTE_MONITOR_POINTS -> MonitorPointsScreen(
+                    points = monitorPointRows,
+                    onBack = { experimentalRoute = ROUTE_MONITOR_SETTINGS },
+                    onPointSelected = { row ->
+                        monitorPointKey = "${row.packageName}\n${row.operationName}"
+                    },
+                )
 
-            experimentalRoute == ROUTE_MONITOR_SETTINGS -> MonitorSettingsScreen(
-                uiState = experimentalUiState,
-                onBack = { experimentalRoute = ROUTE_EXPERIMENTAL },
-                onOpenTargets = { experimentalRoute = ROUTE_MONITOR_TARGETS },
-                onOpenPoints = { experimentalRoute = ROUTE_MONITOR_POINTS },
-                onOpenExamples = { experimentalRoute = ROUTE_MONITOR_EXAMPLES },
-                onHeadsUpChange = onMonitorHeadsUpChange,
-            )
+                experimentalRoute == ROUTE_MONITOR_SETTINGS -> MonitorSettingsScreen(
+                    uiState = experimentalUiState,
+                    onBack = { experimentalRoute = ROUTE_EXPERIMENTAL },
+                    onOpenTargets = { experimentalRoute = ROUTE_MONITOR_TARGETS },
+                    onOpenPoints = { experimentalRoute = ROUTE_MONITOR_POINTS },
+                    onOpenExamples = { experimentalRoute = ROUTE_MONITOR_EXAMPLES },
+                    onHeadsUpChange = onMonitorHeadsUpChange,
+                )
 
-            experimentalRoute == ROUTE_MONITOR_LOG -> MonitorLogScreen(
-                entries = monitorLogEntries(),
-                apps = appListUiState.allApps,
-                onBack = { experimentalRoute = ROUTE_EXPERIMENTAL },
-                // The detail page opens over the log, and back returns to it.
-                onOpenApp = { app ->
-                    selectedApp = app
-                    onAppSelected(app)
-                },
-                onClear = onClearMonitorLog,
-            )
+                experimentalRoute == ROUTE_MONITOR_LOG -> MonitorLogScreen(
+                    entries = monitorLogEntries(),
+                    apps = appListUiState.allApps,
+                    onBack = { experimentalRoute = ROUTE_EXPERIMENTAL },
+                    // The detail page opens over the log, and back returns to it.
+                    onOpenApp = { app ->
+                        selectedApp = app
+                        onAppSelected(app)
+                    },
+                    onClear = onClearMonitorLog,
+                )
 
-            experimentalRoute == ROUTE_GUARD -> GuardScreen(
-                viewModel = guardViewModel,
-                onBack = { experimentalRoute = ROUTE_EXPERIMENTAL },
-            )
+                experimentalRoute == ROUTE_GUARD -> GuardScreen(
+                    viewModel = guardViewModel,
+                    onBack = { experimentalRoute = ROUTE_EXPERIMENTAL },
+                )
 
-            experimentalRoute == ROUTE_WATCHERS -> WatchersScreen(
-                uiState = watchersUiState,
-                onRefresh = onRefreshWatchers,
-                onBack = { experimentalRoute = ROUTE_EXPERIMENTAL },
-            )
+                experimentalRoute == ROUTE_WATCHERS -> WatchersScreen(
+                    uiState = watchersUiState,
+                    onRefresh = onRefreshWatchers,
+                    onBack = { experimentalRoute = ROUTE_EXPERIMENTAL },
+                )
 
-            else -> ExperimentalScreen(
-                uiState = experimentalUiState,
-                onBack = { experimentalRoute = null },
-                onMonitorChange = onMonitorEnabledChange,
-                onEnableUnconfirmedMonitor = onEnableUnconfirmedMonitor,
-                onOpenWatchers = { experimentalRoute = ROUTE_WATCHERS },
-                onOpenGuard = { experimentalRoute = ROUTE_GUARD },
-                onOpenSettings = { experimentalRoute = ROUTE_MONITOR_SETTINGS },
-                logCount = monitorLogEntries().size,
-                onOpenLog = { experimentalRoute = ROUTE_MONITOR_LOG },
-                onOpenBatterySettings = onOpenBatterySettings,
-                onDismissBatteryNotice = onDismissBatteryNotice,
-                onRefreshBatteryExemption = onRefreshBatteryExemption,
-            )
+                else -> ExperimentalScreen(
+                    uiState = experimentalUiState,
+                    onBack = { experimentalRoute = null },
+                    onMonitorChange = onMonitorEnabledChange,
+                    onEnableUnconfirmedMonitor = onEnableUnconfirmedMonitor,
+                    onOpenWatchers = { experimentalRoute = ROUTE_WATCHERS },
+                    onOpenGuard = { experimentalRoute = ROUTE_GUARD },
+                    onOpenSettings = { experimentalRoute = ROUTE_MONITOR_SETTINGS },
+                    logCount = monitorLogEntries().size,
+                    onOpenLog = { experimentalRoute = ROUTE_MONITOR_LOG },
+                    onOpenBatterySettings = onOpenBatterySettings,
+                    onDismissBatteryNotice = onDismissBatteryNotice,
+                    onRefreshBatteryExemption = onRefreshBatteryExemption,
+                )
+            }
         }
         return
     }
@@ -652,10 +663,23 @@ fun AppOpsRootScreen(
             MainDestination.TEMPLATES -> true
             MainDestination.HISTORY -> selectedHistoryPermission == null
         }
-        if (useSharedTypography) {
-            MainPageTypography(content = destinationContent)
-        } else {
-            destinationContent()
+        // A detail page replaces the main page, so each page's lists save their
+        // scroll here instead of starting from the top on return.
+        val pageKey = when (selectedDestination) {
+            // History opens a permission and its app statistics in place.
+            MainDestination.HISTORY -> listOfNotNull(
+                selectedDestination.name,
+                selectedHistoryPermissionName,
+                "apps".takeIf { showHistoryAppStatistics },
+            ).joinToString("/")
+            else -> selectedDestination.name
+        }
+        destinationStates.SaveableStateProvider(pageKey) {
+            if (useSharedTypography) {
+                MainPageTypography(content = destinationContent)
+            } else {
+                destinationContent()
+            }
         }
     }
 

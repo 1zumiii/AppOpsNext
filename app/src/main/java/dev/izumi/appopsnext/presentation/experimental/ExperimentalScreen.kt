@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -72,7 +73,7 @@ fun ExperimentalScreen(
 ) {
     val context = LocalContext.current
     var notificationsEnabled by remember { mutableStateOf(true) }
-    var showAbout by remember { mutableStateOf(false) }
+    var showAbout by rememberSaveable { mutableStateOf(false) }
     // The exemption is granted in system settings, so it is re-read on every
     // return to this screen rather than once when it is first shown.
     LifecycleResumeEffect(Unit) {

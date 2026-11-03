@@ -114,7 +114,7 @@ fun SavedHistoryScreen(
         ).clampedTo(it, latest)
     }
     var picking by remember { mutableStateOf<DateEnd?>(null) }
-    var showHelp by remember { mutableStateOf(false) }
+    var showHelp by rememberSaveable { mutableStateOf(false) }
     var operationsExpanded by rememberSaveable { mutableStateOf(false) }
     var confirming by remember { mutableStateOf<Deletion?>(null) }
 

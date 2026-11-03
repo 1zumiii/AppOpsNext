@@ -2,6 +2,7 @@ package dev.izumi.appopsnext.appops.binder
 
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpScope
+import dev.izumi.appopsnext.appops.model.MiuiOps
 import dev.izumi.appopsnext.appops.parser.EffectiveOpState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -43,6 +44,16 @@ class StructuredOpsMapperTest {
                 names::get, now,
             ),
         )
+    }
+
+    @Test fun `MIUI codes and the ask mode map like the text read`() {
+        val snapshot = StructuredOpsMapper.packageSnapshot(
+            "com.example", emptyList(),
+            listOf(RawPackageOps("com.example", 10123, listOf(RawOpEntry(10033, 5)))),
+            { names[it] ?: MiuiOps.nameOf(it) }, now,
+        )!!
+        assertEquals("10033", snapshot.entries.single().name)
+        assertEquals("ask", snapshot.entries.single().mode)
     }
 
     @Test fun `details follow the platform duration spelling`() {

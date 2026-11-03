@@ -28,6 +28,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.content.pm.PackageManager
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -109,7 +110,7 @@ fun GuardScreen(
     val rules by viewModel.rules.collectAsStateWithLifecycle()
     val events by viewModel.events.collectAsStateWithLifecycle()
     val checking by viewModel.checking.collectAsStateWithLifecycle()
-    var showDetails by remember { mutableStateOf(false) }
+    var showDetails by rememberSaveable { mutableStateOf(false) }
     var removeCandidate by remember { mutableStateOf<Pair<GuardRule, String>?>(null) }
     Scaffold(
         modifier = modifier,
