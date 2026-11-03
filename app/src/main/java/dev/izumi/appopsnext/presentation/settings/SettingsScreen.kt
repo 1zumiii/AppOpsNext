@@ -36,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
@@ -90,12 +91,12 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
 ) {
-    var showLanguageDialog by remember { mutableStateOf(false) }
-    var showThemeDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
+    var showThemeDialog by rememberSaveable { mutableStateOf(false) }
     val themeTransition = LocalThemeTransition.current
     var toggleCenter by remember { mutableStateOf(Offset.Unspecified) }
-    var showConnectionDetails by remember { mutableStateOf(false) }
-    var showAbout by remember { mutableStateOf(false) }
+    var showConnectionDetails by rememberSaveable { mutableStateOf(false) }
+    var showAbout by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val githubUrl = stringResource(R.string.settings_github_url)
     val githubRepository = remember(githubUrl) {

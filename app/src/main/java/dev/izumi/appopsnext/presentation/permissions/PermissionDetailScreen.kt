@@ -297,7 +297,7 @@ private fun ModeFilters(
             onClick = { onModeSelected(null) },
             label = { Text(text = stringResource(R.string.permission_all_modes)) },
         )
-        AppOpMode.entries.forEach { mode ->
+        AppOpMode.standard.forEach { mode ->
             FilterChip(
                 selected = selectedMode == mode,
                 onClick = { onModeSelected(mode) },

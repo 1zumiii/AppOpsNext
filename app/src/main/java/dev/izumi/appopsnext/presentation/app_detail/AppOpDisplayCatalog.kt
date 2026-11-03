@@ -5,6 +5,7 @@ import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.appops.model.AppOpEntry
 import dev.izumi.appopsnext.appops.model.AppOpNames
 import dev.izumi.appopsnext.appops.model.AppOpScope
+import dev.izumi.appopsnext.appops.model.MiuiOps
 
 data class AppOpDisplayItem(
     val operationName: String,
@@ -39,7 +40,7 @@ object AppOpDisplayCatalog {
                 val effectiveEntry = scopedEntries
                     .firstOrNull { it.scope == AppOpScope.UID }
                     ?: scopedEntries.first()
-                val metadata = metadataByOperation[normalize(effectiveEntry.name)]
+                val metadata = metadataOf(effectiveEntry.name)
                 AppOpDisplayItem(
                     operationName = effectiveEntry.name,
                     labelRes = metadata?.labelRes,
@@ -132,7 +133,13 @@ object AppOpDisplayCatalog {
 
     /** The localized label for an operation, or null when it is not catalogued. */
     fun labelResOf(operationName: String): Int? =
-        metadataByOperation[normalize(operationName)]?.labelRes
+        metadataOf(operationName)?.labelRes
+
+    private fun metadataOf(operationName: String): Metadata? =
+        metadataByOperation[normalize(operationName)]
+            ?: MiuiOps.codeOf(operationName)?.let { code ->
+                miuiLabels[code]?.let { Metadata(it, PRIORITY_MIUI) }
+            }
 
     fun knownOperations(): List<KnownAppOp> =
         metadataByOperation
@@ -161,7 +168,71 @@ object AppOpDisplayCatalog {
     private const val PRIORITY_COMMUNICATION = 10
     private const val PRIORITY_FILES_AND_DEVICES = 20
     private const val PRIORITY_SYSTEM_BEHAVIOR = 30
+    private const val PRIORITY_MIUI = 90
     private const val PRIORITY_OTHER = 100
+
+    /**
+     * Labels for the MIUI operations named in the framework's `MiuiHooks`
+     * (to 10035) and the security center's `AppOpsManagerCompat` (to 10053).
+     * They label rows the device reports and add no default rows, since other
+     * devices lack these operations. Neither source carries descriptions, so
+     * each label is read from its constant name.
+     */
+    private val miuiLabels = mapOf(
+        10001 to R.string.miui_op_label_wifi_change,
+        10002 to R.string.miui_op_label_bluetooth_change,
+        10003 to R.string.miui_op_label_data_connect_change,
+        10004 to R.string.miui_op_label_send_mms,
+        10005 to R.string.miui_op_label_read_mms,
+        10006 to R.string.miui_op_label_write_mms,
+        10007 to R.string.miui_op_label_boot_completed,
+        10008 to R.string.miui_op_label_auto_start,
+        10009 to R.string.miui_op_label_nfc_change,
+        10010 to R.string.miui_op_label_delete_sms,
+        10011 to R.string.miui_op_label_delete_mms,
+        10012 to R.string.miui_op_label_delete_contacts,
+        10013 to R.string.miui_op_label_delete_call_log,
+        10014 to R.string.miui_op_label_exact_alarm,
+        10015 to R.string.miui_op_label_access_xiaomi_account,
+        10016 to R.string.miui_op_label_nfc,
+        10017 to R.string.miui_op_label_install_shortcut,
+        10018 to R.string.miui_op_label_read_notification_sms,
+        10019 to R.string.miui_op_label_get_tasks,
+        10020 to R.string.miui_op_label_show_when_locked,
+        10021 to R.string.miui_op_label_background_start_activity,
+        10022 to R.string.miui_op_label_get_installed_apps,
+        10023 to R.string.miui_op_label_service_foreground,
+        10024 to R.string.miui_op_label_get_anonymous_id,
+        10025 to R.string.miui_op_label_get_udevice_id,
+        10026 to R.string.miui_op_label_show_daemon_notification,
+        10027 to R.string.miui_op_label_background_location,
+        10028 to R.string.miui_op_label_read_sms_real,
+        10029 to R.string.miui_op_label_read_contacts_real,
+        10030 to R.string.miui_op_label_read_calendar_real,
+        10031 to R.string.miui_op_label_read_call_log_real,
+        10032 to R.string.miui_op_label_read_phone_state_real,
+        10033 to R.string.miui_op_label_post_local_notification,
+        10034 to R.string.miui_op_label_access_gallery,
+        10035 to R.string.miui_op_label_access_sociality,
+        10036 to R.string.miui_op_label_access_location_real,
+        10037 to R.string.miui_op_label_get_oaid,
+        10038 to R.string.miui_op_label_get_oaid_user,
+        10039 to R.string.miui_op_label_get_phone_number_operator,
+        10040 to R.string.miui_op_label_sec_control_dns,
+        10041 to R.string.miui_op_label_can_be_recorded,
+        10042 to R.string.miui_op_label_media_projection,
+        10043 to R.string.miui_op_label_android_location_real,
+        10044 to R.string.miui_op_label_shake,
+        10045 to R.string.miui_op_label_live_wallpaper,
+        10046 to R.string.miui_op_label_record_voice_call,
+        10047 to R.string.miui_op_label_independent_storage,
+        10048 to R.string.miui_op_label_guide_install,
+        10049 to R.string.miui_op_label_forbidden_chain,
+        10050 to R.string.miui_op_label_device_id,
+        10051 to R.string.miui_op_label_read_record,
+        10052 to R.string.miui_op_label_read_note,
+        10053 to R.string.miui_op_label_auto_start_switch,
+    )
 
     private val metadataByOperation = mapOf(
         "CAMERA" to Metadata(R.string.app_op_label_camera, PRIORITY_PRIVACY),

@@ -70,7 +70,7 @@ fun MonitorTargetsScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    var query by remember { mutableStateOf("") }
+    var query by rememberSaveable { mutableStateOf("") }
     // Watched apps are listed first under their own heading; a count alone does
     // not answer "which ones", which is the question this screen exists for.
     val (watched, others) = remember(apps, query, selectionByPackage) {
@@ -253,7 +253,7 @@ fun MonitorOperationsScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    var query by remember(app.packageName) { mutableStateOf("") }
+    var query by rememberSaveable(app.packageName) { mutableStateOf("") }
     val initialSelection by rememberSaveable(app.packageName, stateSaver = StringSelectionSaver) {
         mutableStateOf(selected.toSet())
     }

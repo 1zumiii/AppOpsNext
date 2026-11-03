@@ -36,8 +36,10 @@ class WatchersViewModel(application: Application) : AndroidViewModel(application
 
     fun refresh() {
         if (mutableState.value.loading) return
-        // A failed refresh must not keep an old list labelled as current.
-        mutableState.value = WatchersUiState(loading = true)
+        // The old list stays while the refresh runs, so a return to the page
+        // keeps its scroll. A failed refresh replaces it below: an old list
+        // must not stay labelled as current.
+        mutableState.value = mutableState.value.copy(loading = true)
         viewModelScope.launch {
             try {
                 val snapshot = repository.read()

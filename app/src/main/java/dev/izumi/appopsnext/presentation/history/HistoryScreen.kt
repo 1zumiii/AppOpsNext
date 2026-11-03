@@ -102,7 +102,7 @@ fun HistoryOverviewScreen(
     bottomBar: @Composable () -> Unit = {},
 ) {
     var showPermissionManagement by rememberSaveable { mutableStateOf(false) }
-    var showInformation by remember { mutableStateOf(false) }
+    var showInformation by rememberSaveable { mutableStateOf(false) }
     Scaffold(
         modifier = modifier,
         bottomBar = bottomBar,
@@ -462,10 +462,10 @@ fun PermissionHistoryDetailScreen(
     onAppSelected: (InstalledApp) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var showInformation by remember(permission.shellOperationName) {
+    var showInformation by rememberSaveable(permission.shellOperationName) {
         mutableStateOf(false)
     }
-    var showAppFilter by remember { mutableStateOf(false) }
+    var showAppFilter by rememberSaveable { mutableStateOf(false) }
     val zoneId = remember { ZoneId.systemDefault() }
     val ranged = remember(history, timeRange) {
         history?.let { HistoryFilter.apply(it, timeRange, null, System.currentTimeMillis(), zoneId) }

@@ -3,6 +3,7 @@ package dev.izumi.appopsnext.presentation.app_detail
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.appops.model.AppOpEntry
 import dev.izumi.appopsnext.appops.model.AppOpScope
+import dev.izumi.appopsnext.appops.model.MiuiOps
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -104,6 +105,19 @@ class AppOpDisplayCatalogTest {
         AppOpDisplayCatalog
             .build(entries, query, ::label, ::englishLabel)
             .map(AppOpDisplayItem::operationName)
+
+    @Test fun `MIUI operations the device reports get labels but add no default rows`() {
+        val items = AppOpDisplayCatalog.build(
+            entries = listOf(entry("10008", "ask")),
+            query = "",
+            labelResolver = ::label,
+        )
+
+        val autoStart = items.single { it.operationName == "10008" }
+        assertEquals(R.string.miui_op_label_auto_start, autoStart.labelRes)
+        assertEquals("ask", autoStart.mode)
+        assertEquals(1, items.count { MiuiOps.isMiuiOp(it.operationName) })
+    }
 
     private fun label(resourceId: Int): String =
         labels[resourceId] ?: "label-$resourceId"
