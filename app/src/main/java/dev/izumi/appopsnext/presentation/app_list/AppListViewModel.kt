@@ -128,9 +128,10 @@ class AppListViewModel(
      * Installed packages rarely change while the user is away, so a resume reuses
      * the repository cache instead of enumerating and labelling every package again.
      */
+    /** Quiet: the list stays as it is and no indicator shows while it reloads. */
     fun refreshAfterResume() {
         if (installedApps.value.isNotEmpty()) {
-            load(forceRefresh = false, holdIndicator = false)
+            load(forceRefresh = false, holdIndicator = false, quiet = true)
         }
     }
 
@@ -139,11 +140,11 @@ class AppListViewModel(
      * cached reload can finish within one frame, so a user refresh keeps the
      * loading state visible for a moment.
      */
-    private fun load(forceRefresh: Boolean, holdIndicator: Boolean) {
+    private fun load(forceRefresh: Boolean, holdIndicator: Boolean, quiet: Boolean = false) {
         if (loadJob?.isActive == true) return
 
         loadJob = viewModelScope.launch {
-            isLoading.value = true
+            if (!quiet) isLoading.value = true
             loadFailed.value = false
             val startedAt = SystemClock.elapsedRealtime()
             diagnosticLog.info(
@@ -181,7 +182,7 @@ class AppListViewModel(
                 val elapsed = SystemClock.elapsedRealtime() - startedAt
                 delay((MIN_REFRESH_INDICATOR_MILLIS - elapsed).coerceAtLeast(0))
             }
-            isLoading.value = false
+            if (!quiet) isLoading.value = false
         }
     }
 

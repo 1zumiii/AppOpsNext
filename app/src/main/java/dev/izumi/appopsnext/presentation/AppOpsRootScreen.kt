@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -168,6 +169,7 @@ fun AppOpsRootScreen(
     onBatchOperationConfirm: (guard: Boolean) -> Unit,
     onBatchOperationDismiss: () -> Unit,
 ) {
+    val destinationStates = rememberSaveableStateHolder()
     var selectedDestination by rememberSaveable {
         mutableStateOf(MainDestination.APPS)
     }
@@ -652,10 +654,23 @@ fun AppOpsRootScreen(
             MainDestination.TEMPLATES -> true
             MainDestination.HISTORY -> selectedHistoryPermission == null
         }
-        if (useSharedTypography) {
-            MainPageTypography(content = destinationContent)
-        } else {
-            destinationContent()
+        // A detail page replaces the main page, so each page's lists save their
+        // scroll here instead of starting from the top on return.
+        val pageKey = when (selectedDestination) {
+            // History opens a permission and its app statistics in place.
+            MainDestination.HISTORY -> listOfNotNull(
+                selectedDestination.name,
+                selectedHistoryPermissionName,
+                "apps".takeIf { showHistoryAppStatistics },
+            ).joinToString("/")
+            else -> selectedDestination.name
+        }
+        destinationStates.SaveableStateProvider(pageKey) {
+            if (useSharedTypography) {
+                MainPageTypography(content = destinationContent)
+            } else {
+                destinationContent()
+            }
         }
     }
 

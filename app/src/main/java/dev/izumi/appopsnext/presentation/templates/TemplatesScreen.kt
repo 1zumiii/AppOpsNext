@@ -54,6 +54,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import dev.izumi.appopsnext.presentation.batch.StringSelectionSaver
 import dev.izumi.appopsnext.presentation.batch.selectedFirstOrdering
 import androidx.compose.runtime.rememberCoroutineScope
@@ -108,6 +109,7 @@ fun TemplatesScreen(
     bottomBar: @Composable () -> Unit = {},
 ) {
     val selectedTemplate = uiState.selectedTemplate
+    val pageStates = rememberSaveableStateHolder()
     var showCreateDialog by remember { mutableStateOf(false) }
     var deleteCandidate by remember {
         mutableStateOf<PermissionTemplate?>(null)
@@ -207,30 +209,33 @@ fun TemplatesScreen(
         },
         bottomBar = bottomBar,
     ) { contentPadding ->
-        if (selectedTemplate == null) {
-            TemplateList(
-                templates = uiState.templates,
-                autoApplyNewAppTemplate =
-                    uiState.autoApplyNewAppTemplate,
-                onAutoApplyNewAppTemplateChange =
-                    onAutoApplyNewAppTemplateChange,
-                instantNewAppRules = uiState.instantNewAppRules,
-                onInstantNewAppRulesChange = onInstantNewAppRulesChange,
-                onSelectTemplate = onSelectTemplate,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(contentPadding),
-            )
-        } else {
-            TemplateEditor(
-                template = selectedTemplate,
-                onRuleModeChange = onRuleModeChange,
-                onRuleSelectionChange = onRuleSelectionChange,
-                onRuleOrderChange = onRuleOrderChange,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(contentPadding),
-            )
+        // The list keeps its scroll while a template is open in the editor.
+        pageStates.SaveableStateProvider(selectedTemplate?.id.orEmpty()) {
+            if (selectedTemplate == null) {
+                TemplateList(
+                    templates = uiState.templates,
+                    autoApplyNewAppTemplate =
+                        uiState.autoApplyNewAppTemplate,
+                    onAutoApplyNewAppTemplateChange =
+                        onAutoApplyNewAppTemplateChange,
+                    instantNewAppRules = uiState.instantNewAppRules,
+                    onInstantNewAppRulesChange = onInstantNewAppRulesChange,
+                    onSelectTemplate = onSelectTemplate,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(contentPadding),
+                )
+            } else {
+                TemplateEditor(
+                    template = selectedTemplate,
+                    onRuleModeChange = onRuleModeChange,
+                    onRuleSelectionChange = onRuleSelectionChange,
+                    onRuleOrderChange = onRuleOrderChange,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(contentPadding),
+                )
+            }
         }
     }
 

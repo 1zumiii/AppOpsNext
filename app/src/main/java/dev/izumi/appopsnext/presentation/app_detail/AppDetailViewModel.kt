@@ -83,7 +83,7 @@ class AppDetailViewModel(
             privilegedServiceClient.state.value is
                 PrivilegedServiceState.Connected
         ) {
-            loadSelectedApp()
+            loadSelectedApp(quiet = true)
         }
     }
 
@@ -360,7 +360,11 @@ class AppDetailViewModel(
         )
     }
 
-    private fun loadSelectedApp() {
+    /**
+     * With [quiet], an app already on screen keeps its rows while it reloads,
+     * so returning to the app neither blanks the page nor loses its scroll.
+     */
+    private fun loadSelectedApp(quiet: Boolean = false) {
         loadJob?.cancel()
         val app = selectedApp.value ?: run {
             mutableUiState.value = AppDetailUiState.Idle
@@ -371,7 +375,10 @@ class AppDetailViewModel(
             return
         }
 
-        mutableUiState.value = AppDetailUiState.Loading(app)
+        val shown = mutableUiState.value
+        if (!quiet || shown !is AppDetailUiState.Ready || shown.app != app) {
+            mutableUiState.value = AppDetailUiState.Loading(app)
+        }
         loadJob = viewModelScope.launch {
             mutableUiState.value = when (
                 val result = repository.loadPackageOps(
