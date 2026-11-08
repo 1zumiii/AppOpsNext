@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -22,7 +23,10 @@ import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.apps.AppSortOrder
 import dev.izumi.appopsnext.apps.model.InstalledApp
 
-/** The sort button of every list of apps. They share one order, kept in the settings. */
+/**
+ * The sort button of every list of apps. They share one order, kept in the
+ * settings. Its last entry shows only the apps AppOpsNext changed.
+ */
 @Composable
 fun AppSortMenu(
     selected: AppSortOrder,
@@ -38,6 +42,8 @@ fun AppSortMenu(
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             AppSortOrder.entries.forEach { order ->
+                // The last entry filters rather than sorts, so a line sets it apart.
+                if (order == AppSortOrder.CHANGED_ONLY) HorizontalDivider()
                 DropdownMenuItem(
                     text = { Text(text = stringResource(order.labelRes())) },
                     onClick = {
@@ -77,13 +83,17 @@ fun ScrollToTopOnSortChange(order: AppSortOrder, listState: LazyListState) {
     }
 }
 
-/** The time a list is sorted by, so the order explains itself. Null in name order. */
+/**
+ * The time a list is sorted by, so the order explains itself. Null in name order.
+ * [modifiedMillis] is the time AppOpsNext last changed what the list shows.
+ */
 @Composable
-fun appSortTimeText(app: InstalledApp, order: AppSortOrder): String? {
+fun appSortTimeText(app: InstalledApp, order: AppSortOrder, modifiedMillis: Long? = null): String? {
     val (millis, label) = when (order) {
         AppSortOrder.NAME -> return null
         AppSortOrder.INSTALL_TIME -> app.firstInstallTimeMillis to R.string.app_list_installed_at
         AppSortOrder.UPDATE_TIME -> app.lastUpdateTimeMillis to R.string.app_list_updated_at
+        AppSortOrder.CHANGED_ONLY -> modifiedMillis to R.string.app_list_changed_at
     }
     if (millis == null) return null
     val context = LocalContext.current
@@ -97,4 +107,5 @@ private fun AppSortOrder.labelRes(): Int = when (this) {
     AppSortOrder.NAME -> R.string.app_list_sort_name
     AppSortOrder.INSTALL_TIME -> R.string.app_list_sort_install_time
     AppSortOrder.UPDATE_TIME -> R.string.app_list_sort_update_time
+    AppSortOrder.CHANGED_ONLY -> R.string.app_list_filter_changed
 }

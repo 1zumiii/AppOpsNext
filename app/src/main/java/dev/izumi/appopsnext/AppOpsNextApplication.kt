@@ -1,10 +1,13 @@
 package dev.izumi.appopsnext
 
 import android.app.Application
+import android.os.Process
 import android.content.pm.PackageManager
 import dev.izumi.appopsnext.appops.AppOpsReadCapabilities
 import dev.izumi.appopsnext.appops.AppOpsReadProbe
 import dev.izumi.appopsnext.appops.AppOpsRepository
+import dev.izumi.appopsnext.appops.UserUids
+import dev.izumi.appopsnext.appops.changes.AppOpChangeLog
 import dev.izumi.appopsnext.appops.StructuredAppOpsReads
 import dev.izumi.appopsnext.appops.model.PackageOpsLoadResult
 import dev.izumi.appopsnext.appops.RevokedCompatWriteMemory
@@ -110,7 +113,12 @@ class AppOpsNextApplication : Application() {
                         "restoration=${write.result.restorationStatus.name}",
                 )
             },
+            onModeChanged = appOpChangeLog::record,
         )
+    }
+
+    val appOpChangeLog: AppOpChangeLog by lazy {
+        AppOpChangeLog(this, currentUserId = UserUids.userIdOf(Process.myUid()))
     }
 
     val guardRepository: GuardRepository by lazy { GuardRepository(this) }

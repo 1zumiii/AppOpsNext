@@ -3,6 +3,7 @@ package dev.izumi.appopsnext.presentation.app_list
 import dev.izumi.appopsnext.presentation.components.topFadingEdge
 import androidx.activity.compose.BackHandler
 import dev.izumi.appopsnext.apps.model.AndroidUser
+import dev.izumi.appopsnext.appops.changes.AppOpChangeRecords
 import dev.izumi.appopsnext.apps.AppSortOrder
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -62,6 +63,7 @@ import dev.izumi.appopsnext.presentation.batch.toggleVisibleSelection
 import dev.izumi.appopsnext.presentation.components.AppIcon
 import dev.izumi.appopsnext.presentation.components.AppSortMenu
 import dev.izumi.appopsnext.presentation.components.ScrollToTopOnSortChange
+import dev.izumi.appopsnext.presentation.components.NoChangesContent
 import dev.izumi.appopsnext.presentation.components.appSortTimeText
 import dev.izumi.appopsnext.presentation.components.CompactSearchField
 import dev.izumi.appopsnext.presentation.components.mainPageGroupShape
@@ -226,6 +228,7 @@ fun AppListScreen(
                             onToggleAll = {
                                 selectedPackages = toggleVisibleSelection(selectedPackages, visiblePackages)
                             },
+                            onShowAllApps = { onSortOrderChange(AppSortOrder.NAME) },
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
@@ -264,9 +267,13 @@ private fun AppListContent(
     onBatchSelectionChange: (String, Boolean) -> Unit,
     onApplyTemplate: () -> Unit,
     onToggleAll: () -> Unit,
+    onShowAllApps: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
+    // The filter that keeps only changed apps has nothing to show yet.
+    val noChanges = uiState.visibleApps.isEmpty() && uiState.searchQuery.isBlank() &&
+        uiState.sortOrder == AppSortOrder.CHANGED_ONLY
     ScrollToTopOnSortChange(uiState.sortOrder, listState)
     Column(
         modifier = modifier,
@@ -279,7 +286,10 @@ private fun AppListContent(
                 .fillMaxWidth()
                 .padding(start = 18.dp, end = 18.dp, top = 12.dp),
         )
-        if (uiState.searchQuery.isNotBlank() || uiState.visibleApps.size != uiState.totalAppCount) {
+        if (
+            !noChanges &&
+            (uiState.searchQuery.isNotBlank() || uiState.visibleApps.size != uiState.totalAppCount)
+        ) {
             Text(
                 text = stringResource(
                     R.string.app_list_count,
@@ -307,7 +317,15 @@ private fun AppListContent(
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                if (uiState.visibleApps.isEmpty()) {
+                if (noChanges) {
+                    item {
+                        NoChangesContent(
+                            detail = stringResource(R.string.app_list_empty_changed),
+                            onShowAll = onShowAllApps,
+                            modifier = Modifier.fillParentMaxSize(),
+                        )
+                    }
+                } else if (uiState.visibleApps.isEmpty()) {
                     item {
                         EmptySearchContent(modifier = Modifier.fillParentMaxSize())
                     }
@@ -319,6 +337,16 @@ private fun AppListContent(
                     InstalledAppListItem(
                         app = app,
                         sortOrder = uiState.sortOrder,
+                        modifiedMillis = if (uiState.sortOrder == AppSortOrder.CHANGED_ONLY) {
+                            AppOpChangeRecords.latestTime(
+                                records = uiState.changes,
+                                userId = app.userId ?: uiState.currentUserId,
+                                packageName = app.packageName,
+                                firstInstallTimeMillis = app.firstInstallTimeMillis,
+                            )
+                        } else {
+                            null
+                        },
                         selectedForBatch = if (batchSelectionMode) {
                             app.packageName in selectedPackages
                         } else {
@@ -368,6 +396,8 @@ private fun AppListContent(
 private fun InstalledAppListItem(
     app: InstalledApp,
     sortOrder: AppSortOrder,
+    /** When AppOpsNext last changed this app, while only changed apps show. */
+    modifiedMillis: Long?,
     selectedForBatch: Boolean?,
     onClick: () -> Unit,
     onBatchSelectionChange: (Boolean) -> Unit,
@@ -410,7 +440,7 @@ private fun InstalledAppListItem(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    appSortTimeText(app, sortOrder)?.let { time ->
+                    appSortTimeText(app, sortOrder, modifiedMillis)?.let { time ->
                         Text(
                             text = time,
                             maxLines = 1,

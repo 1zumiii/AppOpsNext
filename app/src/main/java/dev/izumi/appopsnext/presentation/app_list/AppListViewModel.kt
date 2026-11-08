@@ -4,6 +4,8 @@ import android.app.Application
 import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import dev.izumi.appopsnext.appops.changes.AppOpChangeRecord
+import dev.izumi.appopsnext.appops.changes.AppOpChangeRecords
 import dev.izumi.appopsnext.apps.AppListFilter
 import dev.izumi.appopsnext.apps.AppSortOrder
 import dev.izumi.appopsnext.apps.model.AndroidUser
@@ -31,6 +33,7 @@ class AppListViewModel(
     private val userApps = getApplication<AppOpsNextApplication>().userAppsRepository
     private val privilegedServiceClient =
         getApplication<AppOpsNextApplication>().privilegedServiceClient
+    private val changeLog = getApplication<AppOpsNextApplication>().appOpChangeLog
     private val users = MutableStateFlow<List<AndroidUser>>(emptyList())
     private val installedApps = MutableStateFlow<List<InstalledApp>>(emptyList())
     private val searchQuery = MutableStateFlow("")
@@ -46,6 +49,7 @@ class AppListViewModel(
         settingsRepository.settings,
         users,
         userApps.selectedUserId,
+        changeLog.records,
     ) { values ->
         @Suppress("UNCHECKED_CAST")
         val apps = values[0] as List<InstalledApp>
@@ -56,13 +60,22 @@ class AppListViewModel(
         @Suppress("UNCHECKED_CAST")
         val allUsers = values[5] as List<AndroidUser>
         val selectedUserId = values[6] as Int?
+        @Suppress("UNCHECKED_CAST")
+        val changes = values[7] as List<AppOpChangeRecord>
         val filteredApps = if (settings.hideSystemApps) {
             apps.filterNot(InstalledApp::isSystemApp)
         } else {
             apps
         }
         val sortOrder = settings.appSortOrder
-        val eligibleApps = sortOrder.sort(filteredApps)
+        val eligibleApps = sortOrder.sort(filteredApps) { app ->
+            AppOpChangeRecords.latestTime(
+                records = changes,
+                userId = app.userId ?: userApps.currentUserId,
+                packageName = app.packageName,
+                firstInstallTimeMillis = app.firstInstallTimeMillis,
+            )
+        }
         AppListUiState(
             searchQuery = query,
             totalAppCount = apps.size,
@@ -77,6 +90,7 @@ class AppListViewModel(
             selectedUserId = selectedUserId,
             currentUserId = userApps.currentUserId,
             sortOrder = sortOrder,
+            changes = changes,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -160,6 +174,7 @@ class AppListViewModel(
                 }
             }.onSuccess { apps ->
                 installedApps.value = apps
+                pruneChanges(userApps.selectedUserId.value, apps)
                 diagnosticLog.info(
                     source = LOG_SOURCE,
                     message =
@@ -184,6 +199,17 @@ class AppListViewModel(
             }
             if (!quiet) isLoading.value = false
         }
+    }
+
+    /**
+     * Drops the change records of packages that are gone or were installed
+     * again. An empty list is more likely a failed read than an empty user.
+     */
+    private suspend fun pruneChanges(userId: Int?, apps: List<InstalledApp>) {
+        if (apps.isEmpty()) return
+        runCatching {
+            changeLog.prune(userId, apps.associate { it.packageName to it.firstInstallTimeMillis })
+        }.onFailure { if (it is CancellationException) throw it }
     }
 
     private companion object {

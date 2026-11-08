@@ -85,9 +85,15 @@
     <string name="app_list_sort_update_time">Update time</string>
     <string name="app_list_installed_at">Installed %1$s</string>
     <string name="app_list_updated_at">Updated %1$s</string>
+    <string name="app_list_filter_changed">Changed by AppOpsNext</string>
+    <string name="app_list_changed_at">Changed by AppOpsNext %1$s</string>
     <string name="app_list_count">Showing %1$d of %2$d apps</string>
     <string name="app_list_load_failed">Could not load installed apps</string>
     <string name="app_list_empty_search">No matching apps</string>
+    <string name="app_list_empty_changed">Apps appear here after their permissions are changed in AppOpsNext. Changes made before this version are not recorded.</string>
+    <string name="permission_empty_changed">Apps appear here after this permission is changed in AppOpsNext. Changes made before this version are not recorded.</string>
+    <string name="changes_empty_title">No changes yet</string>
+    <string name="changes_empty_show_all">Show all apps</string>
     <string name="user_select_space">Select user space</string>
     <string name="user_id">User ID %1$d</string>
     <string name="user_private_space">Private space</string>
@@ -144,6 +150,11 @@
     <string name="app_op_mode_deny">Deny</string>
     <string name="app_op_mode_default">System default</string>
     <string name="app_detail_implicit_default_hint">No explicit AppOps mode is stored. The system default may still allow access.</string>
+    <string name="app_op_change_modified">Changed by AppOpsNext</string>
+    <string name="app_op_change_elsewhere">AppOpsNext set this to %1$s. It was changed elsewhere since.</string>
+    <string name="app_op_change_elsewhere_unknown">AppOpsNext set this to %1$s. The current mode is not recognized.</string>
+    <string name="app_op_change_restore">Restore</string>
+    <string name="app_op_change_keep">Keep current</string>
     <string name="app_op_mode_foreground">Foreground only</string>
     <string name="app_op_mode_ask">Ask</string>
     <string name="action_apply">Apply changes</string>
