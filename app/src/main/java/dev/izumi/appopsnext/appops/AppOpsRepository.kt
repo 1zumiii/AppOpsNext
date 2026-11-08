@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.appops
 
+import dev.izumi.appopsnext.appops.changes.AppOpModeChange
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
 import dev.izumi.appopsnext.appops.model.AppOpModeChangePhase
@@ -37,6 +38,8 @@ class AppOpsRepository(
     private val cancellationRecoveryTimeoutMillis: Long = 25_000L,
     private val onCancelledWrite: (CancelledAppOpsWrite) -> Unit = {},
     private val structuredReads: StructuredAppOpsReads? = null,
+    /** Each verified write that changed a mode, for the change log. */
+    private val onModeChanged: suspend (AppOpModeChange) -> Unit = {},
 ) {
     suspend fun readPackageOps(
         packageName: String,
@@ -452,6 +455,7 @@ class AppOpsRepository(
                 )
             }
 
+            reportChange(packageName, userId, operation, scope, originalMode, observedMode)
             return AppOpModeChangeResult.Success(
                 originalMode = originalMode,
                 appliedMode = observedMode,
@@ -481,6 +485,30 @@ class AppOpsRepository(
                 CancelledAppOpsWrite(packageName, operation, scope, recovery),
             )
             throw cancelled
+        }
+    }
+
+    /**
+     * The write already happened, so a cancelled caller still records it, and a
+     * log that cannot be written does not turn the write into a failure.
+     */
+    private suspend fun reportChange(
+        packageName: String,
+        userId: Int?,
+        operation: AppOpIdentifier,
+        scope: AppOpScope,
+        originalMode: AppOpMode,
+        appliedMode: AppOpMode,
+    ) {
+        if (originalMode == appliedMode) return
+        val change = AppOpModeChange(packageName, userId, operation, scope, originalMode, appliedMode)
+        withContext(NonCancellable) {
+            try {
+                onModeChanged(change)
+            } catch (error: Exception) {
+                // The mode on the device is what matters. A missing record only
+                // leaves the setting unmarked.
+            }
         }
     }
 
@@ -578,6 +606,9 @@ class AppOpsRepository(
                 )
             }
 
+            reportChange(
+                packageName, requestedUserId, operation, AppOpScope.UID, originalMode, observedMode,
+            )
             return AppOpModeChangeResult.Success(
                 originalMode = originalMode,
                 appliedMode = observedMode,

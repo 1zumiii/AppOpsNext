@@ -36,6 +36,14 @@ class AppSortOrderTest {
         assertEquals(listOf("d", "a", "c", "b"), AppSortOrder.UPDATE_TIME.sort(apps).labels())
     }
 
+    @Test fun `changed only keeps the changed apps with the latest change first`() {
+        val changed = mapOf("dev.izumi.c" to 20L, "dev.izumi.a" to 10L)
+        assertEquals(
+            listOf("c", "a"),
+            AppSortOrder.CHANGED_ONLY.sort(apps) { changed[it.packageName] }.labels(),
+        )
+    }
+
     @Test fun `an unknown stored name reads as no choice`() {
         assertEquals(null, AppSortOrder.fromName("SIZE"))
         assertEquals(AppSortOrder.UPDATE_TIME, AppSortOrder.fromName("UPDATE_TIME"))

@@ -20,10 +20,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.appops.changes.AppOpChangeStatus
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.appops.parser.EffectiveOpState
 import dev.izumi.appopsnext.apps.model.InstalledApp
+import dev.izumi.appopsnext.presentation.app_detail.AppOpChangeStatusText
 import dev.izumi.appopsnext.presentation.app_detail.EditableModeMenu
 import dev.izumi.appopsnext.presentation.app_detail.modeLabel
 import dev.izumi.appopsnext.presentation.components.AppIcon
@@ -35,6 +37,8 @@ internal fun PermissionAppListItem(
     runtimeGranted: Boolean?,
     /** The time the list is sorted by, if it is sorted by one. */
     sortTime: String?,
+    /** Set where AppOpsNext changed this setting. */
+    changeStatus: AppOpChangeStatus?,
     editEnabled: Boolean,
     isApplying: Boolean,
     selectedForBatch: Boolean?,
@@ -103,6 +107,7 @@ internal fun PermissionAppListItem(
                         maxLines = 1,
                     )
                 }
+                changeStatus?.let { AppOpChangeStatusText(it) }
                 if (runtimeGranted != null && state.mode == AppOpMode.IGNORE) {
                     Text(
                         text = stringResource(

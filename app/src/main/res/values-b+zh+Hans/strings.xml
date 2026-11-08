@@ -83,9 +83,15 @@
     <string name="app_list_sort_update_time">按更新时间</string>
     <string name="app_list_installed_at">安装于 %1$s</string>
     <string name="app_list_updated_at">更新于 %1$s</string>
+    <string name="app_list_filter_changed">被 AppOpsNext 修改</string>
+    <string name="app_list_changed_at">AppOpsNext 修改于 %1$s</string>
     <string name="app_list_count">显示 %1$d 个，共 %2$d 个应用</string>
     <string name="app_list_load_failed">无法读取已安装应用</string>
     <string name="app_list_empty_search">没有匹配的应用</string>
+    <string name="app_list_empty_changed">在 AppOpsNext 中修改应用的权限后，应用会列在这里。安装此版本之前的修改没有记录。</string>
+    <string name="permission_empty_changed">在 AppOpsNext 中修改这项权限后，应用会列在这里。安装此版本之前的修改没有记录。</string>
+    <string name="changes_empty_title">还没有修改记录</string>
+    <string name="changes_empty_show_all">显示全部应用</string>
     <string name="user_select_space">选择用户空间</string>
     <string name="user_id">用户 ID %1$d</string>
     <string name="user_private_space">私密空间</string>
@@ -142,6 +148,11 @@
     <string name="app_op_mode_deny">拒绝</string>
     <string name="app_op_mode_default">系统默认</string>
     <string name="app_detail_implicit_default_hint">未保存显式 AppOps 模式，系统默认仍可能允许访问。</string>
+    <string name="app_op_change_modified">被 AppOpsNext 修改</string>
+    <string name="app_op_change_elsewhere">AppOpsNext 曾设为“%1$s”，之后在别处被改动。</string>
+    <string name="app_op_change_elsewhere_unknown">AppOpsNext 曾设为“%1$s”，当前模式无法识别。</string>
+    <string name="app_op_change_restore">恢复</string>
+    <string name="app_op_change_keep">保留当前值</string>
     <string name="app_op_mode_foreground">仅前台</string>
     <string name="app_op_mode_ask">询问</string>
     <string name="action_apply">应用修改</string>

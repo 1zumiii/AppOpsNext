@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation.app_list
 
+import dev.izumi.appopsnext.appops.changes.AppOpChangeRecord
 import dev.izumi.appopsnext.apps.AppSortOrder
 import dev.izumi.appopsnext.apps.model.AndroidUser
 import dev.izumi.appopsnext.apps.model.InstalledApp
@@ -17,4 +18,6 @@ data class AppListUiState(
     val selectedUserId: Int? = null,
     val currentUserId: Int = 0,
     val sortOrder: AppSortOrder = AppSortOrder.NAME,
+    /** The settings AppOpsNext changed, newest first, for every user. */
+    val changes: List<AppOpChangeRecord> = emptyList(),
 )

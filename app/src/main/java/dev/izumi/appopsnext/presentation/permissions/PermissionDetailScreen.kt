@@ -1,6 +1,11 @@
 package dev.izumi.appopsnext.presentation.permissions
 
 import dev.izumi.appopsnext.presentation.components.topFadingEdge
+import dev.izumi.appopsnext.appops.changes.AppOpChangeRecord
+import dev.izumi.appopsnext.appops.changes.AppOpChangeRecords
+import dev.izumi.appopsnext.appops.changes.AppOpChangeStatus
+import dev.izumi.appopsnext.appops.model.AppOpScope
+import dev.izumi.appopsnext.appops.parser.OpStates
 import dev.izumi.appopsnext.apps.AppSortOrder
 import dev.izumi.appopsnext.presentation.components.AppSortMenu
 import dev.izumi.appopsnext.presentation.components.ScrollToTopOnSortChange
@@ -60,6 +65,7 @@ import dev.izumi.appopsnext.presentation.batch.BatchSelectionControls
 import dev.izumi.appopsnext.presentation.batch.toggleVisibleSelection
 import dev.izumi.appopsnext.presentation.batch.StringSelectionSaver
 import dev.izumi.appopsnext.presentation.components.CompactSearchField
+import dev.izumi.appopsnext.presentation.components.NoChangesContent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,7 +112,26 @@ fun PermissionDetailScreen(
     }
     val canEdit = !busy && !uiState.loading && !uiState.failed &&
         !appListState.isLoading && !appListState.loadFailed && uiState.states != null
-    val apps = appListState.allApps
+    val changes = appListState.changes
+    val userIdOf = { app: InstalledApp -> app.userId ?: appListState.currentUserId }
+    val modifiedTimeOf = { app: InstalledApp ->
+        AppOpChangeRecords.latestTime(
+            records = changes,
+            userId = userIdOf(app),
+            packageName = app.packageName,
+            firstInstallTimeMillis = app.firstInstallTimeMillis,
+            operationName = operation,
+        )
+    }
+    // The shared list keeps the apps changed in any permission. Here only this one counts.
+    val changedOnly = appListState.sortOrder == AppSortOrder.CHANGED_ONLY
+    val apps = remember(appListState.allApps, changedOnly, changes, operation) {
+        if (changedOnly) {
+            AppSortOrder.CHANGED_ONLY.sort(appListState.allApps, modifiedTimeOf)
+        } else {
+            appListState.allApps
+        }
+    }
     val visibleApps = remember(apps, search, filter, uiState.states) {
         val query = search.trim()
         apps.filter { app ->
@@ -231,6 +256,13 @@ fun PermissionDetailScreen(
                                 CircularProgressIndicator()
                             }
                         }
+                        changedOnly && apps.isEmpty() -> item {
+                            NoChangesContent(
+                                detail = stringResource(R.string.permission_empty_changed),
+                                onShowAll = { onSortOrderChange(AppSortOrder.NAME) },
+                                modifier = Modifier.fillParentMaxSize(),
+                            )
+                        }
                         visibleApps.isEmpty() -> item {
                             Text(text = stringResource(R.string.app_list_empty_search))
                         }
@@ -239,7 +271,17 @@ fun PermissionDetailScreen(
                                 app = app,
                                 state = uiState.states.effective(app.uid, app.packageName),
                                 runtimeGranted = uiState.runtimeGrants[app.packageName],
-                                sortTime = appSortTimeText(app, appListState.sortOrder),
+                                sortTime = appSortTimeText(
+                                    app,
+                                    appListState.sortOrder,
+                                    modifiedMillis = modifiedTimeOf(app),
+                                ),
+                                changeStatus = uiState.states.changeStatus(
+                                    records = changes,
+                                    app = app,
+                                    userId = userIdOf(app),
+                                    operation = operation,
+                                ),
                                 editEnabled = canEdit,
                                 isApplying = (modeChangeState as? AppOpModeChangeUiState.Applying)
                                     ?.request?.packageName == app.packageName,
@@ -305,4 +347,23 @@ private fun ModeFilters(
             )
         }
     }
+}
+
+/** How [app]'s mode of [operation] compares with the change AppOpsNext last made. */
+private fun OpStates.changeStatus(
+    records: List<AppOpChangeRecord>,
+    app: InstalledApp,
+    userId: Int,
+    operation: String,
+): AppOpChangeStatus? = AppOpChangeRecords.status(
+    packageRecords = AppOpChangeRecords.forPackage(
+        records, userId, app.packageName, app.firstInstallTimeMillis,
+    ),
+    operationName = operation,
+) { scope ->
+    val raw = when (scope) {
+        AppOpScope.UID -> uidModes[app.uid]
+        AppOpScope.PACKAGE -> packageModes[app.uid to app.packageName]
+    }
+    if (raw == null) AppOpMode.DEFAULT else AppOpMode.fromShellValue(raw)
 }

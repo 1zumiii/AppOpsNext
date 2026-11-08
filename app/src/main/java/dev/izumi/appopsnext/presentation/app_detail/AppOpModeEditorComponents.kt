@@ -48,6 +48,7 @@ import dev.izumi.appopsnext.guard.guards
 import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.presentation.components.PermissionEntryIcon
 import dev.izumi.appopsnext.appops.AppOpRuntimePermissionCatalog
+import dev.izumi.appopsnext.appops.changes.AppOpChangeStatus
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpModeChangePhase
 import dev.izumi.appopsnext.appops.model.AppOpsRestorationStatus
@@ -61,6 +62,10 @@ internal fun AppOpListItem(
     selectedForBatch: Boolean? = null,
     onBatchSelectionChange: (Boolean) -> Unit = {},
     onModeSelected: (AppOpMode, AppOpMode) -> Unit,
+    /** Set where AppOpsNext changed this setting. */
+    changeStatus: AppOpChangeStatus? = null,
+    onRestoreChange: (AppOpChangeStatus.ChangedElsewhere) -> Unit = {},
+    onKeepCurrent: () -> Unit = {},
 ) {
     val currentMode = AppOpMode.fromShellValue(item.mode)
     val context = LocalContext.current
@@ -145,6 +150,30 @@ internal fun AppOpListItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.labelSmall,
                 )
+            }
+            changeStatus?.let { status ->
+                AppOpChangeStatusText(status)
+                if (
+                    status is AppOpChangeStatus.ChangedElsewhere &&
+                    selectedForBatch == null
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (status.currentMode != null) {
+                            OutlinedButton(
+                                onClick = { onRestoreChange(status) },
+                                enabled = editEnabled && !isApplying,
+                            ) {
+                                Text(text = stringResource(R.string.app_op_change_restore))
+                            }
+                        }
+                        TextButton(
+                            onClick = onKeepCurrent,
+                            enabled = editEnabled && !isApplying,
+                        ) {
+                            Text(text = stringResource(R.string.app_op_change_keep))
+                        }
+                    }
+                }
             }
             usageDetails?.let { details ->
                 Text(

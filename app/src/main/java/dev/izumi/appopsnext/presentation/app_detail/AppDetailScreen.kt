@@ -50,7 +50,14 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.appops.changes.AppOpChangeRecords
+import dev.izumi.appopsnext.appops.model.AppOpEntry
+import dev.izumi.appopsnext.appops.model.AppOpNames
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import dev.izumi.appopsnext.presentation.batch.BatchSelectionControls
 import dev.izumi.appopsnext.presentation.batch.BatchOperationUiState
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -324,6 +331,16 @@ private fun ReadyContent(
         )
     }
     val entries = state.snapshot.entries
+    val application = context.applicationContext as AppOpsNextApplication
+    val changeLog = application.appOpChangeLog
+    val changes by changeLog.records.collectAsStateWithLifecycle(emptyList())
+    val changeScope = rememberCoroutineScope()
+    val appUserId = state.app.userId ?: application.userAppsRepository.currentUserId
+    val packageChanges = remember(changes, state.app, appUserId) {
+        AppOpChangeRecords.forPackage(
+            changes, appUserId, state.app.packageName, state.app.firstInstallTimeMillis,
+        )
+    }
     val allDisplayItems = remember(entries, context, alternateContext) {
         AppOpDisplayCatalog.build(
             entries = entries,
@@ -427,6 +444,25 @@ private fun ReadyContent(
                                 requestedMode,
                             )
                         },
+                        changeStatus = AppOpChangeRecords.status(
+                            packageRecords = packageChanges,
+                            operationName = item.operationName,
+                        ) { scope -> entries.modeAt(item.operationName, scope) },
+                        onRestoreChange = { status ->
+                            status.currentMode?.let { current ->
+                                onModeChangeRequested(
+                                    item.operationName,
+                                    status.record.scope,
+                                    current,
+                                    status.record.recordedMode,
+                                )
+                            }
+                        },
+                        onKeepCurrent = {
+                            changeScope.launch {
+                                changeLog.forget(appUserId, state.app.packageName, item.operationName)
+                            }
+                        },
                     )
                 }
             }
@@ -486,6 +522,14 @@ private fun BatchPermissionControls(
             Text(text = stringResource(R.string.batch_apply_short))
         }
     }
+}
+
+/** The mode stored at [scope], [AppOpMode.DEFAULT] where none is, null where it has no known name. */
+private fun List<AppOpEntry>.modeAt(operationName: String, scope: AppOpScope): AppOpMode? {
+    val shellName = AppOpNames.shellName(operationName)
+    val entry = firstOrNull { it.scope == scope && AppOpNames.shellName(it.name) == shellName }
+        ?: return AppOpMode.DEFAULT
+    return AppOpMode.fromShellValue(entry.mode)
 }
 
 private fun AppOpDisplayItem.batchSelectionKey(): String =
