@@ -502,6 +502,8 @@ private fun ModeChangeFailureDialog(
     if (runtimePermissionBlocksGrant) {
         RuntimePermissionRequiredDialog(
             packageName = state.request.packageName,
+            // The settings page opened from here belongs to the user this app runs in.
+            canOpenSettings = state.request.userId == null,
             onDismiss = onDismiss,
         )
         return
@@ -627,6 +629,7 @@ private fun ModeChangeFailureDialog(
 @Composable
 private fun RuntimePermissionRequiredDialog(
     packageName: String,
+    canOpenSettings: Boolean,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -648,28 +651,38 @@ private fun RuntimePermissionRequiredDialog(
             )
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    context.startActivity(
-                        Intent(
-                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                            Uri.fromParts("package", packageName, null),
+            if (canOpenSettings) {
+                Button(
+                    onClick = {
+                        context.startActivity(
+                            Intent(
+                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.fromParts("package", packageName, null),
+                            ),
+                        )
+                        onDismiss()
+                    },
+                ) {
+                    Text(
+                        text = stringResource(
+                            R.string.action_open_app_settings,
                         ),
                     )
-                    onDismiss()
-                },
-            ) {
-                Text(
-                    text = stringResource(
-                        R.string.action_open_app_settings,
-                    ),
-                )
+                }
+            } else {
+                Button(onClick = onDismiss) {
+                    Text(text = stringResource(R.string.action_dismiss))
+                }
             }
         },
-        dismissButton = {
-            OutlinedButton(onClick = onDismiss) {
-                Text(text = stringResource(R.string.action_cancel))
+        dismissButton = if (canOpenSettings) {
+            {
+                OutlinedButton(onClick = onDismiss) {
+                    Text(text = stringResource(R.string.action_cancel))
+                }
             }
+        } else {
+            null
         },
     )
 }

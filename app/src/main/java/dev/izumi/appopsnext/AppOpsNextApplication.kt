@@ -114,6 +114,22 @@ class AppOpsNextApplication : Application() {
                 )
             },
             onModeChanged = appOpChangeLog::record,
+            onWriteFailed = { write ->
+                val result = write.result
+                diagnosticLogRepository.warning(
+                    source = "AppOpsWrite",
+                    message = "Write failed. " +
+                        "package=${write.packageName}, " +
+                        "user=${write.userId ?: "current"}, " +
+                        "operation=${write.operation.stableName}, " +
+                        "scope=${write.scope.name}, " +
+                        "requested=${write.requestedMode.name}, " +
+                        "phase=${result.phase.name}, " +
+                        "original=${result.originalMode?.name}, " +
+                        "observed=${result.observedMode?.name}, " +
+                        "restoration=${result.restorationStatus.name}",
+                )
+            },
         )
     }
 
