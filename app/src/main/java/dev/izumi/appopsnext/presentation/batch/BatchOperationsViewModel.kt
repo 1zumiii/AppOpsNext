@@ -59,6 +59,7 @@ class BatchOperationsViewModel(
                         operation = operation,
                         scope = scope,
                         userId = target.userId,
+                        uid = target.uid,
                     )
                 },
                 revokedCompatRetry = RevokedCompatRetry(

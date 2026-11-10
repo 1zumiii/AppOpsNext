@@ -113,10 +113,14 @@ fun PermissionDetailScreen(
     val canEdit = !busy && !uiState.loading && !uiState.failed &&
         !appListState.isLoading && !appListState.loadFailed && uiState.states != null
     val changes = appListState.changes
+    val changesByPackage = remember(changes) { AppOpChangeRecords.byPackage(changes) }
     val userIdOf = { app: InstalledApp -> app.userId ?: appListState.currentUserId }
+    val packageChangesOf = { app: InstalledApp ->
+        changesByPackage[userIdOf(app) to app.packageName].orEmpty()
+    }
     val modifiedTimeOf = { app: InstalledApp ->
         AppOpChangeRecords.latestTime(
-            records = changes,
+            records = packageChangesOf(app),
             userId = userIdOf(app),
             packageName = app.packageName,
             firstInstallTimeMillis = app.firstInstallTimeMillis,
@@ -125,7 +129,7 @@ fun PermissionDetailScreen(
     }
     // The shared list keeps the apps changed in any permission. Here only this one counts.
     val changedOnly = appListState.sortOrder == AppSortOrder.CHANGED_ONLY
-    val apps = remember(appListState.allApps, changedOnly, changes, operation) {
+    val apps = remember(appListState.allApps, changedOnly, changesByPackage, operation) {
         if (changedOnly) {
             AppSortOrder.CHANGED_ONLY.sort(appListState.allApps, modifiedTimeOf)
         } else {
@@ -277,7 +281,7 @@ fun PermissionDetailScreen(
                                     modifiedMillis = modifiedTimeOf(app),
                                 ),
                                 changeStatus = uiState.states.changeStatus(
-                                    records = changes,
+                                    records = packageChangesOf(app),
                                     app = app,
                                     userId = userIdOf(app),
                                     operation = operation,

@@ -20,6 +20,8 @@ class GuardCodecTest {
     @Test fun `malformed records are dropped`() {
         assertNull(GuardCodec.decodeRule("R1\tcom.example\tx\tandroid:camera\tPACKAGE\tIGNORE\tfalse"))
         assertNull(GuardCodec.decodeRule("R2\tcom.example\t1\tandroid:camera\tPACKAGE\tIGNORE\tfalse"))
+        assertNull(GuardCodec.decodeRule("R1\tcom.example;rm\t1\tandroid:camera\tPACKAGE\tIGNORE\tfalse"))
+        assertNull(GuardCodec.decodeRule("R1\tcom.example\t1\tandroid:cam era\tPACKAGE\tIGNORE\tfalse"))
         assertNull(GuardCodec.decodeEvent("E1\t1\tp\tandroid:camera\tPACKAGE\tIGNORE\tSOMETIMES\tDRIFT"))
         assertNull(GuardCodec.decodeState("S1\tid\tIGNORE\tsoon"))
     }

@@ -14,6 +14,7 @@ import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.ShellCommandResult
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
 import dev.izumi.appopsnext.nativebackend.NativeDaemonBootstrapper
+import dev.izumi.appopsnext.nativebackend.InvalidDaemonArgumentException
 import dev.izumi.appopsnext.nativebackend.NativeDaemonGateway
 import dev.izumi.appopsnext.shizuku.model.PrivilegedBackendType
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceInfo
@@ -46,6 +47,7 @@ class PrivilegedServiceClient(
     private var service: IPrivilegedAppOpsService? = null
     @Volatile
     private var nativeGateway: NativeDaemonGateway? = null
+    // Connection fields below are touched only on the main thread.
     private var bound = false
     private var connectionTimeoutJob: Job? = null
     private var nativeConnectionJob: Job? = null
@@ -66,6 +68,9 @@ class PrivilegedServiceClient(
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, binder: IBinder?) {
+            // Shizuku posts callbacks to the main thread. A bind given up on
+            // timeout or disconnect is ignored, and a new connect() binds again.
+            if (!bound) return
             connectionTimeoutJob?.cancel()
             diagnosticLog.info(
                 source = LOG_SOURCE,
@@ -120,6 +125,7 @@ class PrivilegedServiceClient(
         }
 
         override fun onServiceDisconnected(name: ComponentName) {
+            if (!bound) return
             connectionTimeoutJob?.cancel()
             service = null
             bound = false
@@ -138,7 +144,7 @@ class PrivilegedServiceClient(
             Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
         }.getOrDefault(false)
         if (!shizukuReady) return false
-        connect()
+        withContext(Dispatchers.Main.immediate) { connect() }
         val state = withTimeoutOrNull(timeoutMillis) {
             mutableState.first {
                 it is PrivilegedServiceState.Connected || it is PrivilegedServiceState.Failure
@@ -273,20 +279,7 @@ class PrivilegedServiceClient(
         connectionTimeoutJob?.cancel()
         nativeGateway?.close()
         nativeGateway = null
-        if (bound) {
-            runCatching {
-                Shizuku.unbindUserService(userServiceArgs, connection, false)
-            }.onFailure { error ->
-                Log.w(TAG, "Unable to unbind UserService", error)
-                diagnosticLog.warning(
-                    source = LOG_SOURCE,
-                    message =
-                        "Unable to unbind UserService: " +
-                            "${error::class.java.simpleName}: " +
-                            error.message.orEmpty(),
-                )
-            }
-        }
+        if (bound) unbindUserService()
 
         if (
             bound ||
@@ -317,10 +310,28 @@ class PrivilegedServiceClient(
                         "UserService connection callback timed out after " +
                             "${CONNECTION_TIMEOUT_MILLIS / 1_000}s.",
                 )
+                // Without this, connect() would skip every later attempt as already bound.
+                unbindUserService()
+                bound = false
                 mutableState.value = PrivilegedServiceState.Failure(
                     PrivilegedServiceFailureReason.BIND_TIMED_OUT,
                 )
             }
+        }
+    }
+
+    private fun unbindUserService() {
+        runCatching {
+            Shizuku.unbindUserService(userServiceArgs, connection, false)
+        }.onFailure { error ->
+            Log.w(TAG, "Unable to unbind UserService", error)
+            diagnosticLog.warning(
+                source = LOG_SOURCE,
+                message =
+                    "Unable to unbind UserService: " +
+                        "${error::class.java.simpleName}: " +
+                        error.message.orEmpty(),
+            )
         }
     }
 
@@ -511,6 +522,9 @@ class PrivilegedServiceClient(
             return action(gateway)
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
+        } catch (invalid: InvalidDaemonArgumentException) {
+            // Rejected before anything was sent, so the connection is fine.
+            throw invalid
         } catch (error: Exception) {
             gateway.close()
             connectionScope.launch {

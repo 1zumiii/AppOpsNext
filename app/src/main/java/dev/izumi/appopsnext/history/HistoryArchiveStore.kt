@@ -49,6 +49,12 @@ class HistoryArchiveStore(
     private val file: File,
     private val maxEvents: Int = MAX_EVENTS,
     private val maxFileBytes: Long = MAX_FILE_BYTES,
+    /**
+     * A full archive drops this many records more than it must, so the reads
+     * after it add records without sorting the whole archive each time. The
+     * reader rejects a file past [maxEvents], so the slack is below the limit.
+     */
+    private val trimSlack: Int = maxEvents / TRIM_DIVISOR,
 ) {
     private val mutex = Mutex()
     private val mutableContents = MutableStateFlow<Map<String, ArchivedHistory>?>(null)
@@ -89,7 +95,11 @@ class HistoryArchiveStore(
             if (added.isEmpty() && coverage == existing?.coverage) {
                 null
             } else {
-                trimToLimit(all + (operationName to ArchivedHistory(existing?.events.orEmpty() + added, coverage)), maxEvents)
+                trimToLimit(
+                    all + (operationName to ArchivedHistory(existing?.events.orEmpty() + added, coverage)),
+                    limit = maxEvents,
+                    target = maxEvents - trimSlack,
+                )
             }
         } ?: return@withLock
         mutableContents.value = updated
@@ -201,16 +211,20 @@ class HistoryArchiveStore(
     }
 
     /**
-     * The oldest records go first once the archive is full, down to exactly the
-     * limit: the reader rejects a file holding more, so records sharing the
-     * boundary timestamp are split by order rather than all kept.
+     * The oldest records go first once the archive holds more than [limit], down
+     * to exactly [target]: the reader rejects a file holding more than the limit,
+     * so records sharing the boundary timestamp are split by order rather than all kept.
      */
-    private fun trimToLimit(archive: Map<String, ArchivedHistory>, limit: Int): Map<String, ArchivedHistory> {
+    private fun trimToLimit(
+        archive: Map<String, ArchivedHistory>,
+        limit: Int,
+        target: Int = limit,
+    ): Map<String, ArchivedHistory> {
         val total = archive.values.sumOf { it.events.size }
         if (total <= limit) return archive
         val dropped = archive.flatMap { (operation, archived) ->
             archived.events.mapIndexed { index, event -> Triple(operation, index, event.event.accessTimeMillis) }
-        }.sortedBy { it.third }.take(total - limit)
+        }.sortedBy { it.third }.take(total - target.coerceIn(0, limit))
         val droppedIndices = dropped.groupBy({ it.first }, { it.second }).mapValues { it.value.toHashSet() }
         // A timestamp that lost records is no longer fully covered.
         val coveredFrom = dropped.last().third + 1
@@ -301,7 +315,7 @@ class HistoryArchiveStore(
         private const val MAX_FILE_BYTES = 32L * 1024 * 1024
         private const val MAX_OPERATIONS = 512
         private const val MAX_COVERAGE_RANGES = 4096
-        /** An oversized write retries with a tenth fewer records each time. */
+        /** An oversized write retries with a tenth fewer records each time, and a full archive drops a tenth. */
         private const val TRIM_DIVISOR = 10
 
         fun mergeCoverage(ranges: List<LongRange>): List<LongRange> =

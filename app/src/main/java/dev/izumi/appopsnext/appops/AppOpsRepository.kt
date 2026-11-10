@@ -711,13 +711,15 @@ class AppOpsRepository(
             )
         }.getOrNull()?.isSuccessful == true
 
+    /** [uid] is the app's uid in [userId], when the caller already knows it. */
     suspend fun readMode(
         packageName: String,
         operation: AppOpIdentifier,
         scope: AppOpScope,
         userId: Int? = null,
+        uid: Int? = null,
     ): AppOpMode? {
-        structuredReads?.mode(packageName, operation.shellName, scope, userId)
+        structuredReads?.mode(packageName, operation.shellName, scope, userId, uid)
             ?.let { return it }
         val result = catchBackendFailure {
             if (userId == null) {

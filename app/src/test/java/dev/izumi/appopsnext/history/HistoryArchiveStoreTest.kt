@@ -78,6 +78,20 @@ class HistoryArchiveStoreTest {
         }
     }
 
+    @Test fun `a full archive drops the slack as well, so the next records need no trim`() = runBlocking {
+        withArchive(maxEvents = 4, trimSlack = 2) { store, _ ->
+            store.record("CAMERA", List(4) { event(100L * (it + 1)) }, 0, 1_000)
+            assertEquals(4, store.contents.value!!.getValue("CAMERA").events.size)
+            store.record("CAMERA", listOf(event(500)), 0, 1_000)
+            assertEquals(
+                listOf(400L, 500L),
+                store.contents.value!!.getValue("CAMERA").events.map { it.event.accessTimeMillis },
+            )
+            store.record("CAMERA", listOf(event(600), event(700)), 0, 1_000)
+            assertEquals(4, store.contents.value!!.getValue("CAMERA").events.size)
+        }
+    }
+
     @Test fun `a full archive with a shared boundary timestamp still reopens`() = runBlocking {
         withArchive(maxEvents = 2) { store, file ->
             store.record("CAMERA", List(3) { event(100) }, 0, 1_000)
@@ -208,12 +222,13 @@ class HistoryArchiveStoreTest {
     private suspend fun withArchive(
         maxEvents: Int = HistoryArchiveStore.MAX_EVENTS,
         maxFileBytes: Long = 32L * 1024 * 1024,
+        trimSlack: Int = 0,
         block: suspend (HistoryArchiveStore, File) -> Unit,
     ) {
         val directory = Files.createTempDirectory("history-archive").toFile()
         try {
             val file = File(directory, "archive.bin")
-            val store = HistoryArchiveStore(file, maxEvents, maxFileBytes)
+            val store = HistoryArchiveStore(file, maxEvents, maxFileBytes, trimSlack)
             store.load()
             block(store, file)
         } finally {

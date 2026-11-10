@@ -1,12 +1,16 @@
 package dev.izumi.appopsnext.guard
 
 import dev.izumi.appopsnext.appops.command.AppOpMode
+import dev.izumi.appopsnext.appops.command.OperationNameValidator
+import dev.izumi.appopsnext.appops.command.PackageNameValidator
+import dev.izumi.appopsnext.appops.model.AppOpNames
 import dev.izumi.appopsnext.appops.model.AppOpScope
 
 /**
  * Tab-separated records, one per string. Package and operation names are
- * validated tokens, so they never contain a tab. A record that does not parse
- * is dropped rather than failing the whole list.
+ * validated tokens, so they never contain a tab. A record that does not parse,
+ * or names an invalid package or operation, is dropped rather than failing the
+ * whole list.
  */
 internal object GuardCodec {
     fun encodeRule(rule: GuardRule): String = listOf(
@@ -18,9 +22,11 @@ internal object GuardCodec {
         val fields = value.split(SEPARATOR)
         if (fields.size != 7 || fields[0] != RULE_V1) return null
         return GuardRule(
-            packageName = fields[1].takeIf(String::isNotBlank) ?: return null,
+            packageName = fields[1].takeIf(PackageNameValidator::isValid) ?: return null,
             uid = fields[2].toIntOrNull() ?: return null,
-            stableOperationName = fields[3].takeIf(String::isNotBlank) ?: return null,
+            stableOperationName = fields[3]
+                .takeIf { OperationNameValidator.isValid(AppOpNames.shellName(it)) }
+                ?: return null,
             scope = enumOrNull<AppOpScope>(fields[4]) ?: return null,
             expectedMode = enumOrNull<AppOpMode>(fields[5]) ?: return null,
             autoRestore = fields[6].toBooleanStrictOrNull() ?: return null,

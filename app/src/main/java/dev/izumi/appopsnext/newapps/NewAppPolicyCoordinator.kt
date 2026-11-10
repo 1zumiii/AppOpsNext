@@ -75,6 +75,7 @@ class NewAppPolicyCoordinator(
                         packageName = target.packageName,
                         operation = operation,
                         scope = scope,
+                        uid = target.uid,
                     )
                 },
                 revokedCompatRetry = RevokedCompatRetry(

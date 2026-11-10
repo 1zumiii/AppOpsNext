@@ -6,7 +6,11 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class CommandExecutor {
-    private val streamExecutor: ExecutorService = Executors.newFixedThreadPool(2)
+    // Commands run concurrently, and each needs both of its streams drained at
+    // once or a full pipe stalls it, so readers are never queued behind another command.
+    private val streamExecutor: ExecutorService = Executors.newCachedThreadPool { runnable ->
+        Thread(runnable, "command-stream").apply { isDaemon = true }
+    }
 
     fun execute(arguments: List<String>): ShellCommandResult {
         val process = ProcessBuilder(arguments).start()

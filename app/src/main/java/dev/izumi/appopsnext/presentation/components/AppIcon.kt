@@ -41,7 +41,8 @@ fun AppIcon(
 ) {
     val context = LocalContext.current
     val sizePx = with(LocalDensity.current) { size.roundToPx() }
-    val cacheKey = if (userId == null) packageName else "$userId:$packageName"
+    // Rendered at the size shown, so a bitmap is reused only at that size.
+    val cacheKey = if (userId == null) "$sizePx:$packageName" else "$userId:$sizePx:$packageName"
     val bitmap = produceState<ImageBitmap?>(
         initialValue = AppIconCache[cacheKey],
         key1 = cacheKey,
@@ -117,7 +118,8 @@ private object AppIconCache {
         }
     }
 
-    private const val MAX_CACHED_ICONS = 128
+    // Entries are per size, and the screens use a few sizes.
+    private const val MAX_CACHED_ICONS = 256
 }
 
 private val DefaultAppIconSize = 44.dp
