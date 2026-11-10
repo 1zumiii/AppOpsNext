@@ -19,6 +19,7 @@ import dev.izumi.appopsnext.appops.parser.PackageOpsParser
 import dev.izumi.appopsnext.appops.parser.RuntimePermissionState
 import dev.izumi.appopsnext.appops.parser.RuntimePermissionStateParser
 import dev.izumi.appopsnext.appops.model.CancelledAppOpsWrite
+import dev.izumi.appopsnext.appops.model.FailedAppOpsWrite
 import java.util.Locale
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
@@ -40,6 +41,8 @@ class AppOpsRepository(
     private val structuredReads: StructuredAppOpsReads? = null,
     /** Each verified write that changed a mode, for the change log. */
     private val onModeChanged: suspend (AppOpModeChange) -> Unit = {},
+    /** Each write that ended in a failure, for the diagnostic log. */
+    private val onWriteFailed: (FailedAppOpsWrite) -> Unit = {},
 ) {
     suspend fun readPackageOps(
         packageName: String,
@@ -293,7 +296,7 @@ class AppOpsRepository(
             changeModeInTransaction(
                 packageName, operation, scope, expectedOriginalMode, requestedMode,
                 userId,
-            )
+            ).also { reportFailure(it, packageName, userId, operation, scope, requestedMode) }
         }
 
         suspend fun applyMode(
@@ -305,6 +308,7 @@ class AppOpsRepository(
         ): AppOpModeChangeResult = operationMutex.withLock {
             check(active) { "Write transaction has finished" }
             applyModeInTransaction(packageName, operation, scope, requestedMode, userId)
+                .also { reportFailure(it, packageName, userId, operation, scope, requestedMode) }
         }
 
         /**
@@ -323,6 +327,23 @@ class AppOpsRepository(
             check(active) { "Write transaction has finished" }
             applyRevokedCompatInTransaction(
                 packageName, uid, operation, permissionName, requestedMode, userId,
+            ).also {
+                reportFailure(it, packageName, userId, operation, AppOpScope.UID, requestedMode)
+            }
+        }
+    }
+
+    private fun reportFailure(
+        result: AppOpModeChangeResult?,
+        packageName: String,
+        userId: Int?,
+        operation: AppOpIdentifier,
+        scope: AppOpScope,
+        requestedMode: AppOpMode,
+    ) {
+        if (result is AppOpModeChangeResult.Failure) {
+            onWriteFailed(
+                FailedAppOpsWrite(packageName, userId, operation, scope, requestedMode, result),
             )
         }
     }
@@ -683,6 +704,18 @@ class AppOpsRepository(
             restorationStatus = AppOpsRestorationStatus.SUCCEEDED,
         )
     }
+
+    /**
+     * Whether [permissionName] is granted to [packageName] in the user that
+     * owns [uid]. Null when the state cannot be read or the app has no such
+     * runtime permission.
+     */
+    suspend fun isRuntimePermissionGranted(
+        packageName: String,
+        uid: Int,
+        permissionName: String,
+    ): Boolean? =
+        readPermissionState(packageName, uid / PER_USER_UID_RANGE, permissionName)?.granted
 
     private suspend fun readPermissionState(
         packageName: String,

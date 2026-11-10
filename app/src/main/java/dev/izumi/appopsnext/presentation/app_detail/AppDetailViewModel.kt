@@ -48,6 +48,7 @@ class AppDetailViewModel(
     val searchQuery: StateFlow<String> = mutableSearchQuery.asStateFlow()
     private var loadJob: Job? = null
     private var modeChangeJob: Job? = null
+    private var permissionCheckJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -97,22 +98,44 @@ class AppDetailViewModel(
         if (originalMode == requestedMode) return
         if (mutableModeChangeState.value is AppOpModeChangeUiState.Applying) return
 
-        mutableModeChangeState.value = AppOpModeChangeUiState.Confirming(
-            AppOpModeChangeRequest(
-                packageName = app.packageName,
-                operationName = operationName,
-                scope = scope,
-                originalMode = originalMode,
-                requestedMode = requestedMode,
-                affectedPackages = affectedPackages(app, scope),
-                runtimePermissionDenied = app.userId == null &&
-                    isRuntimePermissionDenied(
-                        packageName = app.packageName,
-                        operationName = operationName,
-                    ),
-                userId = app.userId,
-            ),
-        )
+        fun confirm(runtimePermissionDenied: Boolean) {
+            mutableModeChangeState.value = AppOpModeChangeUiState.Confirming(
+                AppOpModeChangeRequest(
+                    packageName = app.packageName,
+                    operationName = operationName,
+                    scope = scope,
+                    originalMode = originalMode,
+                    requestedMode = requestedMode,
+                    affectedPackages = affectedPackages(app, scope),
+                    runtimePermissionDenied = runtimePermissionDenied,
+                    userId = app.userId,
+                ),
+            )
+        }
+        if (app.userId == null) {
+            confirm(isRuntimePermissionDenied(app.packageName, operationName))
+            return
+        }
+        // Another user's grants are not visible to this app's package manager.
+        permissionCheckJob?.cancel()
+        permissionCheckJob = viewModelScope.launch {
+            val denied = isRuntimePermissionDeniedForUser(app, operationName)
+            if (selectedApp.value == app &&
+                mutableModeChangeState.value !is AppOpModeChangeUiState.Applying
+            ) {
+                confirm(denied)
+            }
+        }
+    }
+
+    /** False when the grant cannot be read, so an unknown state shows no notice. */
+    private suspend fun isRuntimePermissionDeniedForUser(
+        app: InstalledApp,
+        operationName: String,
+    ): Boolean {
+        val permission = AppOpRuntimePermissionCatalog.requiredPermission(operationName)
+            ?: return false
+        return repository.isRuntimePermissionGranted(app.packageName, app.uid, permission) == false
     }
 
     fun updateSearchQuery(query: String) {
