@@ -31,4 +31,12 @@ internal object PlatformOpNames {
             }.getOrNull()?.takeIf { it.shellName.isNotBlank() && it.publicName.isNotBlank() }
         }
     }.getOrNull()?.takeIf { it.isNotEmpty() }
+
+    /** `AppOpsManager.MODE_*` an operation has while no mode is stored, or null when the platform will not say. */
+    fun defaultMode(code: Int): Int? = runCatching {
+        HiddenApiAccess.ensureExempted()
+        AppOpsManager::class.java
+            .getMethod("opToDefaultMode", Int::class.java)
+            .invoke(null, code) as Int
+    }.getOrNull()
 }

@@ -420,6 +420,107 @@ class AppOpsRepositoryTest {
             )
         }
 
+    @Test
+    fun `a record left at the default mode counts as restored to default`() =
+        runBlocking {
+            val gateway = FakeGateway(
+                getResults = ArrayDeque(
+                    listOf(
+                        success("RUN_IN_BACKGROUND: default\n"),
+                        // The system refuses the write and keeps a record at the default mode.
+                        success("RUN_IN_BACKGROUND: allow\n"),
+                        success("RUN_IN_BACKGROUND: allow\n"),
+                    ),
+                ),
+                setResults = ArrayDeque(listOf(success(), success())),
+            )
+
+            val result = AppOpsRepository(
+                privilegedGateway = gateway,
+                defaultModeOf = { AppOpMode.ALLOW },
+            ).changePackageMode(
+                packageName = TEST_PACKAGE,
+                operation = runInBackground,
+                expectedOriginalMode = AppOpMode.DEFAULT,
+                requestedMode = AppOpMode.IGNORE,
+            )
+
+            assertEquals(
+                AppOpModeChangeResult.Failure(
+                    phase = AppOpModeChangePhase.VERIFY_REQUESTED,
+                    originalMode = AppOpMode.DEFAULT,
+                    observedMode = AppOpMode.ALLOW,
+                    restorationStatus = AppOpsRestorationStatus.SUCCEEDED,
+                ),
+                result,
+            )
+            assertEquals(
+                listOf(AppOpMode.IGNORE, AppOpMode.DEFAULT),
+                gateway.requestedModes,
+            )
+        }
+
+    @Test
+    fun `a record at the default mode matches an expected default`() =
+        runBlocking {
+            val gateway = FakeGateway(
+                getResults = ArrayDeque(
+                    listOf(
+                        success("RUN_IN_BACKGROUND: allow\n"),
+                        success("RUN_IN_BACKGROUND: ignore\n"),
+                    ),
+                ),
+                setResults = ArrayDeque(listOf(success())),
+            )
+
+            val result = AppOpsRepository(
+                privilegedGateway = gateway,
+                defaultModeOf = { AppOpMode.ALLOW },
+            ).changePackageMode(
+                packageName = TEST_PACKAGE,
+                operation = runInBackground,
+                expectedOriginalMode = AppOpMode.DEFAULT,
+                requestedMode = AppOpMode.IGNORE,
+            )
+
+            assertEquals(
+                AppOpModeChangeResult.Success(
+                    originalMode = AppOpMode.ALLOW,
+                    appliedMode = AppOpMode.IGNORE,
+                ),
+                result,
+            )
+        }
+
+    @Test
+    fun `a record at another mode still fails the restore to default`() =
+        runBlocking {
+            val gateway = FakeGateway(
+                getResults = ArrayDeque(
+                    listOf(
+                        success("RUN_IN_BACKGROUND: default\n"),
+                        success("RUN_IN_BACKGROUND: deny\n"),
+                        success("RUN_IN_BACKGROUND: deny\n"),
+                    ),
+                ),
+                setResults = ArrayDeque(listOf(success(), success())),
+            )
+
+            val result = AppOpsRepository(
+                privilegedGateway = gateway,
+                defaultModeOf = { AppOpMode.ALLOW },
+            ).changePackageMode(
+                packageName = TEST_PACKAGE,
+                operation = runInBackground,
+                expectedOriginalMode = AppOpMode.DEFAULT,
+                requestedMode = AppOpMode.IGNORE,
+            )
+
+            result as AppOpModeChangeResult.Failure
+            assertEquals(AppOpModeChangePhase.VERIFY_RESTORED, result.phase)
+            assertEquals(AppOpsRestorationStatus.FAILED, result.restorationStatus)
+        }
+
     private abstract class ReadOnlyGateway : PrivilegedAppOpsGateway {
         override suspend fun getPackageOp(
             packageName: String,
