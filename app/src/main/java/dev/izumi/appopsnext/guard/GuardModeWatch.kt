@@ -46,20 +46,26 @@ internal class GuardModeWatch {
         if (opCodes.isEmpty()) return
         val appOps = AppOpsBinder.service()
         service = appOps
-        val start = AppOpsTransactions.startWatchingMode().value
-        for (code in opCodes) {
-            val callback = ModeChangeCallback(onChanged)
-            AppOpsBinder.call(
-                appOps,
-                start,
-                write = { data ->
-                    data.writeInt(code)
-                    data.writeString(null)
-                    data.writeStrongBinder(callback)
-                },
-                read = {},
-            )
-            callbacks += callback
+        try {
+            val start = AppOpsTransactions.startWatchingMode().value
+            for (code in opCodes) {
+                val callback = ModeChangeCallback(onChanged)
+                AppOpsBinder.call(
+                    appOps,
+                    start,
+                    write = { data ->
+                        data.writeInt(code)
+                        data.writeString(null)
+                        data.writeStrongBinder(callback)
+                    },
+                    read = {},
+                )
+                callbacks += callback
+            }
+        } catch (error: Throwable) {
+            // A partial watch would look alive and never be registered again.
+            stop()
+            throw error
         }
     }
 

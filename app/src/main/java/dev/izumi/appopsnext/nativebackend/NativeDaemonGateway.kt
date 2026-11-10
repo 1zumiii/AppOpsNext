@@ -41,7 +41,7 @@ internal class NativeDaemonGateway(
     }
 
     override suspend fun getUidOps(uid: Int): ShellCommandResult {
-        require(uid >= 0) { "Invalid Android UID" }
+        requireArgument(uid >= 0) { "Invalid Android UID" }
         return connection.execute(
             NativeDaemonCommand(
                 verb = "GET_UID_OPS",
@@ -106,9 +106,9 @@ internal class NativeDaemonGateway(
         permissionName: String,
         revoked: Boolean,
     ): ShellCommandResult {
-        require(userId >= 0) { "Invalid Android user" }
+        requireArgument(userId >= 0) { "Invalid Android user" }
         requirePackageName(packageName)
-        require(PermissionNameValidator.isValid(permissionName)) {
+        requireArgument(PermissionNameValidator.isValid(permissionName)) {
             "Invalid Android permission name"
         }
         return connection.execute(
@@ -253,22 +253,32 @@ internal class NativeDaemonGateway(
     }
 
     private fun requireUserId(userId: Int) {
-        require(userId >= 0) { "Invalid Android user" }
+        requireArgument(userId >= 0) { "Invalid Android user" }
     }
 
     override fun close() {
         connection.close()
     }
 
+    private inline fun requireArgument(valid: Boolean, message: () -> String) {
+        if (!valid) throw InvalidDaemonArgumentException(message())
+    }
+
     private fun requirePackageName(packageName: String) {
-        require(PackageNameValidator.isValid(packageName)) {
+        requireArgument(PackageNameValidator.isValid(packageName)) {
             "Invalid Android package name"
         }
     }
 
     private fun requireOperationName(operationName: String) {
-        require(OperationNameValidator.isValid(operationName)) {
+        requireArgument(OperationNameValidator.isValid(operationName)) {
             "Invalid AppOps operation name"
         }
     }
 }
+
+/**
+ * An argument the gateway refused before sending anything. Decoding a reply
+ * can also throw [IllegalArgumentException], and that one means a broken connection.
+ */
+internal class InvalidDaemonArgumentException(message: String) : IllegalArgumentException(message)

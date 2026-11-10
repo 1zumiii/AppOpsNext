@@ -152,6 +152,7 @@ class AppDetailViewModel(
                                 operation = operation,
                                 scope = scope,
                                 userId = app.userId,
+                                uid = app.uid,
                             )
                         },
                         revokedCompatRetry = RevokedCompatRetry(

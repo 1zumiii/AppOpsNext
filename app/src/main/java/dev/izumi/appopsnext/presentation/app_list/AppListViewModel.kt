@@ -16,8 +16,10 @@ import dev.izumi.appopsnext.AppOpsNextApplication
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -41,9 +43,12 @@ class AppListViewModel(
     private val loadFailed = MutableStateFlow(false)
     private var loadJob: Job? = null
 
-    val uiState = combine(
+    /**
+     * Everything but the search, worked out off the main thread. The search
+     * stays on the main thread so the text field never shows an older query.
+     */
+    private val unfilteredState = combine(
         installedApps,
-        searchQuery,
         isLoading,
         loadFailed,
         settingsRepository.settings,
@@ -53,37 +58,37 @@ class AppListViewModel(
     ) { values ->
         @Suppress("UNCHECKED_CAST")
         val apps = values[0] as List<InstalledApp>
-        val query = values[1] as String
-        val loading = values[2] as Boolean
-        val failed = values[3] as Boolean
-        val settings = values[4] as UserSettings
+        val loading = values[1] as Boolean
+        val failed = values[2] as Boolean
+        val settings = values[3] as UserSettings
         @Suppress("UNCHECKED_CAST")
-        val allUsers = values[5] as List<AndroidUser>
-        val selectedUserId = values[6] as Int?
+        val allUsers = values[4] as List<AndroidUser>
+        val selectedUserId = values[5] as Int?
         @Suppress("UNCHECKED_CAST")
-        val changes = values[7] as List<AppOpChangeRecord>
+        val changes = values[6] as List<AppOpChangeRecord>
         val filteredApps = if (settings.hideSystemApps) {
             apps.filterNot(InstalledApp::isSystemApp)
         } else {
             apps
         }
         val sortOrder = settings.appSortOrder
+        val changesByPackage = if (sortOrder == AppSortOrder.CHANGED_ONLY) {
+            AppOpChangeRecords.byPackage(changes)
+        } else {
+            emptyMap()
+        }
         val eligibleApps = sortOrder.sort(filteredApps) { app ->
+            val userId = app.userId ?: userApps.currentUserId
             AppOpChangeRecords.latestTime(
-                records = changes,
-                userId = app.userId ?: userApps.currentUserId,
+                records = changesByPackage[userId to app.packageName].orEmpty(),
+                userId = userId,
                 packageName = app.packageName,
                 firstInstallTimeMillis = app.firstInstallTimeMillis,
             )
         }
         AppListUiState(
-            searchQuery = query,
             totalAppCount = apps.size,
             allApps = eligibleApps,
-            visibleApps = AppListFilter.apply(
-                apps = eligibleApps,
-                query = query,
-            ),
             isLoading = loading,
             loadFailed = failed,
             users = allUsers,
@@ -91,6 +96,16 @@ class AppListViewModel(
             currentUserId = userApps.currentUserId,
             sortOrder = sortOrder,
             changes = changes,
+        )
+    }.flowOn(Dispatchers.Default)
+
+    val uiState = combine(unfilteredState, searchQuery) { state, query ->
+        state.copy(
+            searchQuery = query,
+            visibleApps = AppListFilter.apply(
+                apps = state.allApps,
+                query = query,
+            ),
         )
     }.stateIn(
         scope = viewModelScope,

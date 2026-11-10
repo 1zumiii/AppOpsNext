@@ -3,6 +3,7 @@ package dev.izumi.appopsnext.appops
 import dev.izumi.appopsnext.appops.binder.BinderAppOpsReader
 import dev.izumi.appopsnext.appops.binder.DeviceOp
 import dev.izumi.appopsnext.appops.model.AppOpEntry
+import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.appops.model.PackageOpsSnapshot
 import dev.izumi.appopsnext.appops.parser.OpStates
 import dev.izumi.appopsnext.monitor.AppOpCodes
@@ -107,6 +108,51 @@ class AppOpsReadProbeTest {
             // Off now, so the next read goes straight to text without touching the binder.
             assertNull(structured.packageOps("com.example", 10001))
             assertEquals(1, failures.size)
+        } finally {
+            structured.enable(emptySet())
+        }
+    }
+
+    @Test fun `an unknown package or operation falls back to text and keeps the capability`() = runBlocking {
+        val failures = mutableListOf<AppOpsReadCapability>()
+        val structured = StructuredAppOpsReads(
+            uidOf = { packageName -> 10001.takeIf { packageName == "com.example" } },
+            reader = BinderAppOpsReader(serviceProvider = { error("binder unavailable") }),
+            loadOpTable = { platformTable },
+            onFailure = { capability, _ -> failures += capability },
+        )
+        val enabled = setOf(AppOpsReadCapability.PACKAGE_OPS, AppOpsReadCapability.OP_STATES)
+        structured.enable(enabled)
+        try {
+            assertNull(structured.mode("com.missing", "CAMERA", AppOpScope.PACKAGE))
+            assertNull(structured.packageOps("com.missing", null))
+            assertNull(structured.mode("com.example", "NOT_AN_OPERATION", AppOpScope.UID))
+            assertNull(structured.opStates("NOT_AN_OPERATION", 0, listOf(10001)))
+            assertEquals(enabled, structured.enabled.value)
+            assertTrue(failures.isEmpty())
+            // The probe still sees the error.
+            val thrown = runCatching {
+                structured.mode("com.missing", "CAMERA", AppOpScope.PACKAGE, force = true)
+            }.exceptionOrNull()
+            assertTrue(thrown is IllegalStateException)
+        } finally {
+            structured.enable(emptySet())
+        }
+    }
+
+    @Test fun `a known uid is read without looking the package up`() = runBlocking {
+        val failures = mutableListOf<AppOpsReadCapability>()
+        val structured = StructuredAppOpsReads(
+            uidOf = { null },
+            reader = BinderAppOpsReader(serviceProvider = { error("binder unavailable") }),
+            loadOpTable = { platformTable },
+            onFailure = { capability, _ -> failures += capability },
+        )
+        structured.enable(setOf(AppOpsReadCapability.PACKAGE_OPS))
+        try {
+            // The uid gets past the lookup, so the binder failure is reported.
+            assertNull(structured.mode("com.other", "CAMERA", AppOpScope.UID, userId = 10, uid = 1_010_001))
+            assertEquals(listOf(AppOpsReadCapability.PACKAGE_OPS), failures)
         } finally {
             structured.enable(emptySet())
         }

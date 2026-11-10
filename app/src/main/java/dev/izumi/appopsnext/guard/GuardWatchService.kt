@@ -26,9 +26,11 @@ class GuardWatchService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val watch = GuardModeWatch()
     private val changes = Channel<Int>(Channel.UNLIMITED)
-    private var watchedCodes: Set<Int> = emptySet()
+    /** The codes the rules need, and the codes [watch] last registered successfully. */
+    @Volatile private var wantedCodes: Set<Int> = emptySet()
+    @Volatile private var registeredCodes: Set<Int>? = null
     private var ruleCount = 0
-    private val binderReceived = Shizuku.OnBinderReceivedListener { scope.launch { register(watchedCodes, force = true) } }
+    private val binderReceived = Shizuku.OnBinderReceivedListener { scope.launch { register(wantedCodes, force = true) } }
     private val binderDead = Shizuku.OnBinderDeadListener { watch.stop() }
 
     private val app get() = application as AppOpsNextApplication
@@ -77,8 +79,9 @@ class GuardWatchService : Service() {
     }
 
     private suspend fun register(codes: Set<Int>, force: Boolean) {
-        if (!force && codes == watchedCodes && watch.isAlive) return
-        watchedCodes = codes
+        wantedCodes = codes
+        if (!force && codes == registeredCodes && watch.isAlive) return
+        registeredCodes = null
         val registered = runCatching {
             watch.watch(codes) { opCode, _, _ ->
                 app.guardController.onModeCallback()
@@ -92,7 +95,10 @@ class GuardWatchService : Service() {
             )
         }
         // A change made while nothing was watching is caught by a full check.
-        if (registered.isSuccess) app.guardController.runCheckIfEnabled("realtime_start")
+        if (registered.isSuccess) {
+            registeredCodes = codes
+            app.guardController.runCheckIfEnabled("realtime_start")
+        }
     }
 
     private suspend fun consumeChanges() {

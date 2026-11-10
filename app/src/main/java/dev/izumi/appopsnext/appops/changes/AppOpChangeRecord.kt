@@ -105,6 +105,13 @@ object AppOpChangeRecords {
     fun isCurrent(record: AppOpChangeRecord, firstInstallTimeMillis: Long?): Boolean =
         firstInstallTimeMillis == null || firstInstallTimeMillis <= record.timeMillis
 
+    /**
+     * [records] grouped by user and package, keeping their order, so a list of
+     * apps looks each one up instead of scanning every record per app.
+     */
+    fun byPackage(records: List<AppOpChangeRecord>): Map<Pair<Int, String>, List<AppOpChangeRecord>> =
+        records.groupBy { it.userId to it.packageName }
+
     /** The records of one package that still apply to its installation. */
     fun forPackage(
         records: List<AppOpChangeRecord>,

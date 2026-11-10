@@ -39,6 +39,26 @@ class PermissionTemplateCodecTest {
     }
 
     @Test
+    fun `rules with an invalid operation name are dropped`() {
+        val rule = PermissionTemplateRule(
+            stableOperationName = "android:camera",
+            mode = AppOpMode.IGNORE,
+            scope = AppOpScope.UID,
+        )
+        val encoded = PermissionTemplateCodec.encode(
+            listOf(
+                PermissionTemplate(
+                    id = "t",
+                    name = "T",
+                    rules = listOf(rule, rule.copy(stableOperationName = "android:bad name;")),
+                ),
+            ),
+        )
+
+        assertEquals(listOf(rule), PermissionTemplateCodec.decode(encoded).single().rules)
+    }
+
+    @Test
     fun `invalid or future data fails closed`() {
         assertTrue(PermissionTemplateCodec.decode(null).isEmpty())
         assertTrue(PermissionTemplateCodec.decode("future-format").isEmpty())

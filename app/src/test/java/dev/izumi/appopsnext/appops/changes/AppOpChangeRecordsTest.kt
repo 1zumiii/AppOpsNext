@@ -170,6 +170,32 @@ class AppOpChangeRecordsTest {
         assertNull(AppOpChangeRecords.latestTime(records, 0, "other", null))
     }
 
+    @Test fun `the package index gives the same latest time as scanning every record`() {
+        val records = listOf(
+            record(AppOpMode.IGNORE, time = 400, packageName = "other"),
+            record(AppOpMode.IGNORE, time = 300, operation = "android:read_clipboard"),
+            record(AppOpMode.IGNORE, time = 200, userId = 10),
+            record(AppOpMode.IGNORE, time = 100),
+        )
+        val index = AppOpChangeRecords.byPackage(records)
+        for (userId in listOf(0, 10, 11)) {
+            for (packageName in listOf(PACKAGE, "other", "missing")) {
+                for (installedAt in listOf(null, 150L, 500L)) {
+                    for (operation in listOf(null, "RUN_IN_BACKGROUND")) {
+                        assertEquals(
+                            AppOpChangeRecords.latestTime(records, userId, packageName, installedAt, operation),
+                            AppOpChangeRecords.latestTime(
+                                index[userId to packageName].orEmpty(),
+                                userId, packageName, installedAt, operation,
+                            ),
+                        )
+                    }
+                }
+            }
+        }
+        assertEquals(listOf(300L, 100L), index[0 to PACKAGE]?.map(AppOpChangeRecord::timeMillis))
+    }
+
     @Test fun `prune drops removed and reinstalled packages of one user only`() {
         val records = listOf(
             record(AppOpMode.IGNORE, packageName = "kept", time = 100),

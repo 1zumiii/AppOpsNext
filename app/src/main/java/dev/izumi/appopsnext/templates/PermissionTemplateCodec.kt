@@ -1,6 +1,7 @@
 package dev.izumi.appopsnext.templates
 
 import dev.izumi.appopsnext.appops.command.AppOpMode
+import dev.izumi.appopsnext.appops.command.OperationNameValidator
 import dev.izumi.appopsnext.appops.model.AppOpNames
 import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
@@ -65,6 +66,7 @@ internal object PermissionTemplateCodec {
                     val templateId = decodeField(fields[1])
                         ?: return@forEach
                     val operationName = decodeField(fields[2])
+                        ?.takeIf { OperationNameValidator.isValid(AppOpNames.shellName(it)) }
                         ?: return@forEach
                     val mode = runCatching {
                         AppOpMode.valueOf(fields[3])

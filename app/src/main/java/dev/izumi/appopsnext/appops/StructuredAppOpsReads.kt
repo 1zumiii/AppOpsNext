@@ -91,7 +91,7 @@ class StructuredAppOpsReads internal constructor(
         force: Boolean = false,
     ): PackageOpsSnapshot? = attempt(AppOpsReadCapability.PACKAGE_OPS, force) {
         val appUid = uid ?: uidFor(packageName, userId)
-            ?: error("Unknown package $packageName")
+            ?: throw UnknownTarget("Unknown package $packageName")
         val names = checkNotNull(nameByCode) { "Operation names are unavailable" }
         reader.session {
             StructuredOpsMapper.packageSnapshot(
@@ -109,16 +109,17 @@ class StructuredAppOpsReads internal constructor(
         operationName: String,
         scope: AppOpScope,
         userId: Int? = null,
+        uid: Int? = null,
         force: Boolean = false,
     ): AppOpMode? = attempt(AppOpsReadCapability.PACKAGE_OPS, force) {
-        val uid = uidFor(packageName, userId)
-            ?: error("Unknown package $packageName")
+        val appUid = uid ?: uidFor(packageName, userId)
+            ?: throw UnknownTarget("Unknown package $packageName")
         val code = codeOf(operationName)
         val ops = intArrayOf(code)
         val records = reader.session {
             when (scope) {
-                AppOpScope.UID -> uidOps(uid, ops)
-                AppOpScope.PACKAGE -> opsForPackage(uid, packageName, ops)
+                AppOpScope.UID -> uidOps(appUid, ops)
+                AppOpScope.PACKAGE -> opsForPackage(appUid, packageName, ops)
             }
         }
         StructuredOpsMapper.mode(records, code) ?: error("Unknown mode for $operationName")
@@ -152,10 +153,22 @@ class StructuredAppOpsReads internal constructor(
         return if (userId == null) own else UserUids.forUser(userId, own)
     }
 
-    private fun codeOf(operationName: String): Int =
-        checkNotNull(codeByName?.get(AppOpNames.shellName(operationName)) ?: MiuiOps.codeOf(operationName)) {
-            "Unknown operation $operationName"
-        }
+    private fun codeOf(operationName: String): Int {
+        val table = codeByName
+        return table?.get(AppOpNames.shellName(operationName))
+            ?: MiuiOps.codeOf(operationName)
+            ?: if (table == null) {
+                error("Operation names are unavailable")
+            } else {
+                throw UnknownTarget("Unknown operation $operationName")
+            }
+    }
+
+    /**
+     * The request names a package this user lacks or an operation this device
+     * lacks. That says nothing about the binder, so the capability stays on.
+     */
+    private class UnknownTarget(message: String) : IllegalStateException(message)
 
     /** With [force], used by the probe, a failure is thrown instead of absorbed. */
     private suspend fun <T> attempt(
@@ -169,6 +182,9 @@ class StructuredAppOpsReads internal constructor(
                 block()
             } catch (error: CancellationException) {
                 throw error
+            } catch (error: UnknownTarget) {
+                if (force) throw error
+                null
             } catch (error: Throwable) {
                 // Reflection on a changed platform throws errors, not only exceptions.
                 if (force || error is VirtualMachineError) throw error
