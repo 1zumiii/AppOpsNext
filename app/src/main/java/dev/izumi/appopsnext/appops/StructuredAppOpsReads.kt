@@ -46,6 +46,7 @@ class StructuredAppOpsReads internal constructor(
     private val loadOpTable: () -> List<DeviceOp>?,
     private val onFailure: (AppOpsReadCapability, Throwable) -> Unit,
     private val clock: () -> Long = System::currentTimeMillis,
+    private val defaultModeOf: (Int) -> Int? = PlatformOpNames::defaultMode,
 ) {
     constructor(
         packageManager: PackageManager,
@@ -83,6 +84,17 @@ class StructuredAppOpsReads internal constructor(
         listedOps.takeIf { AppOpsReadCapability.OP_LIST in mutableEnabled.value }
 
     internal fun opTableForProbe(): List<DeviceOp>? = opTable
+
+    /**
+     * The mode [operationName] has while none is stored. It comes from the
+     * platform's table, not from a binder call, so it needs no capability.
+     */
+    fun defaultMode(operationName: String): AppOpMode? {
+        val code = codeByName?.get(AppOpNames.shellName(operationName)) ?: return null
+        return defaultModeOf(code)
+            ?.let(StructuredOpsMapper::modeName)
+            ?.let(AppOpMode::fromShellValue)
+    }
 
     suspend fun packageOps(
         packageName: String,

@@ -43,6 +43,8 @@ class AppOpsRepository(
     private val onModeChanged: suspend (AppOpModeChange) -> Unit = {},
     /** Each write that ended in a failure, for the diagnostic log. */
     private val onWriteFailed: (FailedAppOpsWrite) -> Unit = {},
+    /** The mode an operation has while none is stored, by shell name. Null when unknown. */
+    private val defaultModeOf: (String) -> AppOpMode? = { structuredReads?.defaultMode(it) },
 ) {
     suspend fun readPackageOps(
         packageName: String,
@@ -388,7 +390,9 @@ class AppOpsRepository(
                 restorationStatus = AppOpsRestorationStatus.NOT_REQUIRED,
             )
 
-        if (originalMode != expectedOriginalMode) {
+        if (originalMode != expectedOriginalMode &&
+            !isSameEffectiveMode(operation, expectedOriginalMode, originalMode)
+        ) {
             return AppOpModeChangeResult.Failure(
                 phase = AppOpModeChangePhase.CHECK_ORIGINAL,
                 originalMode = originalMode,
@@ -552,7 +556,9 @@ class AppOpsRepository(
         }
 
         val restoredMode = readMode(packageName, operation, scope, userId)
-        if (restoredMode != originalMode) {
+        if (restoredMode != originalMode &&
+            !isSameEffectiveMode(operation, originalMode, restoredMode)
+        ) {
             return AppOpModeChangeResult.Failure(
                 phase = AppOpModeChangePhase.VERIFY_RESTORED,
                 originalMode = originalMode,
@@ -567,6 +573,25 @@ class AppOpsRepository(
             observedMode = observedMode,
             restorationStatus = AppOpsRestorationStatus.SUCCEEDED,
         )
+    }
+
+    /**
+     * A record that holds the operation's own default mode acts like no record
+     * at all. Android keeps such a record for runtime-permission operations: a
+     * package write it refuses leaves one behind, and a reset to default then
+     * reads back as that mode instead of default.
+     */
+    private fun isSameEffectiveMode(
+        operation: AppOpIdentifier,
+        first: AppOpMode,
+        second: AppOpMode?,
+    ): Boolean {
+        val other = when {
+            first == AppOpMode.DEFAULT -> second
+            second == AppOpMode.DEFAULT -> first
+            else -> return false
+        } ?: return false
+        return other == defaultModeOf(operation.shellName)
     }
 
     private suspend fun applyRevokedCompatInTransaction(
