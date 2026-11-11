@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
@@ -354,6 +355,9 @@ class NewAppPolicyCoordinator(
             )
         }
     }
+
+    /** See [NewAppPolicyStateRepository.results]. */
+    val results: Flow<List<NewAppResult>> get() = stateRepository.results
 
     suspend fun reportFor(packageName: String, installedAt: Long): BatchOperationReport? {
         val records = stateRepository.progress(InstalledPackageFingerprint(packageName, installedAt))

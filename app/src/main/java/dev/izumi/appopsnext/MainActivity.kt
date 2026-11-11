@@ -102,6 +102,7 @@ class MainActivity : ComponentActivity() {
                     onPermissionForegroundRequested = permissionBrowserViewModel::requestForeground,
                     onOperationBatchRequested = batchOperationsViewModel::requestOperationBatch,
                     onSettingsBatchRequested = batchOperationsViewModel::requestSettingsBatch,
+                    onBatchReportRequested = batchOperationsViewModel::showReport,
                     experimentalUiState = experimentalUiState.value,
                     // Read only where the log is shown: it changes every couple of seconds
                     // while the monitor is busy, which must not recompose every other page.

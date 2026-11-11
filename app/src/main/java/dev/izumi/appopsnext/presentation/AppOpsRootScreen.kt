@@ -26,6 +26,7 @@ import dev.izumi.appopsnext.monitor.MonitorOutcomes
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpScope
+import dev.izumi.appopsnext.batch.model.BatchOperationReport
 import dev.izumi.appopsnext.batch.model.BatchOperationTarget
 import dev.izumi.appopsnext.presentation.app_detail.ModeChangeDialog
 import dev.izumi.appopsnext.presentation.notifications.NotificationsScreen
@@ -98,6 +99,7 @@ fun AppOpsRootScreen(
     onPermissionForegroundRequested: () -> Unit,
     onOperationBatchRequested: (String, List<BatchOperationTarget>) -> Unit,
     onSettingsBatchRequested: (String, List<BatchOperationTarget>) -> Unit,
+    onBatchReportRequested: (BatchOperationReport) -> Unit,
     onShizukuAction: () -> Unit,
     onPrivilegedServiceRetry: () -> Unit,
     onClearDiagnosticLog: () -> Unit,
@@ -543,6 +545,7 @@ fun AppOpsRootScreen(
                     onAppSelected(app)
                 },
                 onRestoreRequested = onSettingsBatchRequested,
+                onReportRequested = onBatchReportRequested,
             )
         }
     } else {
