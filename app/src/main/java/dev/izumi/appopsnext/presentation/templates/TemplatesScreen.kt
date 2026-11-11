@@ -6,6 +6,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.clip
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
@@ -105,6 +108,7 @@ fun TemplatesScreen(
     onRuleOrderChange: (List<String>) -> Unit,
     onAutoApplyNewAppTemplateChange: (Boolean) -> Unit,
     onInstantNewAppRulesChange: (Boolean) -> Unit,
+    onRestoreOnReinstallChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
 ) {
@@ -119,9 +123,11 @@ fun TemplatesScreen(
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) {}
-    LaunchedEffect(uiState.autoApplyNewAppTemplate) {
+    // Either way of handling an install reports its result in a notification.
+    val watchesNewApps = uiState.autoApplyNewAppTemplate || uiState.restoreOnReinstall
+    LaunchedEffect(watchesNewApps) {
         if (
-            uiState.autoApplyNewAppTemplate &&
+            watchesNewApps &&
             context.checkSelfPermission(
                 Manifest.permission.POST_NOTIFICATIONS,
             ) != PackageManager.PERMISSION_GRANTED
@@ -220,6 +226,8 @@ fun TemplatesScreen(
                         onAutoApplyNewAppTemplateChange,
                     instantNewAppRules = uiState.instantNewAppRules,
                     onInstantNewAppRulesChange = onInstantNewAppRulesChange,
+                    restoreOnReinstall = uiState.restoreOnReinstall,
+                    onRestoreOnReinstallChange = onRestoreOnReinstallChange,
                     onSelectTemplate = onSelectTemplate,
                     modifier = Modifier
                         .fillMaxSize()
@@ -320,6 +328,8 @@ private fun TemplateList(
     onAutoApplyNewAppTemplateChange: (Boolean) -> Unit,
     instantNewAppRules: Boolean,
     onInstantNewAppRulesChange: (Boolean) -> Unit,
+    restoreOnReinstall: Boolean,
+    onRestoreOnReinstallChange: (Boolean) -> Unit,
     onSelectTemplate: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -366,6 +376,8 @@ private fun TemplateList(
                     onEnabledChange = onAutoApplyNewAppTemplateChange,
                     instant = instantNewAppRules,
                     onInstantChange = onInstantNewAppRulesChange,
+                    restore = restoreOnReinstall,
+                    onRestoreChange = onRestoreOnReinstallChange,
                     onEdit = { onSelectTemplate(template.id) },
                     modifier = Modifier.padding(horizontal = 18.dp).padding(bottom = 12.dp),
                 )
@@ -405,6 +417,8 @@ private fun NewAppPolicyCard(
     onEnabledChange: (Boolean) -> Unit,
     instant: Boolean,
     onInstantChange: (Boolean) -> Unit,
+    restore: Boolean,
+    onRestoreChange: (Boolean) -> Unit,
     onEdit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -449,51 +463,116 @@ private fun NewAppPolicyCard(
                 modifier = Modifier.padding(vertical = 12.dp),
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
             )
+            // Three switches in a row would outweigh the template itself, so they
+            // fold away and the header says which of them are on.
+            var optionsExpanded by rememberSaveable { mutableStateOf(false) }
+            val watches = enabled || restore
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { optionsExpanded = !optionsExpanded },
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = stringResource(R.string.template_new_app_auto_apply),
-                    modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                CompactSwitch(
-                    checked = enabled,
-                    onCheckedChange = onEnabledChange,
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.template_new_app_options),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = newAppOptionsSummary(enabled, instant && watches, restore),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Icon(
+                    painter = painterResource(R.drawable.ic_ph_caret_right),
+                    // The row is the control and its text says what it opens.
+                    contentDescription = null,
+                    modifier = Modifier.rotate(if (optionsExpanded) 90f else 0f),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            // Depends on the switch above, so it dims while that is off. It stays
-            // on the same edge: the divider already groups the two.
-            val instantAlpha = if (enabled) 1f else DISABLED_CONTENT_ALPHA
-            Column(modifier = Modifier.padding(top = 12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+            AnimatedVisibility(visible = optionsExpanded) {
+                Column(
+                    modifier = Modifier.padding(top = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.template_new_app_instant),
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = instantAlpha),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Text(
-                            text = stringResource(R.string.template_new_app_instant_summary),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = instantAlpha),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                    CompactSwitch(
+                    NewAppOptionRow(
+                        title = stringResource(R.string.template_new_app_auto_apply),
+                        checked = enabled,
+                        onCheckedChange = onEnabledChange,
+                    )
+                    NewAppOptionRow(
+                        title = stringResource(R.string.template_new_app_restore),
+                        summary = stringResource(R.string.template_new_app_restore_summary),
+                        checked = restore,
+                        onCheckedChange = onRestoreChange,
+                    )
+                    // Needs something to do after an install, so it dims while
+                    // both switches above are off.
+                    NewAppOptionRow(
+                        title = stringResource(R.string.template_new_app_instant),
+                        summary = stringResource(R.string.template_new_app_instant_summary),
                         checked = instant,
                         onCheckedChange = onInstantChange,
-                        enabled = enabled,
+                        enabled = watches,
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun newAppOptionsSummary(auto: Boolean, instant: Boolean, restore: Boolean): String {
+    val on = buildList {
+        if (auto) add(stringResource(R.string.template_new_app_option_auto))
+        if (restore) add(stringResource(R.string.template_new_app_option_restore))
+        if (instant) add(stringResource(R.string.template_new_app_option_instant))
+    }
+    return if (on.isEmpty()) {
+        stringResource(R.string.template_new_app_options_off)
+    } else {
+        on.joinToString(stringResource(R.string.list_separator))
+    }
+}
+
+@Composable
+private fun NewAppOptionRow(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    summary: String? = null,
+    enabled: Boolean = true,
+) {
+    val alpha = if (enabled) 1f else DISABLED_CONTENT_ALPHA
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            summary?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+        CompactSwitch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            enabled = enabled,
+        )
     }
 }
 

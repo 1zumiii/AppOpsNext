@@ -7,4 +7,5 @@ data class TemplatesUiState(
     val selectedTemplate: PermissionTemplate? = null,
     val autoApplyNewAppTemplate: Boolean = false,
     val instantNewAppRules: Boolean = true,
+    val restoreOnReinstall: Boolean = false,
 )

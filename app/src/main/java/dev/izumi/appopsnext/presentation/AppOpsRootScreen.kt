@@ -167,6 +167,7 @@ fun AppOpsRootScreen(
     onTemplateRuleOrderChange: (List<String>) -> Unit,
     onAutoApplyNewAppTemplateChange: (Boolean) -> Unit,
     onInstantNewAppRulesChange: (Boolean) -> Unit,
+    onRestoreOnReinstallChange: (Boolean) -> Unit,
     onTemplateApplyRequested:
         (PermissionTemplate, List<InstalledApp>) -> Unit,
     onPermissionBatchRequested: (
@@ -604,6 +605,7 @@ fun AppOpsRootScreen(
                     onAutoApplyNewAppTemplateChange =
                         onAutoApplyNewAppTemplateChange,
                     onInstantNewAppRulesChange = onInstantNewAppRulesChange,
+                    onRestoreOnReinstallChange = onRestoreOnReinstallChange,
                     bottomBar = navigationBar,
                 )
 

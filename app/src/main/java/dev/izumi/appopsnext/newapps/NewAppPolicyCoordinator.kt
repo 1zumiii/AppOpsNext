@@ -10,6 +10,7 @@ import androidx.work.WorkManager
 import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeOutcome
 import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeExecutor
 import dev.izumi.appopsnext.appops.AppOpsRepository
+import dev.izumi.appopsnext.appops.changes.AppOpChangeRecord
 import dev.izumi.appopsnext.appops.RevokedCompatRetry
 import dev.izumi.appopsnext.appops.RevokedCompatWriteMemory
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
@@ -48,6 +49,8 @@ class NewAppPolicyCoordinator(
     private val privilegedServiceClient: PrivilegedServiceClient,
     private val diagnosticLog: DiagnosticLogRepository,
     private val appOpsRepository: AppOpsRepository,
+    /** The settings a package had in an earlier installation, by package name and install time. */
+    private val restorableChanges: suspend (String, Long) -> List<AppOpChangeRecord>,
     writeMemory: RevokedCompatWriteMemory = RevokedCompatWriteMemory(),
     private val scanner: InstalledPackageScanner =
         InstalledPackageScanner(context),
@@ -147,7 +150,7 @@ class NewAppPolicyCoordinator(
         }
         scope.launch {
             settingsRepository.settings
-                .map { it.autoApplyNewAppTemplate }
+                .map { it.watchesNewApps }
                 .distinctUntilChanged()
                 .collect { enabled ->
                     schedulePeriodicCheck(enabled)
@@ -164,7 +167,7 @@ class NewAppPolicyCoordinator(
         }
         scope.launch {
             settingsRepository.settings
-                .map { it.autoApplyNewAppTemplate && it.instantNewAppRules }
+                .map { it.watchesNewApps && it.instantNewAppRules }
                 .distinctUntilChanged()
                 .collect(watcher::setWanted)
         }
@@ -281,12 +284,24 @@ class NewAppPolicyCoordinator(
                 stateRepository.markProcessed(fingerprint)
                 continue
             }
-            val targets = NewAppPolicyTargetFactory.create(app, template)
+            val settings = settingsRepository.settings.first()
+            // An app installed again gets what it had, which was chosen for it,
+            // and not the template, which is a guess for apps never seen.
+            val restorable = if (settings.restoreOnReinstall) {
+                restorableChanges(fingerprint.packageName, fingerprint.firstInstallTimeMillis)
+            } else {
+                emptyList()
+            }
+            val targets = when {
+                restorable.isNotEmpty() -> NewAppPolicyTargetFactory.restore(app, restorable)
+                settings.autoApplyNewAppTemplate -> NewAppPolicyTargetFactory.create(app, template)
+                else -> emptyList()
+            }
             if (targets.isEmpty()) {
                 diagnosticLog.info(
                     source = LOG_SOURCE,
                     message =
-                        "New-app template has no rules. " +
+                        "Nothing to apply to the new app. " +
                             "package=${fingerprint.packageName}",
                 )
                 stateRepository.markProcessed(fingerprint)
@@ -330,6 +345,7 @@ class NewAppPolicyCoordinator(
             diagnosticLog.info(
                 source = LOG_SOURCE,
                 message = "New-app policy progress. package=${fingerprint.packageName}, " +
+                    "restored=${restorable.isNotEmpty()}, " +
                     "success=${report.successCount}, failure=${report.failureCount}, complete=$complete",
             )
 
@@ -337,7 +353,7 @@ class NewAppPolicyCoordinator(
     }
 
     private suspend fun isEnabled(): Boolean =
-        settingsRepository.settings.first().autoApplyNewAppTemplate
+        settingsRepository.settings.first().watchesNewApps
 
     private suspend fun runSafely(
         reason: String,

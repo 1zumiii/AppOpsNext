@@ -202,6 +202,7 @@ class AppOpsNextApplication : Application() {
             privilegedServiceClient = privilegedServiceClient,
             diagnosticLog = diagnosticLogRepository,
             appOpsRepository = appOpsRepository,
+            restorableChanges = appOpChangeLog::restorable,
             writeMemory = revokedCompatWriteMemory,
         )
     }

@@ -47,6 +47,7 @@ class AppBackupService(
                     suppressPermissionFlagNotice = settings.suppressPermissionFlagNotice,
                     autoApplyNewAppTemplate = settings.autoApplyNewAppTemplate,
                     instantNewAppRules = settings.instantNewAppRules,
+                    restoreOnReinstall = settings.restoreOnReinstall,
                     monitorHeadsUp = settings.monitorHeadsUp,
                     suppressBatteryNotice = settings.suppressBatteryNotice,
                     showAllMonitorOperations = settings.showAllMonitorOperations,

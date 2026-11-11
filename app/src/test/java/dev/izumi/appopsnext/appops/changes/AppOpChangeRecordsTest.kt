@@ -223,6 +223,88 @@ class AppOpChangeRecordsTest {
         assertNull(AppOpChangeCodec.decode("C1\t-1\tpkg\top\tUID\tALLOW\tIGNORE\t1"))
     }
 
+    @Test fun `prune keeps a removed package for a while when asked to`() {
+        val records = listOf(
+            record(AppOpMode.IGNORE, packageName = "installed"),
+            record(AppOpMode.IGNORE, packageName = "gone"),
+            record(AppOpMode.IGNORE, packageName = "reinstalled", time = 100),
+        )
+        val installed = mapOf("installed" to 50L, "reinstalled" to 200L)
+
+        val first = AppOpChangeRecords.prune(records, 0, installed, keepRemovedMillis = 1_000, nowMillis = 5_000)
+
+        assertEquals(
+            mapOf("installed" to null, "gone" to 5_000L, "reinstalled" to 5_000L),
+            first.associate { it.packageName to it.removedAtMillis },
+        )
+        // The time runs from the first pass that missed the package, not from the change.
+        val later = AppOpChangeRecords.prune(first, 0, installed, keepRemovedMillis = 1_000, nowMillis = 6_000)
+        assertEquals(first, later)
+        val expired = AppOpChangeRecords.prune(first, 0, installed, keepRemovedMillis = 1_000, nowMillis = 6_001)
+        assertEquals(listOf("installed"), expired.map { it.packageName })
+        // Without the setting they go at once, kept or not.
+        assertEquals(listOf("installed"), AppOpChangeRecords.prune(first, 0, installed).map { it.packageName })
+    }
+
+    @Test fun `a record that applies again is no longer marked as removed`() {
+        val kept = record(AppOpMode.IGNORE, time = 100).copy(removedAtMillis = 5_000)
+
+        val pruned = AppOpChangeRecords.prune(
+            listOf(kept), 0, mapOf(PACKAGE to 50L), keepRemovedMillis = 1_000, nowMillis = 9_000,
+        )
+
+        assertEquals(listOf(kept.copy(removedAtMillis = null)), pruned)
+    }
+
+    @Test fun `only the settings of an earlier installation are restorable`() {
+        val records = listOf(
+            record(AppOpMode.IGNORE, time = 100, operation = "android:camera"),
+            record(AppOpMode.ALLOW, time = 300, operation = "android:record_audio"),
+            record(AppOpMode.IGNORE, time = 100, operation = "android:camera", userId = 10),
+            record(AppOpMode.IGNORE, time = 100, operation = "android:camera", packageName = "other"),
+        )
+
+        val restorable = AppOpChangeRecords.restorable(records, 0, PACKAGE, firstInstallTimeMillis = 200)
+
+        assertEquals(listOf("android:camera" to 0), restorable.map { it.stableOperationName to it.userId })
+    }
+
+    @Test fun `one setting is restored per operation and package scope comes first`() {
+        val records = listOf(
+            record(AppOpMode.ALLOW, scope = AppOpScope.UID, time = 150),
+            record(AppOpMode.IGNORE, scope = AppOpScope.PACKAGE, time = 100),
+            record(AppOpMode.DENY, scope = AppOpScope.UID, time = 120, operation = "android:camera"),
+            record(AppOpMode.ALLOW, scope = AppOpScope.UID, time = 110, operation = "android:camera"),
+        )
+
+        val restorable = AppOpChangeRecords.restorable(records, 0, PACKAGE, firstInstallTimeMillis = 200)
+
+        assertEquals(
+            listOf("android:camera" to AppOpMode.DENY, OPERATION to AppOpMode.IGNORE),
+            restorable.map { it.stableOperationName to it.recordedMode },
+        )
+    }
+
+    @Test fun `a change to an app installed again starts from its new original mode`() {
+        val earlier = record(AppOpMode.IGNORE).copy(removedAtMillis = 5_000)
+
+        val merged = AppOpChangeRecords.merge(
+            listOf(earlier), change(AppOpMode.ALLOW, AppOpMode.IGNORE), userId = 0, nowMillis = 9_000,
+        )
+
+        assertEquals(1, merged.size)
+        assertEquals(AppOpMode.ALLOW, merged.single().originalMode)
+        assertNull(merged.single().removedAtMillis)
+    }
+
+    @Test fun `the time a package was removed survives encoding`() {
+        val kept = record(AppOpMode.IGNORE).copy(removedAtMillis = 5_000)
+
+        assertEquals(kept, AppOpChangeCodec.decode(AppOpChangeCodec.encode(kept)))
+        assertNull(AppOpChangeCodec.decode(AppOpChangeCodec.encode(kept) + "\tx"))
+        assertNull(AppOpChangeCodec.decode(AppOpChangeCodec.encode(record(AppOpMode.IGNORE)) + "\tx"))
+    }
+
     private companion object {
         const val PACKAGE = "com.example.target"
         const val OPERATION = "android:run_in_background"

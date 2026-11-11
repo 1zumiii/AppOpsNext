@@ -14,6 +14,7 @@ object UserSettingsDefaults {
     const val SUPPRESS_ALL_OPERATIONS_WARNING = false
     const val SAVE_INDIVIDUAL_HISTORY = false
     const val INSTANT_NEW_APP_RULES = true
+    const val RESTORE_ON_REINSTALL = false
 }
 
 data class UserSettings(
@@ -47,4 +48,9 @@ data class UserSettings(
     val appTheme: AppTheme = AppTheme.SYSTEM,
     /** Watches installs from a Shizuku daemon, so new-app rules apply right away. */
     val instantNewAppRules: Boolean = UserSettingsDefaults.INSTANT_NEW_APP_RULES,
-)
+    /** Gives an app installed again the settings it had, in place of the new-app template. */
+    val restoreOnReinstall: Boolean = UserSettingsDefaults.RESTORE_ON_REINSTALL,
+) {
+    /** Whether installs are looked for at all, which either way of handling them needs. */
+    val watchesNewApps: Boolean get() = autoApplyNewAppTemplate || restoreOnReinstall
+}
