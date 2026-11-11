@@ -28,6 +28,35 @@ data class NewAppRuleProgress(
     }
 }
 
+/** What the new-app rules did to one installation. */
+data class NewAppResult(
+    val installation: InstalledPackageFingerprint,
+    val appLabel: String,
+    val items: List<BatchOperationItemResult>,
+) {
+    val successCount: Int get() = items.count { it.result is AppOpModeChangeResult.Success }
+
+    val failureCount: Int get() = items.size - successCount
+
+    companion object {
+        /** One result per installation, the latest installation first. */
+        fun group(records: List<NewAppRuleProgress>): List<NewAppResult> =
+            records.groupBy(NewAppRuleProgress::installation)
+                .map { (installation, progress) ->
+                    NewAppResult(
+                        installation = installation,
+                        appLabel = progress.first().item.target.appLabel,
+                        items = progress.map(NewAppRuleProgress::item)
+                            .sortedBy { it.target.stableOperationName },
+                    )
+                }
+                .sortedWith(
+                    compareByDescending<NewAppResult> { it.installation.firstInstallTimeMillis }
+                        .thenBy { it.installation.packageName },
+                )
+    }
+}
+
 internal object NewAppRuleProgressCodec {
     fun encode(record: NewAppRuleProgress): String {
         val target = record.item.target

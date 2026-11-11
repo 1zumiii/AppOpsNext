@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation.notifications
 
+import android.text.format.DateUtils
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -38,12 +39,15 @@ import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.appops.changes.AppOpChangeDrift
 import dev.izumi.appopsnext.appops.model.AppOpNames
 import dev.izumi.appopsnext.apps.model.InstalledApp
+import dev.izumi.appopsnext.batch.model.BatchOperationReport
 import dev.izumi.appopsnext.batch.model.BatchOperationTarget
+import dev.izumi.appopsnext.newapps.NewAppResult
 import dev.izumi.appopsnext.presentation.app_detail.AppOpChangeStatusText
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 import dev.izumi.appopsnext.presentation.app_detail.modeLabel
 import dev.izumi.appopsnext.presentation.components.AppIcon
 import dev.izumi.appopsnext.presentation.experimental.ExperimentalGroup
+import dev.izumi.appopsnext.presentation.experimental.ExperimentalGroupRow
 import dev.izumi.appopsnext.presentation.experimental.ExperimentalSectionTitle
 import dev.izumi.appopsnext.presentation.experimental.GuardEventRow
 import kotlinx.coroutines.launch
@@ -59,11 +63,13 @@ fun NotificationsScreen(
     onBack: () -> Unit,
     onAppSelected: (InstalledApp) -> Unit,
     onRestoreRequested: (title: String, targets: List<BatchOperationTarget>) -> Unit,
+    onReportRequested: (BatchOperationReport) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val application = LocalContext.current.applicationContext as AppOpsNextApplication
     val drifts by application.appOpChangeDriftMonitor.drifts.collectAsStateWithLifecycle()
     val guardEvents by application.guardRepository.events.collectAsStateWithLifecycle(emptyList())
+    val newAppResults by application.newAppPolicyCoordinator.results.collectAsStateWithLifecycle(emptyList())
     val changeLog = application.appOpChangeLog
     val currentUserId = application.userAppsRepository.currentUserId
     val scope = rememberCoroutineScope()
@@ -92,7 +98,7 @@ fun NotificationsScreen(
         },
     ) { contentPadding ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
-            if (drifts.isEmpty() && guardEvents.isEmpty()) {
+            if (drifts.isEmpty() && guardEvents.isEmpty() && newAppResults.isEmpty()) {
                 item {
                     Text(
                         text = stringResource(R.string.notifications_empty),
@@ -149,6 +155,20 @@ fun NotificationsScreen(
                             }
                         },
                     )
+                }
+            }
+            if (newAppResults.isNotEmpty()) {
+                item {
+                    ExperimentalSectionTitle(stringResource(R.string.new_app_policy_notification_channel))
+                    ExperimentalGroup {
+                        newAppResults.take(MAX_NEW_APP_RESULTS).forEachIndexed { index, result ->
+                            if (index > 0) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            NewAppResultRow(
+                                result = result,
+                                onOpen = { onReportRequested(BatchOperationReport(result.appLabel, result.items)) },
+                            )
+                        }
+                    }
                 }
             }
             if (guardEvents.isNotEmpty()) {
@@ -243,6 +263,47 @@ private fun ChangedSettingCard(
     }
 }
 
+@Composable
+private fun NewAppResultRow(result: NewAppResult, onOpen: () -> Unit) {
+    ExperimentalGroupRow(
+        modifier = Modifier.clickable(onClick = onOpen),
+        leadingContent = {
+            AppIcon(
+                packageName = result.installation.packageName,
+                appLabel = result.appLabel,
+                size = 32.dp,
+            )
+        },
+        headlineContent = { Text(result.appLabel) },
+        supportingContent = {
+            Text(
+                text = stringResource(
+                    R.string.new_app_policy_notification_result,
+                    result.successCount,
+                    result.failureCount,
+                ),
+                color = if (result.failureCount > 0) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
+        },
+        trailingContent = {
+            Text(
+                text = DateUtils.getRelativeTimeSpanString(
+                    result.installation.firstInstallTimeMillis,
+                    System.currentTimeMillis(),
+                    DateUtils.MINUTE_IN_MILLIS,
+                    DateUtils.FORMAT_ABBREV_RELATIVE,
+                ).toString(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+    )
+}
+
 /** Writes back the mode this app last set, at the scope it set it. */
 private fun AppOpChangeDrift.restoreTarget() = BatchOperationTarget(
     packageName = app.packageName,
@@ -255,3 +316,4 @@ private fun AppOpChangeDrift.restoreTarget() = BatchOperationTarget(
 )
 
 private const val MAX_GUARD_EVENTS = 20
+private const val MAX_NEW_APP_RESULTS = 10

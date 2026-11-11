@@ -9,7 +9,12 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dev.izumi.appopsnext.newapps.model.InstalledPackageFingerprint
 import dev.izumi.appopsnext.newapps.model.NewAppReconcileResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 
 private val Context.newAppPolicyDataStore: DataStore<Preferences> by
     preferencesDataStore(name = "new_app_policy")
@@ -18,6 +23,16 @@ class NewAppPolicyStateRepository(
     context: Context,
 ) {
     private val dataStore = context.newAppPolicyDataStore
+
+    /** The rule outcomes kept for recent installations, the latest installation first. */
+    val results: Flow<List<NewAppResult>> = dataStore.data
+        .map { preferences ->
+            NewAppResult.group(
+                preferences[Keys.RULE_PROGRESS].orEmpty().mapNotNull(NewAppRuleProgressCodec::decode),
+            )
+        }
+        .distinctUntilChanged()
+        .flowOn(Dispatchers.Default)
 
     suspend fun reconcile(
         installed: List<InstalledPackageFingerprint>,
