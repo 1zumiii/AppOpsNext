@@ -4,7 +4,6 @@ import dev.izumi.appopsnext.presentation.components.topFadingEdge
 import dev.izumi.appopsnext.appops.changes.AppOpChangeRecord
 import dev.izumi.appopsnext.appops.changes.AppOpChangeRecords
 import dev.izumi.appopsnext.appops.changes.AppOpChangeStatus
-import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.appops.parser.OpStates
 import dev.izumi.appopsnext.apps.AppSortOrder
 import dev.izumi.appopsnext.presentation.components.AppSortMenu
@@ -364,10 +363,4 @@ private fun OpStates.changeStatus(
         records, userId, app.packageName, app.firstInstallTimeMillis,
     ),
     operationName = operation,
-) { scope ->
-    val raw = when (scope) {
-        AppOpScope.UID -> uidModes[app.uid]
-        AppOpScope.PACKAGE -> packageModes[app.uid to app.packageName]
-    }
-    if (raw == null) AppOpMode.DEFAULT else AppOpMode.fromShellValue(raw)
-}
+) { scope -> modeAt(app.uid, app.packageName, scope) }

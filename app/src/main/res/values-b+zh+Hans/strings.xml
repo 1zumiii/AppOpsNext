@@ -153,6 +153,15 @@
     <string name="app_op_change_elsewhere_unknown">AppOpsNext 曾设为“%1$s”，当前模式无法识别。</string>
     <string name="app_op_change_restore">恢复</string>
     <string name="app_op_change_keep">保留当前值</string>
+    <string name="notifications_title">通知</string>
+    <string name="notifications_empty">没有需要处理的通知。</string>
+    <string name="notifications_changed_section">被改动的设置</string>
+    <string name="notifications_changed_summary">这些设置由 AppOpsNext 修改过，之后在别处被改动。</string>
+    <string name="notifications_restore_all">全部恢复</string>
+    <string name="notifications_restore_title">恢复被改动的设置</string>
+    <string name="notifications_current_mode">当前为“%1$s”</string>
+    <string name="notifications_operation_in_user">%1$s · 用户 %2$d</string>
+    <string name="notifications_guard_section">守护记录</string>
     <string name="app_op_mode_foreground">仅前台</string>
     <string name="app_op_mode_ask">询问</string>
     <string name="action_apply">应用修改</string>

@@ -10,6 +10,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.izumi.appopsnext.AppOpsNextApplication
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -25,6 +28,7 @@ import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.batch.model.BatchOperationTarget
 import dev.izumi.appopsnext.presentation.app_detail.ModeChangeDialog
+import dev.izumi.appopsnext.presentation.notifications.NotificationsScreen
 import dev.izumi.appopsnext.presentation.permissions.PermissionBrowserState
 import dev.izumi.appopsnext.presentation.permissions.PermissionDetailScreen
 import dev.izumi.appopsnext.presentation.permissions.PermissionInfoDialog
@@ -93,6 +97,7 @@ fun AppOpsRootScreen(
     onPermissionFlagNoticeDismissedForBrowser: (Boolean) -> Unit,
     onPermissionForegroundRequested: () -> Unit,
     onOperationBatchRequested: (String, List<BatchOperationTarget>) -> Unit,
+    onSettingsBatchRequested: (String, List<BatchOperationTarget>) -> Unit,
     onShizukuAction: () -> Unit,
     onPrivilegedServiceRetry: () -> Unit,
     onClearDiagnosticLog: () -> Unit,
@@ -200,6 +205,9 @@ fun AppOpsRootScreen(
         mutableStateOf<String?>(null)
     }
     var showSavedHistory by rememberSaveable { mutableStateOf(false) }
+    var showNotifications by rememberSaveable { mutableStateOf(false) }
+    val changeDrifts by (LocalContext.current.applicationContext as AppOpsNextApplication)
+        .appOpChangeDriftMonitor.drifts.collectAsStateWithLifecycle()
     var experimentalRoute by rememberSaveable {
         mutableStateOf<String?>(null)
     }
@@ -293,6 +301,9 @@ fun AppOpsRootScreen(
         experimentalRoute = null
     }
 
+    BackHandler(enabled = selectedApp == null && showNotifications) {
+        showNotifications = false
+    }
     BackHandler(enabled = selectedApp != null) {
         navigateBackFromDetail()
     }
@@ -522,6 +533,18 @@ fun AppOpsRootScreen(
                 onPermissionBatchRequested = onPermissionBatchRequested,
             )
         }
+    } else if (showNotifications) {
+        MainPageTypography {
+            NotificationsScreen(
+                busy = batchOperationUiState !is BatchOperationUiState.Idle,
+                onBack = { showNotifications = false },
+                onAppSelected = { app ->
+                    selectedApp = app
+                    onAppSelected(app)
+                },
+                onRestoreRequested = onSettingsBatchRequested,
+            )
+        }
     } else {
         val destinationContent: @Composable () -> Unit = {
             when (selectedDestination) {
@@ -554,6 +577,12 @@ fun AppOpsRootScreen(
                     },
                     templates = templatesUiState.templates,
                     onTemplateApplyRequested = onTemplateApplyRequested,
+                    notificationCount = changeDrifts.size,
+                    onOpenNotifications = {
+                        focusManager.clearFocus()
+                        keyboardController?.hide()
+                        showNotifications = true
+                    },
                     bottomBar = navigationBar,
                 )
 

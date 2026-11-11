@@ -7,6 +7,7 @@ import dev.izumi.appopsnext.appops.AppOpsReadCapabilities
 import dev.izumi.appopsnext.appops.AppOpsReadProbe
 import dev.izumi.appopsnext.appops.AppOpsRepository
 import dev.izumi.appopsnext.appops.UserUids
+import dev.izumi.appopsnext.appops.changes.AppOpChangeDriftMonitor
 import dev.izumi.appopsnext.appops.changes.AppOpChangeLog
 import dev.izumi.appopsnext.appops.StructuredAppOpsReads
 import dev.izumi.appopsnext.appops.model.PackageOpsLoadResult
@@ -37,7 +38,9 @@ import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class AppOpsNextApplication : Application() {
@@ -135,6 +138,24 @@ class AppOpsNextApplication : Application() {
 
     val appOpChangeLog: AppOpChangeLog by lazy {
         AppOpChangeLog(this, currentUserId = UserUids.userIdOf(Process.myUid()))
+    }
+
+    val appOpChangeDriftMonitor: AppOpChangeDriftMonitor by lazy {
+        AppOpChangeDriftMonitor(
+            records = appOpChangeLog.records,
+            connected = privilegedServiceClient.state
+                .map { it is PrivilegedServiceState.Connected }
+                .distinctUntilChanged(),
+            loadApps = { userId ->
+                if (userId == userAppsRepository.currentUserId) {
+                    installedAppsRepository.loadInstalledApps()
+                } else {
+                    userAppsRepository.loadApps(userId)
+                }
+            },
+            loadOpStates = appOpsRepository::loadOpStates,
+            scope = applicationScope,
+        )
     }
 
     val guardRepository: GuardRepository by lazy { GuardRepository(this) }

@@ -27,6 +27,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -92,6 +94,9 @@ fun AppListScreen(
     onPermissionInfo: () -> Unit,
     permissionContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
+    /** Items waiting in the notifications page, shown on the bell. */
+    notificationCount: Int = 0,
+    onOpenNotifications: () -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
 ) {
     var batchSelectionMode by rememberSaveable { mutableStateOf(false) }
@@ -145,6 +150,20 @@ fun AppListScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onOpenNotifications) {
+                        BadgedBox(
+                            badge = {
+                                if (notificationCount > 0) {
+                                    Badge { Text(notificationCount.coerceAtMost(99).toString()) }
+                                }
+                            },
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_ph_bell),
+                                contentDescription = stringResource(R.string.notifications_title),
+                            )
+                        }
+                    }
                     if (!permissionTab) {
                         AppSortMenu(selected = uiState.sortOrder, onSelected = onSortOrderChange)
                     }

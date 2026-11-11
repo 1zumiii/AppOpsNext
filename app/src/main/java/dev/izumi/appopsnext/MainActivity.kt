@@ -101,6 +101,7 @@ class MainActivity : ComponentActivity() {
                     onPermissionFlagNoticeDismissedForBrowser = permissionBrowserViewModel::dismissFlagNotice,
                     onPermissionForegroundRequested = permissionBrowserViewModel::requestForeground,
                     onOperationBatchRequested = batchOperationsViewModel::requestOperationBatch,
+                    onSettingsBatchRequested = batchOperationsViewModel::requestSettingsBatch,
                     experimentalUiState = experimentalUiState.value,
                     // Read only where the log is shown: it changes every couple of seconds
                     // while the monitor is busy, which must not recompose every other page.
@@ -294,6 +295,7 @@ class MainActivity : ComponentActivity() {
             newAppPolicyCoordinator.onAppForeground()
             guardController.onAppForeground()
             historyArchiveRecorder.onAppForeground()
+            appOpChangeDriftMonitor.refresh()
         }
         appListViewModel.refreshAfterResume()
         appDetailViewModel.refreshIfReady()
