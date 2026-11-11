@@ -321,7 +321,7 @@
     <string name="template_new_app_options_off">未开启</string>
     <string name="template_new_app_option_auto">自动套用</string>
     <string name="template_new_app_option_restore">重装恢复</string>
-    <string name="template_new_app_option_instant">安装后立即</string>
+    <string name="template_new_app_option_instant">后台监听</string>
     <string name="template_new_app_restore">重装后恢复之前的设置</string>
     <string name="template_new_app_restore_summary">重装的应用恢复卸载前的设置，不套用此模板。设置在卸载后保留 30 天。</string>
     <string name="template_new_app_policy_information">自动套用说明</string>
