@@ -326,7 +326,7 @@
     <string name="template_new_app_options_off">Off</string>
     <string name="template_new_app_option_auto">Automatic</string>
     <string name="template_new_app_option_restore">Restore on reinstall</string>
-    <string name="template_new_app_option_instant">Right after install</string>
+    <string name="template_new_app_option_instant">Background watcher</string>
     <string name="template_new_app_restore">Restore settings after reinstall</string>
     <string name="template_new_app_restore_summary">An app installed again gets the settings it had before, not this template. They are kept for 30 days after it is removed.</string>
     <string name="template_new_app_policy_information">About automatic application</string>
