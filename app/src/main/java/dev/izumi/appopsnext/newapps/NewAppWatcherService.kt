@@ -5,8 +5,10 @@ import android.content.pm.PackageInstaller
 import android.os.Handler
 import android.os.HandlerThread
 import android.system.Os
+import android.system.OsConstants
 import android.util.Log
 import androidx.annotation.Keep
+import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.system.exitProcess
 
@@ -46,7 +48,12 @@ class NewAppWatcherService : INewAppWatcher.Stub {
     override fun watch(userId: Int): Int {
         val installer = context?.packageManager?.packageInstaller
             ?: throw IllegalStateException("Shizuku did not pass a context")
-        if (watchedUserId == null) installer.registerSessionCallback(callback, handler)
+        if (watchedUserId == null) {
+            // Only the watcher the app is connected to gets here, so it is the
+            // current one and any other is left over.
+            endStaleWatchers()
+            installer.registerSessionCallback(callback, handler)
+        }
         watchedUserId = userId
         return Os.getpid()
     }
@@ -54,6 +61,22 @@ class NewAppWatcherService : INewAppWatcher.Stub {
     override fun destroy() {
         runCatching { context?.packageManager?.packageInstaller?.unregisterSessionCallback(callback) }
         exitProcess(0)
+    }
+
+    private fun endStaleWatchers() {
+        val packageName = context?.packageName ?: return
+        runCatching {
+            val ownUid = Os.getuid()
+            StaleWatcherProcesses.find(
+                procDir = File("/proc"),
+                processName = "$packageName:$PROCESS_SUFFIX",
+                ownPid = Os.getpid(),
+                ownedBy = { Os.stat(it.path).st_uid == ownUid },
+            ).forEach { pid ->
+                Log.i(TAG, "Ending a stale watcher. pid=$pid")
+                runCatching { Os.kill(pid, OsConstants.SIGKILL) }
+            }
+        }.onFailure { Log.w(TAG, "Unable to look for stale watchers", it) }
     }
 
     private fun wakeApp(userId: Int) {
@@ -72,9 +95,11 @@ class NewAppWatcherService : INewAppWatcher.Stub {
         }.onFailure { Log.w(TAG, "Unable to wake the app", it) }
     }
 
-    private companion object {
-        const val TAG = "NewAppWatcher"
-        const val FLAG_INCLUDE_STOPPED_PACKAGES = 0x20
-        const val BROADCAST_TIMEOUT_SECONDS = 10L
+    companion object {
+        /** Follows the package name in the name of the watcher's process. */
+        const val PROCESS_SUFFIX = "watcher"
+        private const val TAG = "NewAppWatcher"
+        private const val FLAG_INCLUDE_STOPPED_PACKAGES = 0x20
+        private const val BROADCAST_TIMEOUT_SECONDS = 10L
     }
 }
