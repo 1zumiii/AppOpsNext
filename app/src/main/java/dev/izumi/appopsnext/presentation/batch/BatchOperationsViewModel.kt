@@ -14,6 +14,7 @@ import dev.izumi.appopsnext.appops.model.AppOpNames
 import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.batch.BatchAppOpsExecutor
+import dev.izumi.appopsnext.batch.BatchRetry
 import dev.izumi.appopsnext.batch.model.BatchOperationReport
 import dev.izumi.appopsnext.batch.model.BatchOperationTarget
 import dev.izumi.appopsnext.guard.GuardMode
@@ -221,7 +222,43 @@ class BatchOperationsViewModel(
                 },
             )
             recordGuardChanges(report, guard)
-            mutableUiState.value = BatchOperationUiState.Finished(report)
+            guardRetried = guard
+            mutableUiState.value = BatchOperationUiState.Finished(report, retryable = true)
+        }
+    }
+
+    /** The guard choice of the batch on screen, which a retry of its failures keeps. */
+    private var guardRetried = false
+
+    /** Runs the failed changes of the finished batch again and folds the outcomes into its report. */
+    fun retryFailures() {
+        val finished = mutableUiState.value as? BatchOperationUiState.Finished ?: return
+        if (!finished.retryable) return
+        val failed = BatchRetry.failedTargets(finished.report)
+        if (failed.isEmpty()) return
+        val request = BatchOperationRequest(
+            title = finished.report.title,
+            targetCount = failed.distinctBy { it.userId to it.packageName }.size,
+            operationCount = failed.size,
+            targets = failed,
+        )
+        mutableUiState.value = BatchOperationUiState.Running(request = request, completed = 0)
+        viewModelScope.launch {
+            val retried = executor.execute(
+                title = request.title,
+                targets = failed,
+                onProgress = { completed, _ ->
+                    mutableUiState.value = BatchOperationUiState.Running(
+                        request = request,
+                        completed = completed,
+                    )
+                },
+            )
+            recordGuardChanges(retried, guardRetried)
+            mutableUiState.value = BatchOperationUiState.Finished(
+                report = BatchRetry.merge(finished.report, retried),
+                retryable = true,
+            )
         }
     }
 

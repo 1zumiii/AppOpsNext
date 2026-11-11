@@ -508,6 +508,12 @@
     <string name="watchers_title">权限变更监听者</string>
     <string name="watchers_information">监听注册说明</string>
     <string name="watchers_summary">查看已注册权限模式变更监听的进程。</string>
+    <string name="background_stop_title">停止后台任务</string>
+    <string name="background_install_watcher">安装监听进程</string>
+    <string name="background_stop_summary">运行中：%1$s</string>
+    <string name="background_stop_summary_none">当前没有后台任务</string>
+    <string name="background_stop_confirm">将关闭访问监测，并结束 Shizuku 中的安装监听进程，“安装后立即套用”随之关闭。监测记录会保留。</string>
+    <string name="background_stop_action">停止</string>
     <string name="watchers_explainer">快照显示权限模式变更的监听注册。监听注册不表示权限访问，也不能证明进程收到了回调。\n\n按操作和按包名注册的范围分别生效。UID 不受限不代表监听所有权限，Android 仍可能过滤回调。\n\n点击进程可查看注册详情。</string>
     <string name="watchers_unavailable">无法读取监听表。请检查特权连接，此设备也可能使用了不支持的格式。</string>
     <string name="watchers_incomplete">部分注册无法解析，列表可能不完整。</string>
@@ -645,6 +651,7 @@
     <string name="batch_show_targets">展开修改清单</string>
     <string name="batch_hide_targets">收起修改清单</string>
     <string name="batch_failures_only">仅失败</string>
+    <string name="batch_retry_failures">重试失败项</string>
     <string name="batch_no_failures">没有失败项</string>
     <string name="batch_failure_details">详情</string>
     <string name="batch_failure_read">无法读取当前模式。</string>

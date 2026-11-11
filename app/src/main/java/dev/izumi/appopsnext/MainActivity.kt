@@ -114,6 +114,8 @@ class MainActivity : ComponentActivity() {
                     openGuardRequest = openGuardRequests.intValue,
                     onMonitorEnabledChange =
                         experimentalViewModel::setMonitorEnabled,
+                    onStopBackgroundWork =
+                        experimentalViewModel::stopBackgroundWork,
                     onEnableUnconfirmedMonitor =
                         experimentalViewModel::enableUnconfirmedMonitor,
                     onMonitorHeadsUpChange =
@@ -209,6 +211,8 @@ class MainActivity : ComponentActivity() {
                         batchOperationsViewModel::requestPermissionBatch,
                     onBatchOperationConfirm =
                         batchOperationsViewModel::confirm,
+                    onBatchOperationRetryFailures =
+                        batchOperationsViewModel::retryFailures,
                     onBatchOperationDismiss = {
                         // Cancelling a confirmation changed nothing, so only
                         // closing a finished report needs a reload.
