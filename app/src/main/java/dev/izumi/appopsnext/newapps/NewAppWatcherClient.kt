@@ -108,6 +108,13 @@ class NewAppWatcherClient(
         if (value) bindIfWanted() else stop()
     }
 
+    /**
+     * Binds a watcher that is wanted but could not be bound when it was asked
+     * for, because Shizuku had not granted its permission yet. Nothing else
+     * reports the grant, so the caller tries again once the backend is up.
+     */
+    fun bindIfMissing() = bindIfWanted()
+
     @Synchronized
     private fun bindIfWanted() {
         if (!wanted || bound || !shizukuReady()) return

@@ -175,6 +175,7 @@ class NewAppPolicyCoordinator(
             privilegedServiceClient.state
                 .filterIsInstance<PrivilegedServiceState.Connected>()
                 .collect {
+                    watcher.bindIfMissing()
                     runSafely("backend_connected") {
                         processPendingIfEnabled()
                     }
