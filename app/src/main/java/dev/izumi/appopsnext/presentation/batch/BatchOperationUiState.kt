@@ -28,5 +28,7 @@ sealed interface BatchOperationUiState {
 
     data class Finished(
         val report: BatchOperationReport,
+        /** Whether this view model ran the batch, so it can run the failed changes again. */
+        val retryable: Boolean = false,
     ) : BatchOperationUiState
 }

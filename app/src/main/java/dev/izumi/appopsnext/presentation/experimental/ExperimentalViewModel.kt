@@ -39,7 +39,11 @@ data class ExperimentalUiState(
     /** Offer every operation the watch can report, not the shortlist. */
     val showAllOperations: Boolean = false,
     val allOperationsWarningSuppressed: Boolean = false,
+    /** Whether the install watcher process is kept running in Shizuku. */
+    val installWatcherEnabled: Boolean = false,
 ) {
+    val backgroundWorkRunning: Boolean get() = monitorEnabled || installWatcherEnabled
+
     val showBatteryNotice: Boolean
         get() = monitorEnabled && !batteryExempt && !batteryNoticeSuppressed
 
@@ -134,6 +138,7 @@ class ExperimentalViewModel(
             batteryNoticeSuppressed = settings.suppressBatteryNotice,
             showAllOperations = settings.showAllMonitorOperations,
             allOperationsWarningSuppressed = settings.suppressAllOperationsWarning,
+            installWatcherEnabled = settings.autoApplyNewAppTemplate && settings.instantNewAppRules,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -147,6 +152,17 @@ class ExperimentalViewModel(
         if (selfCheckResult.value == MonitorSelfCheckResult.Unconfirmed) {
             changeMonitorEnabled(true, allowUnconfirmed = true)
         }
+    }
+
+    /**
+     * Turns off everything this app keeps running: the access monitor and the
+     * install watcher, whose setting the new-app rules follow to end its process.
+     */
+    fun stopBackgroundWork() {
+        viewModelScope.launch {
+            withContext(NonCancellable) { settingsRepository.setInstantNewAppRules(false) }
+        }
+        if (uiState.value.monitorEnabled) setMonitorEnabled(false)
     }
 
     /** Store the setting only after confirmation, or an explicit unconfirmed opt-in. */

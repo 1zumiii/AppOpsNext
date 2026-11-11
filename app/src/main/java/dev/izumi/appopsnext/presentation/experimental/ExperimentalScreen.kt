@@ -21,6 +21,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import dev.izumi.appopsnext.presentation.components.CompactSwitch
@@ -62,6 +63,7 @@ fun ExperimentalScreen(
     onMonitorChange: (Boolean) -> Unit,
     onEnableUnconfirmedMonitor: () -> Unit,
     onOpenWatchers: () -> Unit,
+    onStopBackgroundWork: () -> Unit,
     onOpenGuard: () -> Unit,
     onOpenSettings: () -> Unit,
     logCount: Int,
@@ -74,6 +76,7 @@ fun ExperimentalScreen(
     val context = LocalContext.current
     var notificationsEnabled by remember { mutableStateOf(true) }
     var showAbout by rememberSaveable { mutableStateOf(false) }
+    var confirmingStop by rememberSaveable { mutableStateOf(false) }
     // The exemption is granted in system settings, so it is re-read on every
     // return to this screen rather than once when it is first shown.
     LifecycleResumeEffect(Unit) {
@@ -207,9 +210,36 @@ fun ExperimentalScreen(
                         supportingContent = { Text(stringResource(R.string.watchers_summary)) },
                         trailingContent = { MainPageChevron() },
                     )
+                    val canStop = uiState.backgroundWorkRunning && !uiState.monitorBusy
+                    ExperimentalGroupRow(
+                        modifier = Modifier.clickable(enabled = canStop) { confirmingStop = true },
+                        leadingContent = { ExperimentalRowIcon(R.drawable.ic_ph_x) },
+                        headlineContent = { Text(stringResource(R.string.background_stop_title)) },
+                        supportingContent = { Text(backgroundWorkSummary(uiState)) },
+                    )
                 }
             }
         }
+    }
+    if (confirmingStop) {
+        AppBottomSheet(
+            onDismissRequest = { confirmingStop = false },
+            title = { Text(stringResource(R.string.background_stop_title)) },
+            text = { Text(stringResource(R.string.background_stop_confirm)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        confirmingStop = false
+                        onStopBackgroundWork()
+                    },
+                ) { Text(stringResource(R.string.background_stop_action)) }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { confirmingStop = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
     }
     if (showAbout) {
         AppBottomSheet(
@@ -319,6 +349,22 @@ private fun MonitorFeature(
                 },
             )
         }
+    }
+}
+
+@Composable
+private fun backgroundWorkSummary(uiState: ExperimentalUiState): String {
+    val running = buildList {
+        if (uiState.monitorEnabled) add(stringResource(R.string.monitor_title))
+        if (uiState.installWatcherEnabled) add(stringResource(R.string.background_install_watcher))
+    }
+    return if (running.isEmpty()) {
+        stringResource(R.string.background_stop_summary_none)
+    } else {
+        stringResource(
+            R.string.background_stop_summary,
+            running.joinToString(stringResource(R.string.list_separator)),
+        )
     }
 }
 

@@ -513,6 +513,12 @@
     <string name="watchers_title">Permission change listeners</string>
     <string name="watchers_information">About watcher registrations</string>
     <string name="watchers_summary">View processes registered for permission mode changes.</string>
+    <string name="background_stop_title">Stop background work</string>
+    <string name="background_install_watcher">Install watcher</string>
+    <string name="background_stop_summary">Running: %1$s</string>
+    <string name="background_stop_summary_none">Nothing is running in the background</string>
+    <string name="background_stop_confirm">Access monitoring is turned off and the install watcher process in Shizuku is ended. \"Apply right after install\" is turned off with it. Monitor records are kept.</string>
+    <string name="background_stop_action">Stop</string>
     <string name="watchers_explainer">This snapshot shows registrations for permission mode changes. It does not show access history or confirm that a process received a callback.\n\nOperation and package registrations apply independently. An unrestricted UID does not mean that every permission is watched. Android may further filter callbacks.\n\nTap a process to view its registrations.</string>
     <string name="watchers_unavailable">Unable to read the registry. Check the privileged connection. This device may also use an unsupported format.</string>
     <string name="watchers_incomplete">Some registrations could not be parsed. This list may be incomplete.</string>
@@ -652,6 +658,7 @@
     <string name="batch_show_targets">Show changes</string>
     <string name="batch_hide_targets">Hide changes</string>
     <string name="batch_failures_only">Failures only</string>
+    <string name="batch_retry_failures">Retry failed</string>
     <string name="batch_no_failures">No failed changes</string>
     <string name="batch_failure_details">Details</string>
     <string name="batch_failure_read">Could not read the current mode.</string>

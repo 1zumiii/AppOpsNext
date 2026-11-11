@@ -45,6 +45,7 @@ fun BatchOperationDialog(
     state: BatchOperationUiState,
     onConfirm: (guard: Boolean) -> Unit,
     onDismiss: () -> Unit,
+    onRetryFailures: () -> Unit,
 ) {
     var guard by rememberSaveable((state as? BatchOperationUiState.Confirming)?.request) { mutableStateOf(false) }
     when (state) {
@@ -236,6 +237,15 @@ fun BatchOperationDialog(
                 Button(onClick = onDismiss) {
                     Text(text = stringResource(R.string.action_dismiss))
                 }
+            },
+            dismissButton = if (state.retryable && state.report.failureCount > 0) {
+                {
+                    TextButton(onClick = onRetryFailures) {
+                        Text(text = stringResource(R.string.batch_retry_failures))
+                    }
+                }
+            } else {
+                null
             },
         )
     }

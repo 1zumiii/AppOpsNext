@@ -142,6 +142,7 @@ fun AppOpsRootScreen(
     guardViewModel: GuardViewModel,
     openGuardRequest: Int,
     onMonitorEnabledChange: (Boolean) -> Unit,
+    onStopBackgroundWork: () -> Unit,
     onEnableUnconfirmedMonitor: () -> Unit,
     onMonitorHeadsUpChange: (Boolean) -> Unit,
     onCheckForUpdate: () -> Unit,
@@ -175,6 +176,7 @@ fun AppOpsRootScreen(
     ) -> Unit,
     onBatchOperationConfirm: (guard: Boolean) -> Unit,
     onBatchOperationDismiss: () -> Unit,
+    onBatchOperationRetryFailures: () -> Unit,
 ) {
     val destinationStates = rememberSaveableStateHolder()
     var selectedDestination by rememberSaveable {
@@ -468,6 +470,7 @@ fun AppOpsRootScreen(
                     onMonitorChange = onMonitorEnabledChange,
                     onEnableUnconfirmedMonitor = onEnableUnconfirmedMonitor,
                     onOpenWatchers = { experimentalRoute = ROUTE_WATCHERS },
+                    onStopBackgroundWork = onStopBackgroundWork,
                     onOpenGuard = { experimentalRoute = ROUTE_GUARD },
                     onOpenSettings = { experimentalRoute = ROUTE_MONITOR_SETTINGS },
                     logCount = monitorLogEntries().size,
@@ -731,6 +734,7 @@ fun AppOpsRootScreen(
         state = batchOperationUiState,
         onConfirm = onBatchOperationConfirm,
         onDismiss = onBatchOperationDismiss,
+        onRetryFailures = onBatchOperationRetryFailures,
     )
 }
 
