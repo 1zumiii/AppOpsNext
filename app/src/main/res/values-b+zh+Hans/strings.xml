@@ -317,6 +317,13 @@
     <string name="template_preview_count_only">+%1$d</string>
     <string name="template_new_app_instant">安装后立即套用</string>
     <string name="template_new_app_instant_summary">由 Shizuku 中常驻的后台进程监听应用安装</string>
+    <string name="template_new_app_options">套用方式</string>
+    <string name="template_new_app_options_off">未开启</string>
+    <string name="template_new_app_option_auto">自动套用</string>
+    <string name="template_new_app_option_restore">重装恢复</string>
+    <string name="template_new_app_option_instant">安装后立即</string>
+    <string name="template_new_app_restore">重装后恢复之前的设置</string>
+    <string name="template_new_app_restore_summary">重装的应用恢复卸载前的设置，不套用此模板。设置在卸载后保留 30 天。</string>
     <string name="template_new_app_policy_information">自动套用说明</string>
     <string name="new_app_policy_notification_channel">新装应用规则</string>
     <string name="new_app_policy_notification_title">已处理新装应用：%1$s</string>

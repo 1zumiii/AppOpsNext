@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -69,9 +70,15 @@ class AppOpChangeLog(
     }
 
     /** See [AppOpChangeRecords.prune]. */
-    suspend fun prune(userId: Int?, installed: Map<String, Long?>) {
-        update { AppOpChangeRecords.prune(it, userId ?: currentUserId, installed) }
+    suspend fun prune(userId: Int?, installed: Map<String, Long?>, keepRemovedMillis: Long? = null) {
+        update {
+            AppOpChangeRecords.prune(it, userId ?: currentUserId, installed, keepRemovedMillis, clock())
+        }
     }
+
+    /** See [AppOpChangeRecords.restorable], for the user this app runs in. */
+    suspend fun restorable(packageName: String, firstInstallTimeMillis: Long): List<AppOpChangeRecord> =
+        AppOpChangeRecords.restorable(records.first(), currentUserId, packageName, firstInstallTimeMillis)
 
     /** Runs after the changes queued before it, and waits for its write. */
     private suspend fun update(transform: (List<AppOpChangeRecord>) -> List<AppOpChangeRecord>) {
@@ -110,7 +117,7 @@ class AppOpChangeLog(
                     userId = edit.change.userId ?: currentUserId,
                     nowMillis = edit.timeMillis,
                 )
-                is Edit.Update -> edit.transform(records).takeIf { it.size != records.size } ?: records
+                is Edit.Update -> edit.transform(records).takeIf { it != records } ?: records
             }
             if (updated !== records) changed = true
             records = updated

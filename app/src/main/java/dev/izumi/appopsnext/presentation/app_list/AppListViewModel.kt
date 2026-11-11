@@ -16,6 +16,7 @@ import dev.izumi.appopsnext.AppOpsNextApplication
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.CancellationException
@@ -218,12 +219,19 @@ class AppListViewModel(
 
     /**
      * Drops the change records of packages that are gone or were installed
-     * again. An empty list is more likely a failed read than an empty user.
+     * again, at once or once they are too old to restore. An empty list is
+     * more likely a failed read than an empty user.
      */
     private suspend fun pruneChanges(userId: Int?, apps: List<InstalledApp>) {
         if (apps.isEmpty()) return
         runCatching {
-            changeLog.prune(userId, apps.associate { it.packageName to it.firstInstallTimeMillis })
+            changeLog.prune(
+                userId = userId,
+                installed = apps.associate { it.packageName to it.firstInstallTimeMillis },
+                // Kept only while they can be used, so nothing lingers with the setting off.
+                keepRemovedMillis = AppOpChangeRecords.KEEP_REMOVED_MILLIS
+                    .takeIf { settingsRepository.settings.first().restoreOnReinstall },
+            )
         }.onFailure { if (it is CancellationException) throw it }
     }
 

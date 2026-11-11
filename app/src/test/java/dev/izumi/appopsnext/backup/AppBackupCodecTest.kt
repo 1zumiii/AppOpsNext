@@ -33,6 +33,7 @@ class AppBackupCodecTest {
         settings = UserSettingsBackup(
             hideSystemApps = false,
             autoApplyNewAppTemplate = true,
+            restoreOnReinstall = true,
             savedHistoryOperations = setOf("android:camera", "android:coarse_location"),
             appSortOrder = AppSortOrder.INSTALL_TIME,
         ),

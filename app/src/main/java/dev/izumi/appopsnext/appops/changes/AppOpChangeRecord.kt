@@ -30,6 +30,11 @@ data class AppOpChangeRecord(
     val originalMode: AppOpMode,
     val recordedMode: AppOpMode,
     val timeMillis: Long,
+    /**
+     * When the package was first found gone, or installed again since the
+     * change. Null while the record applies to the installed package.
+     */
+    val removedAtMillis: Long? = null,
 ) {
     val key: Key get() = Key(userId, packageName, stableOperationName, scope)
 
@@ -82,7 +87,9 @@ object AppOpChangeRecords {
         )
         val existing = records.firstOrNull { it.key == key }
         val others = records.filter { it.key != key }
-        val originalMode = existing?.originalMode ?: change.originalMode
+        // A record of an earlier installation says nothing about this one.
+        val originalMode = existing?.takeIf { it.removedAtMillis == null }?.originalMode
+            ?: change.originalMode
         if (change.appliedMode == originalMode) return others
         val updated = AppOpChangeRecord(
             userId = key.userId,
@@ -163,19 +170,64 @@ object AppOpChangeRecords {
         return AppOpChangeStatus.Modified(records.first())
     }
 
+    /** How long the settings of a removed package are kept for its next installation. */
+    const val KEEP_REMOVED_MILLIS = 30L * 24 * 60 * 60 * 1000
+
     /**
-     * Records of [userId] for packages no longer installed, or installed again
-     * after the change. [installed] maps each installed package to its install
-     * time, null where unknown.
+     * Drops the records of [userId] for packages no longer installed, or
+     * installed again after the change. [installed] maps each installed package
+     * to its install time, null where unknown.
+     *
+     * With [keepRemovedMillis] such a record is kept that long from the first
+     * time it was found here, so the settings can be restored when the package
+     * is installed again. Without it the record is dropped at once.
      */
     fun prune(
         records: List<AppOpChangeRecord>,
         userId: Int,
         installed: Map<String, Long?>,
-    ): List<AppOpChangeRecord> = records.filter { record ->
-        record.userId != userId ||
+        keepRemovedMillis: Long? = null,
+        nowMillis: Long = 0,
+    ): List<AppOpChangeRecord> = records.mapNotNull { record ->
+        val applies = record.userId != userId ||
             (record.packageName in installed && isCurrent(record, installed[record.packageName]))
+        when {
+            applies -> if (record.userId == userId && record.removedAtMillis != null) {
+                record.copy(removedAtMillis = null)
+            } else {
+                record
+            }
+            keepRemovedMillis == null -> null
+            record.removedAtMillis == null -> record.copy(removedAtMillis = nowMillis)
+            // A clock set back must not keep a record forever.
+            nowMillis - record.removedAtMillis in 0..keepRemovedMillis -> record
+            else -> null
+        }
     }
+
+    /**
+     * The settings to give a package installed at [firstInstallTimeMillis]
+     * again: the records of its earlier installation, one per operation. A
+     * record at package scope outweighs one at UID scope, since the UID is new.
+     */
+    fun restorable(
+        records: List<AppOpChangeRecord>,
+        userId: Int,
+        packageName: String,
+        firstInstallTimeMillis: Long,
+    ): List<AppOpChangeRecord> = records
+        .filter {
+            it.userId == userId && it.packageName == packageName &&
+                !isCurrent(it, firstInstallTimeMillis)
+        }
+        .groupBy(AppOpChangeRecord::stableOperationName)
+        .map { (_, sameOperation) ->
+            sameOperation.sortedWith(
+                compareBy<AppOpChangeRecord> { it.scope != AppOpScope.PACKAGE }
+                    .thenByDescending(AppOpChangeRecord::timeMillis),
+            ).first()
+        }
+        .sortedBy(AppOpChangeRecord::stableOperationName)
 }
 
 /**
@@ -183,15 +235,16 @@ object AppOpChangeRecords {
  * does not parse is dropped rather than failing the whole log.
  */
 internal object AppOpChangeCodec {
-    fun encode(record: AppOpChangeRecord): String = listOf(
+    fun encode(record: AppOpChangeRecord): String = listOfNotNull(
         V1, record.userId, record.packageName, record.stableOperationName,
         record.scope.name, record.originalMode.name, record.recordedMode.name,
-        record.timeMillis,
+        record.timeMillis, record.removedAtMillis,
     ).joinToString(SEPARATOR)
 
     fun decode(value: String): AppOpChangeRecord? {
         val fields = value.split(SEPARATOR)
-        if (fields.size != 8 || fields[0] != V1) return null
+        // The ninth field is only written for a record of a removed package.
+        if (fields.size !in 8..9 || fields[0] != V1) return null
         return AppOpChangeRecord(
             userId = fields[1].toIntOrNull()?.takeIf { it >= 0 } ?: return null,
             packageName = fields[2].takeIf(String::isNotBlank) ?: return null,
@@ -200,6 +253,7 @@ internal object AppOpChangeCodec {
             originalMode = enumOrNull<AppOpMode>(fields[5]) ?: return null,
             recordedMode = enumOrNull<AppOpMode>(fields[6]) ?: return null,
             timeMillis = fields[7].toLongOrNull() ?: return null,
+            removedAtMillis = fields.getOrNull(8)?.let { it.toLongOrNull() ?: return null },
         )
     }
 

@@ -74,6 +74,9 @@ class UserSettingsRepository(
                 instantNewAppRules =
                     preferences[Keys.INSTANT_NEW_APP_RULES]
                         ?: UserSettingsDefaults.INSTANT_NEW_APP_RULES,
+                restoreOnReinstall =
+                    preferences[Keys.RESTORE_ON_REINSTALL]
+                        ?: UserSettingsDefaults.RESTORE_ON_REINSTALL,
             )
         }
 
@@ -116,6 +119,12 @@ class UserSettingsRepository(
     suspend fun setInstantNewAppRules(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[Keys.INSTANT_NEW_APP_RULES] = enabled
+        }
+    }
+
+    suspend fun setRestoreOnReinstall(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[Keys.RESTORE_ON_REINSTALL] = enabled
         }
     }
 
@@ -183,6 +192,7 @@ class UserSettingsRepository(
             put(Keys.SUPPRESS_PERMISSION_FLAG_NOTICE, backup.suppressPermissionFlagNotice)
             put(Keys.AUTO_APPLY_NEW_APP_TEMPLATE, backup.autoApplyNewAppTemplate)
             put(Keys.INSTANT_NEW_APP_RULES, backup.instantNewAppRules)
+            put(Keys.RESTORE_ON_REINSTALL, backup.restoreOnReinstall)
             put(Keys.MONITOR_HEADS_UP, backup.monitorHeadsUp)
             put(Keys.SUPPRESS_BATTERY_NOTICE, backup.suppressBatteryNotice)
             put(Keys.SHOW_ALL_MONITOR_OPERATIONS, backup.showAllMonitorOperations)
@@ -208,6 +218,7 @@ class UserSettingsRepository(
         val AUTO_APPLY_NEW_APP_TEMPLATE =
             booleanPreferencesKey("auto_apply_new_app_template")
         val INSTANT_NEW_APP_RULES = booleanPreferencesKey("instant_new_app_rules")
+        val RESTORE_ON_REINSTALL = booleanPreferencesKey("restore_on_reinstall")
         val BACKGROUND_MONITOR = booleanPreferencesKey("background_monitor")
         val MONITOR_HEADS_UP = booleanPreferencesKey("monitor_heads_up")
         val SUPPRESS_BATTERY_NOTICE =

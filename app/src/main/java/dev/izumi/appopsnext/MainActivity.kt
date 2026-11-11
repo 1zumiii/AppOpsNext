@@ -205,6 +205,8 @@ class MainActivity : ComponentActivity() {
                         templatesViewModel::setAutoApplyNewAppTemplate,
                     onInstantNewAppRulesChange =
                         templatesViewModel::setInstantNewAppRules,
+                    onRestoreOnReinstallChange =
+                        templatesViewModel::setRestoreOnReinstall,
                     onTemplateApplyRequested =
                         batchOperationsViewModel::requestTemplateApplication,
                     onPermissionBatchRequested =
