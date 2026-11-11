@@ -183,6 +183,22 @@ class BatchOperationsViewModel(
         )
     }
 
+    /**
+     * Unlike [requestOperationBatch], the targets may name several operations
+     * of one app, so none is folded into another.
+     */
+    fun requestSettingsBatch(title: String, targets: List<BatchOperationTarget>) {
+        if (targets.isEmpty() || mutableUiState.value !is BatchOperationUiState.Idle) return
+        mutableUiState.value = BatchOperationUiState.Confirming(
+            BatchOperationRequest(
+                title = title,
+                targetCount = targets.distinctBy { it.userId to it.packageName }.size,
+                operationCount = targets.size,
+                targets = targets,
+            ),
+        )
+    }
+
     /** With [guard] every setting the batch wrote is guarded at its new mode. */
     fun confirm(guard: Boolean = false) {
         val request =

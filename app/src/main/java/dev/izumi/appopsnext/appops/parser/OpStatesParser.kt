@@ -21,6 +21,18 @@ data class OpStates(
                 AppOpScope.PACKAGE,
             )
 
+    /**
+     * The mode stored at [scope], [AppOpMode.DEFAULT] where none is stored and
+     * null where the stored mode has no known name.
+     */
+    fun modeAt(uid: Int, packageName: String, scope: AppOpScope): AppOpMode? {
+        val raw = when (scope) {
+            AppOpScope.UID -> uidModes[uid]
+            AppOpScope.PACKAGE -> packageModes[uid to packageName]
+        }
+        return if (raw == null) AppOpMode.DEFAULT else AppOpMode.fromShellValue(raw)
+    }
+
     private fun effective(rawMode: String, scope: AppOpScope) = EffectiveOpState(
         mode = AppOpMode.fromShellValue(rawMode),
         scope = scope,

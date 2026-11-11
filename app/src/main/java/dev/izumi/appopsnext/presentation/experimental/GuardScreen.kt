@@ -278,7 +278,7 @@ fun GuardScreen(
 }
 
 @Composable
-private fun GuardEventRow(event: GuardEvent, notifier: GuardNotifier) {
+internal fun GuardEventRow(event: GuardEvent, notifier: GuardNotifier) {
     val title = remember(event.packageName, event.stableOperationName) {
         "${notifier.appLabel(event.packageName)} · ${notifier.operationLabel(event.stableOperationName)}"
     }
