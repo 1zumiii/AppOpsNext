@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -46,9 +47,14 @@ fun DiagnosticLogModule(
     uiState: DiagnosticsUiState,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
+    onReportOpened: () -> Unit = {},
     compact: Boolean = false,
 ) {
     var showReport by rememberSaveable { mutableStateOf(false) }
+    // The process list says what runs now, so it is read again for each look.
+    LaunchedEffect(showReport) {
+        if (showReport) onReportOpened()
+    }
     ListItem(
         modifier = modifier.clickable { showReport = true },
         leadingContent = {

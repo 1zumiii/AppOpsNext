@@ -45,6 +45,8 @@ var rejectedResult = commandResult{exitCode: rejectedExitCode}
 
 type appOpsCommand struct {
 	arguments []string
+	// run answers a request inside the daemon instead of starting a program.
+	run func() commandResult
 }
 
 type commandResult struct {
@@ -255,6 +257,16 @@ func parseCommand(request string) (appOpsCommand, error) {
 		}
 		return command("/system/bin/pm", "list", "users"), nil
 
+	case "GET_PROCESSES":
+		// Read from procfs here, so only the processes the app may see leave the daemon.
+		if len(fields) != 2 || !validPackageName(fields[1]) {
+			return appOpsCommand{}, errors.New("invalid process query")
+		}
+		packageName := fields[1]
+		return appOpsCommand{run: func() commandResult {
+			return collectProcesses("/proc", packageName)
+		}}, nil
+
 	case "GET_PACKAGE_TIMES":
 		// Install and update times of every user, which `pm list packages`
 		// does not print. The app reads only those lines of the dump.
@@ -377,6 +389,9 @@ func command(arguments ...string) appOpsCommand {
 }
 
 func execute(command appOpsCommand) commandResult {
+	if command.run != nil {
+		return command.run()
+	}
 	contextWithTimeout, cancel := context.WithTimeout(
 		context.Background(),
 		commandTimeout,

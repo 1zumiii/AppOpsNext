@@ -48,6 +48,13 @@ interface PrivilegedAppOpsGateway {
     suspend fun getPackageTimes(): ShellCommandResult =
         error("Package times are not implemented by this gateway")
 
+    /**
+     * The processes of this app, its native daemon and the Shizuku server, one
+     * per line as `ProcessStats.collectRaw` writes them. Nothing else is listed.
+     */
+    suspend fun getProcesses(packageName: String): ShellCommandResult =
+        error("Process listing is not implemented by this gateway")
+
     suspend fun listPackagesForUser(userId: Int): ShellCommandResult =
         error("Per-user package listing is not implemented by this gateway")
 

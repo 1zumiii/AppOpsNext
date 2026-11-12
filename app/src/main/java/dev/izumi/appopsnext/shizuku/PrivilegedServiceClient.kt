@@ -460,6 +460,13 @@ class PrivilegedServiceClient(
                 ?: throw IllegalStateException("Privileged service is unavailable")
         }
 
+    override suspend fun getProcesses(packageName: String): ShellCommandResult =
+        withContext(Dispatchers.IO) {
+            executeNative { it.getProcesses(packageName) }
+                ?: service?.getProcesses(packageName)
+                ?: throw IllegalStateException("Privileged service is unavailable")
+        }
+
     override suspend fun listPackagesForUser(
         userId: Int,
     ): ShellCommandResult =

@@ -7,6 +7,9 @@ import androidx.annotation.Keep
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.WatcherResponseCodec
 import dev.izumi.appopsnext.appops.command.AppOpsCommands
+import dev.izumi.appopsnext.appops.command.PackageNameValidator
+import dev.izumi.appopsnext.diagnostics.ProcessStats
+import java.io.File
 import dev.izumi.appopsnext.appops.command.CommandExecutor
 import dev.izumi.appopsnext.apps.PackageTimesParser
 import dev.izumi.appopsnext.appops.model.ShellCommandResult
@@ -131,6 +134,20 @@ class AppOpsUserService : IPrivilegedAppOpsService.Stub {
     override fun getPackageTimes(): ShellCommandResult {
         val result = commandExecutor.execute(AppOpsCommands.getPackageTimes())
         return result.copy(stdout = PackageTimesParser.compact(result.stdout))
+    }
+
+    override fun getProcesses(packageName: String): ShellCommandResult {
+        if (!PackageNameValidator.isValid(packageName)) {
+            return ShellCommandResult(exitCode = 64, stdout = "", stderr = "invalid package name", timedOut = false)
+        }
+        return runCatching {
+            ProcessStats.collectRaw(File("/proc"), packageName) { Os.stat(it.path).st_uid }
+        }.fold(
+            onSuccess = { ShellCommandResult(exitCode = 0, stdout = it, stderr = "", timedOut = false) },
+            onFailure = {
+                ShellCommandResult(exitCode = -2, stdout = "", stderr = it.message.orEmpty(), timedOut = false)
+            },
+        )
     }
 
     override fun listPackagesForUser(userId: Int): ShellCommandResult =

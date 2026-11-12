@@ -150,6 +150,8 @@ class MainActivity : ComponentActivity() {
                         diagnosticsViewModel::retryPrivilegedService,
                     onClearDiagnosticLog =
                         diagnosticsViewModel::clearDiagnosticLog,
+                    onDiagnosticReportOpened =
+                        diagnosticsViewModel::refreshProcesses,
                     onAppSearchQueryChange = appListViewModel::updateSearchQuery,
                     onAppSortOrderChange = appListViewModel::setSortOrder,
                     onRefreshApps = appListViewModel::refresh,

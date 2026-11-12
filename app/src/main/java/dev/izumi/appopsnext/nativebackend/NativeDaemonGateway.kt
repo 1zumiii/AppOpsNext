@@ -171,6 +171,11 @@ internal class NativeDaemonGateway(
     override suspend fun getPackageTimes(): ShellCommandResult =
         connection.execute(NativeDaemonCommand(verb = "GET_PACKAGE_TIMES"))
 
+    override suspend fun getProcesses(packageName: String): ShellCommandResult {
+        requirePackageName(packageName)
+        return connection.execute(NativeDaemonCommand("GET_PROCESSES", listOf(packageName)))
+    }
+
     override suspend fun listPackagesForUser(userId: Int): ShellCommandResult {
         requireUserId(userId)
         return connection.execute(

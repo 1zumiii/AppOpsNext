@@ -13,6 +13,7 @@ object DiagnosticReportComposer {
         eventLines: List<String>,
         watcherRegistry: String = "Not read in this session.",
         readPaths: String = "not resolved",
+        processes: String = "Not read in this session.",
     ): String = buildString {
         appendLine("AppOpsNext diagnostic report")
         appendLine(
@@ -55,6 +56,10 @@ object DiagnosticReportComposer {
         appendLine()
         appendLine("[Watcher registry]")
         appendLine(watcherRegistry)
+        appendLine()
+        // The app's own processes and Shizuku's, not the AppOps registry above.
+        appendLine("[Processes]")
+        appendLine(processes)
         appendLine()
         appendLine("[Events]")
         if (eventLines.isEmpty()) {
