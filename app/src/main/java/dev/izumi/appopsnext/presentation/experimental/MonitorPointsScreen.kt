@@ -154,7 +154,7 @@ private fun PointRow(point: MonitorPointRow, onClick: () -> Unit) {
 
 /** The row has to say what was chosen without opening it. */
 @Composable
-private fun monitorPointSummary(settings: MonitorPointSettings): String {
+internal fun monitorPointSummary(settings: MonitorPointSettings): String {
     val parts = buildList {
         add(
             settings.throttleSeconds

@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -37,7 +39,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import dev.izumi.appopsnext.presentation.batch.BatchSelectionControls
 import dev.izumi.appopsnext.presentation.batch.StringSelectionSaver
+import dev.izumi.appopsnext.presentation.batch.toggleVisibleSelection
 import dev.izumi.appopsnext.presentation.batch.selectedFirstOrdering
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -68,14 +72,32 @@ fun MonitorTargetsScreen(
     onBack: () -> Unit,
     onAppSelected: (InstalledApp) -> Unit,
     modifier: Modifier = Modifier,
+    title: String = stringResource(R.string.monitor_targets_title),
+    hint: String = stringResource(R.string.monitor_targets_hint),
+    /**
+     * Non-null turns the list into a multiple choice, as applying a monitor
+     * template needs: a tap ticks the app instead of opening it, and the bar at
+     * the bottom holds [pickActions].
+     */
+    picked: Set<String>? = null,
+    onPickedChange: (Set<String>) -> Unit = {},
+    pickActions: @Composable RowScope.() -> Unit = {},
 ) {
-    val context = LocalContext.current
     var query by rememberSaveable { mutableStateOf("") }
     // Watched apps are listed first under their own heading; a count alone does
     // not answer "which ones", which is the question this screen exists for.
     val (watched, others) = remember(apps, query, selectionByPackage) {
         AppListFilter.apply(apps = apps, query = query)
             .partition { selectionByPackage[it.packageName].orEmpty().isNotEmpty() }
+    }
+    val pick: (InstalledApp) -> Unit = { app ->
+        if (picked == null) {
+            onAppSelected(app)
+        } else {
+            onPickedChange(
+                if (app.packageName in picked) picked - app.packageName else picked + app.packageName,
+            )
+        }
     }
     val listState = rememberLazyListState()
     ScrollToTopOnSortChange(sortOrder, listState)
@@ -85,7 +107,9 @@ fun MonitorTargetsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = stringResource(R.string.monitor_targets_title),
+                        text = title,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         fontWeight = FontWeight.SemiBold,
                     )
                 },
@@ -102,6 +126,19 @@ fun MonitorTargetsScreen(
                 },
             )
         },
+        bottomBar = {
+            if (picked != null) {
+                val visible = (watched + others).map(InstalledApp::packageName).toSet()
+                BatchSelectionControls(
+                    selectedCount = picked.size,
+                    visibleSelectedCount = visible.count(picked::contains),
+                    visibleItemCount = visible.size,
+                    onToggleAll = { onPickedChange(toggleVisibleSelection(picked, visible)) },
+                    modifier = Modifier.navigationBarsPadding(),
+                    actions = pickActions,
+                )
+            }
+        },
     ) { contentPadding ->
         LazyColumn(
             modifier = Modifier
@@ -112,7 +149,7 @@ fun MonitorTargetsScreen(
         ) {
             item {
                 Text(
-                    text = stringResource(R.string.monitor_targets_hint),
+                    text = hint,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -156,7 +193,8 @@ fun MonitorTargetsScreen(
                         time = appSortTimeText(app, sortOrder),
                         first = index == 0,
                         last = index == watched.lastIndex,
-                        onClick = { onAppSelected(app) },
+                        checked = picked?.let { app.packageName in it },
+                        onClick = { pick(app) },
                     )
                 }
             }
@@ -173,7 +211,8 @@ fun MonitorTargetsScreen(
                         time = appSortTimeText(app, sortOrder),
                         first = index == 0,
                         last = index == others.lastIndex,
-                        onClick = { onAppSelected(app) },
+                        checked = picked?.let { app.packageName in it },
+                        onClick = { pick(app) },
                     )
                 }
             }
@@ -199,6 +238,8 @@ private fun TargetRow(
     time: String?,
     first: Boolean,
     last: Boolean,
+    /** Null when the row opens the app rather than ticking it. */
+    checked: Boolean?,
     onClick: () -> Unit,
 ) {
     Surface(
@@ -230,6 +271,9 @@ private fun TargetRow(
                         time?.let { Text(text = it, maxLines = 1) }
                     }
                 },
+                trailingContent = checked?.let {
+                    { Checkbox(checked = it, onCheckedChange = { onClick() }) }
+                },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
             )
             if (!last) {
@@ -242,7 +286,11 @@ private fun TargetRow(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MonitorOperationsScreen(
-    app: InstalledApp,
+    /** What the operations are picked for: an app, or a monitor template. */
+    title: String,
+    /** Keeps this screen's own state apart from another subject's. */
+    stateKey: String,
+    hint: String,
     selected: Set<String>,
     showAll: Boolean,
     warningSuppressed: Boolean,
@@ -253,8 +301,8 @@ fun MonitorOperationsScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    var query by rememberSaveable(app.packageName) { mutableStateOf("") }
-    val initialSelection by rememberSaveable(app.packageName, stateSaver = StringSelectionSaver) {
+    var query by rememberSaveable(stateKey) { mutableStateOf("") }
+    val initialSelection by rememberSaveable(stateKey, stateSaver = StringSelectionSaver) {
         mutableStateOf(selected.toSet())
     }
     // The shortlist is a judgement about what usually matters, not a limit of
@@ -263,7 +311,7 @@ fun MonitorOperationsScreen(
     // turning the shortlist back on cannot hide a live selection.
     val options = remember(showAll, selected, initialSelection, context) {
         val names = if (showAll) {
-            AppOpCodes.ALL_NAMES
+            (AppOpCodes.ALL_NAMES + initialSelection + selected).distinct()
         } else {
             (AppOpCodes.MONITORED_NAMES + initialSelection + selected).distinct()
         }
@@ -329,7 +377,7 @@ fun MonitorOperationsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = app.label,
+                        text = title,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         fontWeight = FontWeight.SemiBold,
@@ -352,7 +400,7 @@ fun MonitorOperationsScreen(
         ) {
             item {
                 Text(
-                    text = stringResource(R.string.monitor_operations_hint),
+                    text = hint,
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

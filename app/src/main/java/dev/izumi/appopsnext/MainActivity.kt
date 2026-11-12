@@ -22,6 +22,7 @@ import dev.izumi.appopsnext.presentation.batch.BatchOperationUiState
 import dev.izumi.appopsnext.presentation.batch.BatchOperationsViewModel
 import dev.izumi.appopsnext.presentation.diagnostics.DiagnosticsViewModel
 import dev.izumi.appopsnext.presentation.experimental.ExperimentalViewModel
+import dev.izumi.appopsnext.presentation.experimental.MonitorTemplatesViewModel
 import dev.izumi.appopsnext.presentation.experimental.WatchersViewModel
 import dev.izumi.appopsnext.presentation.history.HistoryViewModel
 import dev.izumi.appopsnext.presentation.permissions.PermissionBrowserViewModel
@@ -41,6 +42,7 @@ class MainActivity : ComponentActivity() {
     private val experimentalViewModel: ExperimentalViewModel by viewModels()
     private val watchersViewModel: WatchersViewModel by viewModels()
     private val guardViewModel: GuardViewModel by viewModels()
+    private val monitorTemplatesViewModel: MonitorTemplatesViewModel by viewModels()
     /** Bumped by a guard notification so the root screen opens the guard page. */
     private val openGuardRequests = mutableIntStateOf(0)
 
@@ -111,6 +113,7 @@ class MainActivity : ComponentActivity() {
                     watchersUiState = watchersUiState.value,
                     onRefreshWatchers = watchersViewModel::refresh,
                     guardViewModel = guardViewModel,
+                    monitorTemplatesViewModel = monitorTemplatesViewModel,
                     openGuardRequest = openGuardRequests.intValue,
                     onMonitorEnabledChange =
                         experimentalViewModel::setMonitorEnabled,
