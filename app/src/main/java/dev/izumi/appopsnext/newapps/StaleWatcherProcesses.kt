@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.newapps
 
+import dev.izumi.appopsnext.diagnostics.ProcessStats
 import java.io.File
 
 /**
@@ -25,9 +26,6 @@ internal object StaleWatcherProcesses {
         pid.takeIf { name == processName && runCatching { ownedBy(entry) }.getOrDefault(false) }
     }.sorted()
 
-    /** The first argument of a `cmdline` file, which the platform pads with NUL bytes. */
-    fun commandName(cmdline: ByteArray): String {
-        val end = cmdline.indexOf(0).let { if (it < 0) cmdline.size else it }
-        return String(cmdline, 0, end, Charsets.UTF_8)
-    }
+    /** See [ProcessStats.commandName]. */
+    fun commandName(cmdline: ByteArray): String = ProcessStats.commandName(cmdline)
 }

@@ -10,7 +10,9 @@ internal class WatcherRebindBackoff(
     private val delaysMillis: List<Long> = DEFAULT_DELAYS_MILLIS,
     private val stableMillis: Long = STABLE_MILLIS,
 ) {
-    private var attempts = 0
+    /** How many restarts were handed out since the last healthy run or reset. */
+    var attempts = 0
+        private set
     private var connectedAtMillis: Long? = null
 
     fun onConnected(nowMillis: Long) {
