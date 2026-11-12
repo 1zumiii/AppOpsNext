@@ -181,7 +181,7 @@ fun ExperimentalScreen(
                         supportingContent = {
                             Text(
                                 if (logCount > 0) {
-                                    androidx.compose.ui.res.pluralStringResource(
+                                    pluralStringResource(
                                         R.plurals.monitor_log_summary, logCount, logCount,
                                     )
                                 } else {

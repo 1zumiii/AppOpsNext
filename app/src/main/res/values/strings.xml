@@ -323,7 +323,7 @@
     <string name="templates_custom_empty">Create a template to reuse the same rules across apps.</string>
     <string name="template_create">New</string>
     <string name="template_new_app_policy_title">New app defaults</string>
-    <string name="template_new_app_policy_description">Automatically applies common privacy controls. This template cannot be deleted. With \"Apply right after install\" on, a process kept in Shizuku watches installs and wakes AppOpsNext, so rules apply even while AppOpsNext is not running. Shizuku brings the process back when it starts again, for example after a reboot. A background check about every 15 minutes covers the rest while Shizuku is running. A brief result notification is sent when notification permission is available.</string>
+    <string name="template_new_app_policy_description">Automatically applies common privacy controls. This template cannot be deleted. With “Apply right after install” on, a process kept in Shizuku watches installs and wakes AppOpsNext, so rules apply even while AppOpsNext is not running. Shizuku brings the process back when it starts again, for example after a reboot. A background check about every 15 minutes covers the rest while Shizuku is running. A brief result notification is sent when notification permission is available.</string>
     <string name="template_new_app_auto_apply">Automatically apply to new apps</string>
     <string name="template_preview_more">%1$s +%2$d</string>
     <string name="template_preview_count_only">+%1$d</string>
@@ -485,7 +485,7 @@
     <string name="miui_op_label_read_record">Read recordings</string>
     <string name="miui_op_label_read_note">Read notes</string>
     <string name="miui_op_label_auto_start_switch">Autostart switch</string>
-    <string name="miui_op_label_fallback">MIUI private operation %1$d</string>
+    <string name="miui_op_label_fallback">MIUI private permission %1$d</string>
     <string name="app_op_usage_separator">" · "</string>
     <string name="app_op_usage_less_than_minute">Less than 1 minute</string>
     <string name="app_op_usage_ago">%1$s ago</string>
@@ -528,7 +528,10 @@
     <string name="monitor_log_empty_title">No entries yet</string>
     <string name="monitor_log_empty_filtered">No entries match this filter</string>
     <string name="monitor_log_clear">Clear monitor log</string>
-    <string name="monitor_log_clear_confirm">This deletes all %1$d entries. It cannot be undone.</string>
+    <plurals name="monitor_log_clear_confirm">
+        <item quantity="one">This deletes %1$d entry. It cannot be undone.</item>
+        <item quantity="other">This deletes all %1$d entries. It cannot be undone.</item>
+    </plurals>
     <string name="watchers_title">Permission change listeners</string>
     <string name="watchers_information">About watcher registrations</string>
     <string name="watchers_summary">View processes registered for permission mode changes.</string>
@@ -536,7 +539,7 @@
     <string name="background_install_watcher">Install watcher</string>
     <string name="background_stop_summary">Running: %1$s</string>
     <string name="background_stop_summary_none">Nothing is running in the background</string>
-    <string name="background_stop_confirm">Access monitoring is turned off and the install watcher process in Shizuku is ended. \"Apply right after install\" is turned off with it. Monitor records are kept.</string>
+    <string name="background_stop_confirm">Access monitoring is turned off and the install watcher process in Shizuku is ended. “Apply right after install” is turned off with it. Monitor records are kept.</string>
     <string name="background_stop_action">Stop</string>
     <string name="watchers_explainer">This snapshot shows registrations for permission mode changes. It does not show access history or confirm that a process received a callback.\n\nOperation and package registrations apply independently. An unrestricted UID does not mean that every permission is watched. Android may further filter callbacks.\n\nTap a process to view its registrations.</string>
     <string name="watchers_unavailable">Unable to read the registry. Check the privileged connection. This device may also use an unsupported format.</string>
@@ -586,7 +589,10 @@
     <string name="monitor_watch_active">ongoing access</string>
     <string name="monitor_watch_noted">one-off access</string>
     <string name="monitor_watch_started">access start</string>
-    <string name="monitor_selected_count">%1$d permissions</string>
+    <plurals name="monitor_selected_count">
+        <item quantity="one">%1$d permission</item>
+        <item quantity="other">%1$d permissions</item>
+    </plurals>
     <string name="monitor_more_accesses">%1$d more</string>
     <string name="monitor_heads_up_title">Pop up for each access</string>
     <string name="monitor_heads_up_summary">Off: a quiet status bar icon with a count. On: the notification appears on screen.</string>
@@ -610,7 +616,7 @@
     <string name="monitor_throttle_invalid">Enter between one second and %1$d minutes.</string>
     <string name="monitor_example_own_use">Frequently used location apps</string>
     <string name="monitor_example_own_use_body">Report location access only while the app is off screen, reducing alerts during normal use.</string>
-    <string name="monitor_example_quiet_location">Background location access</string>
+    <string name="monitor_example_quiet_location">Location while off screen</string>
     <string name="monitor_example_quiet_location_body">Report location access at most once per minute while the app is off screen.</string>
     <string name="monitor_example_sensors">Camera and microphone access</string>
     <string name="monitor_example_sensors_body">Show a pop-up for each camera or microphone access while the app is off screen.</string>
@@ -621,7 +627,6 @@
     <string name="monitor_example_unknown">Watching a permission for the first time</string>
     <string name="monitor_example_unknown_body">Some permissions report often. Start with a short interval, then adjust it after a few days.</string>
     <string name="monitor_example_every_minute">Every minute</string>
-    <string name="monitor_example_no_limit">No limit</string>
     <string name="monitor_example_on_screen_too">On screen too</string>
     <string name="monitor_example_every_30_seconds">Every 30 sec</string>
     <string name="monitor_templates_title">Monitor templates</string>
@@ -655,24 +660,23 @@
     <string name="monitor_template_count_operations">Permissions (%1$d): %2$s</string>
     <string name="monitor_template_confirm_replace">This replaces reporting settings for these permissions in the selected apps. Other monitoring points are unchanged.</string>
     <string name="monitor_template_confirm_operations">Permissions (%1$d), set to:</string>
-    <string name="monitor_template_confirm_defaults">Permissions marked “every access” return to the default reporting settings.</string>
+    <string name="monitor_template_confirm_defaults">Permissions marked “Every access” return to the default reporting settings.</string>
     <string name="monitor_template_needs_rules">No permissions yet. Add some to apply this template.</string>
     <string name="monitor_template_skipped">Skipped, not available on this device: %1$s</string>
     <string name="monitor_template_nothing_to_apply">None of this template\'s permissions are available on this device.</string>
     <string name="monitor_template_applied_title">Template applied</string>
     <string name="monitor_template_not_applied_title">Template not applied</string>
     <string name="monitor_points_title">Monitoring points</string>
-    <string name="monitor_points_none">Every access is reported</string>
     <plurals name="monitor_points_summary">
-        <item quantity="one">%1$d point configured</item>
-        <item quantity="other">%1$d points configured</item>
+        <item quantity="one">%1$d monitoring point</item>
+        <item quantity="other">%1$d monitoring points</item>
     </plurals>
     <string name="monitor_points_hint">Set what each monitoring point reports, how loudly, and how often.</string>
     <string name="monitor_points_empty">Nothing is being watched yet</string>
     <string name="monitor_points_empty_detail">Monitoring points appear here after apps and permissions are picked under Watched apps.</string>
     <string name="monitor_points_retained_header">Kept, not in use</string>
-    <string name="monitor_point_every_access">every access</string>
-    <string name="monitor_point_every">every %1$s</string>
+    <string name="monitor_point_every_access">Every access</string>
+    <string name="monitor_point_every">Every %1$s</string>
     <string name="monitor_point_unwatched">This permission is no longer watched. The settings are kept and apply again once it is selected.</string>
     <string name="monitor_point_throttle_title">Limit how often</string>
     <string name="monitor_point_throttle_summary">Report this point at most once per interval</string>
@@ -683,7 +687,7 @@
     <string name="monitor_point_outcome_summary">Choose which access results to report</string>
     <string name="monitor_point_background_title">Only when off screen</string>
     <string name="monitor_point_background_summary">Skip accesses made while this app is the one on screen. A foreground service counts as off screen, so navigation left running behind a notification is still reported.</string>
-    <string name="monitor_point_background_short">off screen only</string>
+    <string name="monitor_point_background_short">Off screen only</string>
     <string name="monitor_alert_default">Use monitor setting</string>
     <string name="monitor_alert_silent">Silent</string>
     <string name="monitor_alert_loud">Pop up</string>
@@ -698,11 +702,11 @@
     <string name="monitor_operations_section">Monitoring points</string>
     <string name="monitor_operations_search">Search monitoring points</string>
     <string name="monitor_operations_empty">No matching monitoring points</string>
-    <string name="monitor_vendor_op_item">MIUI private operation %1$d · unverified</string>
+    <string name="monitor_vendor_op_item">MIUI private permission %1$d · unverified</string>
     <string name="monitor_vendor_ops_hint">Monitoring MIUI private permissions is unverified. The system may reject registration or never report access.</string>
-    <string name="monitor_vendor_registered">MIUI private operations registered: %1$s</string>
-    <string name="monitor_vendor_refused">MIUI private operations refused by the system: %1$s</string>
-    <string name="monitor_vendor_unknown">MIUI private operations submitted for monitoring, but not confirmed in the registry: %1$s</string>
+    <string name="monitor_vendor_registered">MIUI private permissions registered: %1$s</string>
+    <string name="monitor_vendor_refused">MIUI private permissions refused by the system: %1$s</string>
+    <string name="monitor_vendor_unknown">MIUI private permissions submitted for monitoring, but not confirmed in the registry: %1$s</string>
     <string name="monitor_vendor_refused_item">%1$s (%2$s)</string>
     <string name="monitor_all_ops_warning_title">Before you turn this on</string>
     <string name="monitor_all_ops_warning_text">Noise: many of these permissions are used constantly by ordinary apps. Watching one without giving it an interval can fill the notification within seconds.\n\nCompatibility: only the usual shortlist has been tested. Some are never reported, may be numbered differently from one ROM to another, or mean something other than their name suggests.</string>
@@ -793,7 +797,15 @@
     <string name="backup_preview_templates">Templates: %1$d to add, %2$d already present</string>
     <string name="backup_preview_new_app_defaults">New app defaults: replaced by the rules in the backup</string>
     <string name="backup_preview_settings">Preferences: replaced by the ones in the backup</string>
-    <string name="backup_preview_monitor">Access monitor: %1$d apps and %2$d monitoring point settings replace the current setup</string>
+    <string name="backup_preview_monitor">Access monitor: %1$s and %2$s replace the current setup</string>
+    <plurals name="backup_preview_monitor_apps">
+        <item quantity="one">%1$d app</item>
+        <item quantity="other">%1$d apps</item>
+    </plurals>
+    <plurals name="backup_preview_monitor_points">
+        <item quantity="one">%1$d monitoring point setting</item>
+        <item quantity="other">%1$d monitoring point settings</item>
+    </plurals>
     <string name="backup_preview_monitor_templates">Monitor templates to add: %1$d · already present: %2$d</string>
     <string name="backup_preview_guard">Setting guard: %1$d rules are added to the current rules</string>
     <string name="backup_preview_guard_mode">Guard check method: %1$s</string>

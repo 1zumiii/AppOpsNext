@@ -98,14 +98,16 @@ fun MonitorSettingsScreen(
                         Text(text = stringResource(R.string.monitor_points_title))
                     },
                     supportingContent = {
+                        // The same points the page lists: the watched ones and the kept ones.
+                        val pointCount = uiState.configurablePoints.size
                         Text(
-                            text = if (uiState.points.isEmpty()) {
-                                stringResource(R.string.monitor_points_none)
+                            text = if (pointCount == 0) {
+                                stringResource(R.string.monitor_points_empty)
                             } else {
                                 pluralStringResource(
                                     R.plurals.monitor_points_summary,
-                                    uiState.points.size,
-                                    uiState.points.size,
+                                    pointCount,
+                                    pointCount,
                                 )
                             },
                         )

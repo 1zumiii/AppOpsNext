@@ -51,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -199,10 +200,9 @@ fun MonitorTargetsScreen(
                     // the names are one tap away.
                     TargetRow(
                         app = app,
-                        detail = stringResource(
-                            R.string.monitor_selected_count,
-                            selectionByPackage[app.packageName].orEmpty().size,
-                        ),
+                        detail = selectionByPackage[app.packageName].orEmpty().size.let { count ->
+                            pluralStringResource(R.plurals.monitor_selected_count, count, count)
+                        },
                         time = appSortTimeText(app, sortOrder),
                         first = index == 0,
                         last = index == watched.lastIndex,

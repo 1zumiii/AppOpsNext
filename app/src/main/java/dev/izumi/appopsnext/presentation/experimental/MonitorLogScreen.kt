@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -233,7 +234,7 @@ fun MonitorLogScreen(
         AppBottomSheet(
             onDismissRequest = { confirmingClear = false },
             title = { Text(text = stringResource(R.string.monitor_log_clear)) },
-            text = { Text(text = stringResource(R.string.monitor_log_clear_confirm, entries.size)) },
+            text = { Text(text = pluralStringResource(R.plurals.monitor_log_clear_confirm, entries.size, entries.size)) },
             confirmButton = {
                 Button(
                     onClick = {
