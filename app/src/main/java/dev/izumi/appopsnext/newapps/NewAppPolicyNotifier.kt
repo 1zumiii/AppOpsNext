@@ -68,6 +68,10 @@ class NewAppPolicyNotifier(
         notificationManager.notify(packageName.hashCode(), notification)
     }
 
+    fun cancel(packageName: String) {
+        notificationManager.cancel(packageName.hashCode())
+    }
+
     private fun createChannel() {
         notificationManager.createNotificationChannel(
             NotificationChannel(

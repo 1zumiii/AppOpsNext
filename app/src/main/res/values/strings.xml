@@ -170,6 +170,7 @@
     <string name="notifications_current_mode">Now “%1$s”</string>
     <string name="notifications_operation_in_user">%1$s · User %2$d</string>
     <string name="notifications_guard_section">Guard events</string>
+    <string name="notifications_new_app_clear">Clear</string>
     <string name="app_op_mode_foreground">Foreground only</string>
     <string name="app_op_mode_ask">Ask</string>
     <string name="action_apply">Apply changes</string>

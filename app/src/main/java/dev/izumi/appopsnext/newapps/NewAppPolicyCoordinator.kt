@@ -376,6 +376,15 @@ class NewAppPolicyCoordinator(
     /** See [NewAppPolicyStateRepository.results]. */
     val results: Flow<List<NewAppResult>> get() = stateRepository.results
 
+    /** See [NewAppPolicyStateRepository.clearResults]. */
+    suspend fun clearResults() {
+        // A notification left behind would open a result that no longer exists.
+        // One notification stands for a package, so a package still waiting keeps it.
+        val cleared = stateRepository.clearResults().map { it.packageName }.toSet()
+        val waiting = stateRepository.pending().map { it.packageName }.toSet()
+        (cleared - waiting).forEach(notifier::cancel)
+    }
+
     suspend fun reportFor(packageName: String, installedAt: Long): BatchOperationReport? {
         val records = stateRepository.progress(InstalledPackageFingerprint(packageName, installedAt))
         if (records.isEmpty()) return null
