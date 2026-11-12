@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.appops.changes
 
+import dev.izumi.appopsnext.appops.AppOpsWriteCoordinator
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.appops.parser.OpStates
@@ -8,6 +9,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -15,6 +17,8 @@ import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 class AppOpChangeDriftsTest {
     private val camera = "android:camera"
@@ -180,7 +184,7 @@ class AppOpChangeDriftsTest {
             },
             betweenWrites = { action ->
                 synchronized(marked) { betweenWrites++ }
-                action()
+                action(null)
             },
             scope = scope,
             settleMillis = 0,
@@ -213,7 +217,7 @@ class AppOpChangeDriftsTest {
             markChangedElsewhere = { seen -> synchronized(marked) { marked += seen } },
             betweenWrites = { action ->
                 writing = false
-                action()
+                action(null)
                 confirmed.complete(Unit)
             },
             scope = scope,
@@ -223,6 +227,93 @@ class AppOpChangeDriftsTest {
             withTimeout(5_000) { confirmed.await() }
             assertEquals(1, monitor.drifts.value.size)
             assertTrue(synchronized(marked) { marked.isEmpty() })
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun `a mode Android moves after a rejected write of this app is not flagged`(): Unit = runBlocking {
+        // Without the quiet time this is the reported case: the write sequence
+        // ends, Android briefly shows another mode, and the record is flagged.
+        assertEquals(listOf(AppOpMode.IGNORE), flaggedAfterRejectedWrite(quietAfterWriteMillis = 0))
+        assertEquals(emptyList<AppOpMode>(), flaggedAfterRejectedWrite(quietAfterWriteMillis = 300))
+    }
+
+    /**
+     * Records Ignore, runs a rejected Deny that restores Ignore inside a write
+     * transaction, and has the device show Allow for a moment after it, as
+     * Android may. Returns the recorded modes of the records flagged.
+     */
+    private suspend fun flaggedAfterRejectedWrite(quietAfterWriteMillis: Long): List<AppOpMode> {
+        val scope = CoroutineScope(Dispatchers.Default)
+        val coordinator = AppOpsWriteCoordinator()
+        val records = MutableStateFlow(listOf(record(app.packageName, camera, AppOpMode.IGNORE)))
+        val device = AtomicReference("ignore")
+        val reads = AtomicInteger()
+        val marked = mutableListOf<AppOpChangeRecord>()
+        val monitor = AppOpChangeDriftMonitor(
+            records = records,
+            connected = MutableStateFlow(true),
+            loadApps = { listOf(app) },
+            loadOpStates = { _, _, _ ->
+                reads.incrementAndGet()
+                uidStates(app.uid to device.get())
+            },
+            markChangedElsewhere = { seen ->
+                synchronized(marked) { marked += seen }
+                records.value = AppOpChangeRecords.markChangedElsewhere(records.value, seen)
+            },
+            betweenWrites = { action -> coordinator.betweenWrites(action) },
+            scope = scope,
+            settleMillis = 0,
+            quietAfterWriteMillis = quietAfterWriteMillis,
+        )
+        try {
+            withTimeout(5_000) { while (reads.get() == 0) delay(10) }
+            coordinator.serialize {
+                device.set("deny")
+                device.set("ignore")
+            }
+            device.set("allow")
+            val before = reads.get()
+            monitor.refresh()
+            withTimeout(5_000) { while (reads.get() == before) delay(10) }
+            delay(100)
+            device.set("ignore")
+            val settled = reads.get()
+            // The pass after the quiet time, or a last one to show nothing else happens.
+            delay(quietAfterWriteMillis + 100)
+            monitor.refresh()
+            withTimeout(5_000) { while (reads.get() == settled) delay(10) }
+            withTimeout(5_000) { monitor.drifts.first { it.isEmpty() } }
+            return synchronized(marked) { marked.map(AppOpChangeRecord::recordedMode) }
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun `a change elsewhere is still flagged once the writes have been quiet`(): Unit = runBlocking {
+        val scope = CoroutineScope(Dispatchers.Default)
+        val coordinator = AppOpsWriteCoordinator()
+        val records = MutableStateFlow(listOf(record(app.packageName, camera, AppOpMode.IGNORE)))
+        coordinator.serialize { }
+        AppOpChangeDriftMonitor(
+            records = records,
+            connected = MutableStateFlow(true),
+            loadApps = { listOf(app) },
+            loadOpStates = { _, _, _ -> uidStates(app.uid to "foreground") },
+            markChangedElsewhere = { seen ->
+                records.value = AppOpChangeRecords.markChangedElsewhere(records.value, seen)
+            },
+            betweenWrites = { action -> coordinator.betweenWrites(action) },
+            scope = scope,
+            settleMillis = 0,
+            quietAfterWriteMillis = 300,
+        )
+        try {
+            withTimeout(5_000) { records.first { it.single().changedElsewhere } }
         } finally {
             scope.cancel()
         }
