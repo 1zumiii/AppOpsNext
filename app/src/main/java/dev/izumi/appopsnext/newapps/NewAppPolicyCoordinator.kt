@@ -29,6 +29,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
@@ -383,6 +384,9 @@ class NewAppPolicyCoordinator(
             )
         }
     }
+
+    /** See [NewAppWatcherClient.settling]. */
+    val watcherSettling: StateFlow<Boolean> get() = watcher.settling
 
     /** See [NewAppPolicyStateRepository.results]. */
     val results: Flow<List<NewAppResult>> get() = stateRepository.results
