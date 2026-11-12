@@ -116,6 +116,35 @@ class AppOpsWatchersParserTest {
         assertEquals(null, UidStateParser.uidOf("u0a999999"))
     }
 
+    @Test fun `private operation rows leave the standard check as it was`() {
+        val withVendor = dump() + vendorRows("MIUIOP(10008), MIUIOP(10021)")
+        val snapshot = AppOpsWatchersParser.parse(withVendor)
+        assertEquals(emptySet<AccessWatchKind>(), snapshot.malformedAccessKinds)
+        assertEquals(WatchRegistration.CONFIRMED, snapshot.registration(operations, kinds, 2000))
+        assertEquals(WatchRegistration.MISSING, snapshot.registration(operations + "READ_CLIPBOARD", kinds, 2000))
+    }
+
+    @Test fun `private codes are listed per watch for the caller only`() {
+        val snapshot = AppOpsWatchersParser.parse(dump() + vendorRows("MIUI:10008, MIUIOP(10021)"))
+        val codes = snapshot.vendorCodes(2000)!!
+        assertEquals(setOf(10008, 10021), codes[AccessWatchKind.NOTED])
+        assertEquals(emptySet<Int>(), codes[AccessWatchKind.ACTIVE])
+        assertEquals(emptySet<Int>(), snapshot.vendorCodes(0)!![AccessWatchKind.NOTED])
+    }
+
+    @Test fun `an unknown private spelling makes its watch unreadable, not missing`() {
+        val snapshot = AppOpsWatchersParser.parse(dump() + vendorRows("OP_10008(10008)"))
+        assertEquals(setOf(AccessWatchKind.NOTED), snapshot.malformedAccessKinds)
+        assertEquals(WatchRegistration.UNKNOWN, snapshot.registration(operations, kinds, 2000))
+        assertEquals(null, snapshot.vendorCodes(2000)!![AccessWatchKind.NOTED])
+        assertEquals(null, AppOpsWatchersParser.parse("Permission Denial").vendorCodes(2000))
+    }
+
+    /** A second noted section entry, as a separate callback for private operations would print. */
+    private fun vendorRows(operations: String): String =
+        "  All op noted watchers:\n    cd ->\n        [$operations]\n" +
+            "        NotedCallback{def watchinguid=-1 from uid=2000 pid=123}\n"
+
     private fun dump(selected: Set<AccessWatchKind> = kinds): String = buildString {
         appendLine("Current AppOps Service state:")
         for (kind in selected) {

@@ -40,4 +40,13 @@ class MiuiOpsTest {
         assertTrue(AppOpMode.ASK in AppOpMode.choicesFor("10001", AppOpMode.ASK))
         assertFalse(AppOpMode.ASK in AppOpMode.choicesFor("10001", AppOpMode.ALLOW))
     }
+
+    @Test
+    fun `registry spellings of MIUI operations give their codes`() {
+        assertEquals(10008, MiuiOps.codeOfPrinted("MIUIOP(10008)"))
+        assertEquals(10036, MiuiOps.codeOfPrinted("MIUI:10036"))
+        assertNull(MiuiOps.codeOfPrinted("CAMERA"))
+        assertNull(MiuiOps.codeOfPrinted("10008"))
+        assertNull(MiuiOps.codeOfPrinted("MIUIOP(26)"))
+    }
 }
