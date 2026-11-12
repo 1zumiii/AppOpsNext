@@ -103,7 +103,7 @@
     <string name="app_type_system">系统应用 · UID %1$d</string>
     <string name="app_type_user">用户应用 · UID %1$d</string>
     <string name="app_detail_title">应用详情</string>
-    <string name="app_detail_waiting_backend">连接后会自动读取此应用的权限，连接状态可在“设置”中查看。</string>
+    <string name="app_detail_waiting_backend">连接后会自动读取此应用的权限。\n连接状态可在“设置”中查看。</string>
     <string name="app_detail_waiting_backend_title">特权后端未连接</string>
     <string name="app_detail_load_failed_title">无法读取此应用的权限</string>
     <string name="app_detail_operation_count">记录到 %1$d 项 AppOps</string>
@@ -616,7 +616,7 @@
     <string name="monitor_example_one_shot">剪贴板、通讯录、短信和通话记录</string>
     <string name="monitor_example_one_shot_body">这类读取多为单次发生，应用在屏幕上时也值得留意。</string>
     <string name="monitor_example_unknown">首次监测某项权限</string>
-    <string name="monitor_example_unknown_body">有些权限上报很频繁。先设置 30 秒间隔，观察几天后再调整。</string>
+    <string name="monitor_example_unknown_body">有些权限上报频繁，先设 30 秒间隔，之后再调整。</string>
     <string name="monitor_example_every_minute">每分钟</string>
     <string name="monitor_example_on_screen_too">应用在屏幕上时也通报</string>
     <string name="monitor_example_every_30_seconds">每 30 秒</string>

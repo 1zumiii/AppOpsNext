@@ -105,7 +105,7 @@
     <string name="app_type_system">System app · UID %1$d</string>
     <string name="app_type_user">User app · UID %1$d</string>
     <string name="app_detail_title">App details</string>
-    <string name="app_detail_waiting_backend">This app’s permissions load once it connects. Settings shows the connection status.</string>
+    <string name="app_detail_waiting_backend">This app’s permissions load once it connects.\nSettings shows the connection status.</string>
     <string name="app_detail_waiting_backend_title">Privileged backend not connected</string>
     <string name="app_detail_load_failed_title">Could not read this app’s permissions</string>
     <string name="app_detail_operation_count">%1$d AppOps recorded</string>
