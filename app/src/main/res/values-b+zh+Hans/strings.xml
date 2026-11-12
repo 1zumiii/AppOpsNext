@@ -522,7 +522,9 @@
     <string name="monitor_log_empty_title">暂无记录</string>
     <string name="monitor_log_empty_filtered">没有符合筛选条件的记录</string>
     <string name="monitor_log_clear">清空监测记录</string>
-    <string name="monitor_log_clear_confirm">将删除全部 %1$d 条记录，删除后无法恢复。</string>
+    <plurals name="monitor_log_clear_confirm">
+        <item quantity="other">将删除全部 %1$d 条记录，删除后无法恢复。</item>
+    </plurals>
     <string name="watchers_title">权限变更监听者</string>
     <string name="watchers_information">监听注册说明</string>
     <string name="watchers_summary">查看已注册权限模式变更监听的进程。</string>
@@ -579,7 +581,9 @@
     <string name="monitor_watch_active">持续访问</string>
     <string name="monitor_watch_noted">单次访问</string>
     <string name="monitor_watch_started">访问开始</string>
-    <string name="monitor_selected_count">%1$d 项权限</string>
+    <plurals name="monitor_selected_count">
+        <item quantity="other">%1$d 项权限</item>
+    </plurals>
     <string name="monitor_more_accesses">还有 %1$d 条</string>
     <string name="monitor_heads_up_title">每次访问弹窗提示</string>
     <string name="monitor_heads_up_summary">关闭时只在状态栏显示带计数的静默图标，开启时通知会弹出到屏幕上。</string>
@@ -602,20 +606,19 @@
     <string name="monitor_throttle_seconds">秒</string>
     <string name="monitor_throttle_invalid">请输入 1 秒到 %1$d 分钟之间的间隔。</string>
     <string name="monitor_example_own_use">常用的定位应用</string>
-    <string name="monitor_example_own_use_body">仅通报应用不在屏幕上时的定位访问，减少正常使用时的提醒。</string>
-    <string name="monitor_example_quiet_location">关注后台定位</string>
+    <string name="monitor_example_own_use_body">仅通报应用不在屏幕上时的定位，减少使用中的提醒。</string>
+    <string name="monitor_example_quiet_location">应用不在屏幕上时的定位</string>
     <string name="monitor_example_quiet_location_body">应用不在屏幕上时，每分钟最多提醒一次定位访问。</string>
     <string name="monitor_example_sensors">关注相机和麦克风</string>
     <string name="monitor_example_sensors_body">应用不在屏幕上时，每次访问相机或麦克风都弹窗提醒。</string>
     <string name="monitor_example_refusals">查看被拒绝的访问</string>
     <string name="monitor_example_refusals_body">仅通报被系统拒绝的访问，便于观察权限限制的效果。</string>
     <string name="monitor_example_one_shot">剪贴板、通讯录、短信和通话记录</string>
-    <string name="monitor_example_one_shot_body">这类读取通常是单次发生。应用在屏幕上时的读取也值得留意。</string>
+    <string name="monitor_example_one_shot_body">这类读取多为单次发生，应用在屏幕上时也值得留意。</string>
     <string name="monitor_example_unknown">首次监测某项权限</string>
     <string name="monitor_example_unknown_body">有些权限上报很频繁。先设置 30 秒间隔，观察几天后再调整。</string>
     <string name="monitor_example_every_minute">每分钟</string>
-    <string name="monitor_example_no_limit">不限频率</string>
-    <string name="monitor_example_on_screen_too">前台也通报</string>
+    <string name="monitor_example_on_screen_too">应用在屏幕上时也通报</string>
     <string name="monitor_example_every_30_seconds">每 30 秒</string>
     <string name="monitor_templates_title">监测模板</string>
     <string name="monitor_templates_summary">为多个应用设置相同的监测点</string>
@@ -655,9 +658,8 @@
     <string name="monitor_template_applied_title">模板已套用</string>
     <string name="monitor_template_not_applied_title">模板未套用</string>
     <string name="monitor_points_title">监测点设置</string>
-    <string name="monitor_points_none">每次访问都通报</string>
     <plurals name="monitor_points_summary">
-        <item quantity="other">已配置 %1$d 个监测点</item>
+        <item quantity="other">共 %1$d 个监测点</item>
     </plurals>
     <string name="monitor_points_hint">为每个监测点设置通报内容、提醒方式和通报间隔。</string>
     <string name="monitor_points_empty">还没有监测任何权限</string>
@@ -783,7 +785,13 @@
     <string name="backup_preview_templates">模板：新增 %1$d 个，已有 %2$d 个</string>
     <string name="backup_preview_new_app_defaults">新应用默认设置：替换为备份中的规则</string>
     <string name="backup_preview_settings">偏好设置：将替换为备份中的设置</string>
-    <string name="backup_preview_monitor">访问监测：%1$d 个应用、%2$d 项监测点设置，将替换当前配置</string>
+    <string name="backup_preview_monitor">访问监测：%1$s、%2$s，将替换当前配置</string>
+    <plurals name="backup_preview_monitor_apps">
+        <item quantity="other">%1$d 个应用</item>
+    </plurals>
+    <plurals name="backup_preview_monitor_points">
+        <item quantity="other">%1$d 项监测点设置</item>
+    </plurals>
     <string name="backup_preview_monitor_templates">监测模板：新增 %1$d 个，已有 %2$d 个</string>
     <string name="backup_preview_guard">设置守护：%1$d 条规则，将与现有规则合并</string>
     <string name="backup_preview_guard_mode">守护检查方式：%1$s</string>

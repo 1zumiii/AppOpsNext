@@ -325,12 +325,6 @@ private fun MonitorTemplateList(
                 },
                 navigationIcon = { BackButton(onBack) },
                 actions = {
-                    IconButton(onClick = { creating = true }) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_ph_plus),
-                            contentDescription = stringResource(R.string.monitor_template_create),
-                        )
-                    }
                     IconButton(onClick = { showDetails = true }) {
                         Icon(
                             painter = painterResource(R.drawable.ic_ph_info),
@@ -913,9 +907,9 @@ private val builtInExamples: Map<String, MonitorExample> = mapOf(
         R.string.monitor_example_own_use_body,
         R.drawable.ic_ph_map_pin,
         listOf(
-            R.string.monitor_point_background_short,
             R.string.monitor_example_every_minute,
             R.string.monitor_alert_silent,
+            R.string.monitor_point_background_short,
         ),
     ),
     BuiltInMonitorTemplates.QUIET_LOCATION to MonitorExample(
@@ -923,9 +917,9 @@ private val builtInExamples: Map<String, MonitorExample> = mapOf(
         R.string.monitor_example_quiet_location_body,
         R.drawable.ic_ph_eye,
         listOf(
-            R.string.monitor_point_background_short,
             R.string.monitor_example_every_minute,
             R.string.monitor_alert_loud,
+            R.string.monitor_point_background_short,
         ),
     ),
     BuiltInMonitorTemplates.CAMERA_MICROPHONE to MonitorExample(
@@ -933,9 +927,9 @@ private val builtInExamples: Map<String, MonitorExample> = mapOf(
         R.string.monitor_example_sensors_body,
         R.drawable.ic_ph_camera,
         listOf(
-            R.string.monitor_point_background_short,
-            R.string.monitor_example_no_limit,
+            R.string.monitor_point_every_access,
             R.string.monitor_alert_loud,
+            R.string.monitor_point_background_short,
         ),
     ),
     BuiltInMonitorTemplates.PERSONAL_DATA_READS to MonitorExample(
@@ -943,7 +937,7 @@ private val builtInExamples: Map<String, MonitorExample> = mapOf(
         R.string.monitor_example_one_shot_body,
         R.drawable.ic_ph_clipboard_text,
         listOf(
-            R.string.monitor_example_no_limit,
+            R.string.monitor_point_every_access,
             R.string.monitor_example_on_screen_too,
         ),
     ),
@@ -956,9 +950,9 @@ private val adviceExamples = listOf(
         R.string.monitor_example_refusals_body,
         R.drawable.ic_ph_shield,
         listOf(
-            R.string.monitor_outcome_refused,
-            R.string.monitor_example_no_limit,
+            R.string.monitor_point_every_access,
             R.string.monitor_alert_loud,
+            R.string.monitor_outcome_refused,
         ),
     ),
     MonitorExample(

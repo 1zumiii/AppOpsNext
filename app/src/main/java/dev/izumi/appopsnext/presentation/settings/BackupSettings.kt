@@ -26,6 +26,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
@@ -185,8 +186,12 @@ private fun BackupPreviewSheet(
                     Text(
                         text = stringResource(
                             R.string.backup_preview_monitor,
-                            preview.monitorAppCount ?: 0,
-                            preview.monitorPointCount ?: 0,
+                            (preview.monitorAppCount ?: 0).let { count ->
+                                pluralStringResource(R.plurals.backup_preview_monitor_apps, count, count)
+                            },
+                            (preview.monitorPointCount ?: 0).let { count ->
+                                pluralStringResource(R.plurals.backup_preview_monitor_points, count, count)
+                            },
                         ),
                     )
                 }
