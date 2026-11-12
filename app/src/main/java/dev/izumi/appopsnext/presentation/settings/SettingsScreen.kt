@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,6 +34,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -90,12 +92,23 @@ fun SettingsScreen(
     onDismissBackup: () -> Unit,
     modifier: Modifier = Modifier,
     bottomBar: @Composable () -> Unit = {},
+    /** True once when another page sends the user here to see the connection. */
+    openConnectionDetails: Boolean = false,
+    onConnectionDetailsOpened: () -> Unit = {},
 ) {
     var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
     var showThemeDialog by rememberSaveable { mutableStateOf(false) }
     val themeTransition = LocalThemeTransition.current
     var toggleCenter by remember { mutableStateOf(Offset.Unspecified) }
     var showConnectionDetails by rememberSaveable { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    LaunchedEffect(openConnectionDetails) {
+        if (openConnectionDetails) {
+            showConnectionDetails = true
+            listState.scrollToItem(0)
+            onConnectionDetailsOpened()
+        }
+    }
     var showAbout by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val githubUrl = stringResource(R.string.settings_github_url)
@@ -123,6 +136,7 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(contentPadding),
+            state = listState,
         ) {
             item(key = "connection") {
                 SettingsGroup {

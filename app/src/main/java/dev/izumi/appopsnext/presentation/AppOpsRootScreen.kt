@@ -251,6 +251,22 @@ fun AppOpsRootScreen(
         onAppOpModeChangeDismissed()
         selectedApp = null
     }
+    var openConnectionDetails by rememberSaveable { mutableStateOf(false) }
+    // Leaves the app for the connection status the way the Settings tab is reached,
+    // closing every page that would otherwise be shown over the Settings tab.
+    val openConnectionSettings = {
+        navigateBackFromDetail()
+        experimentalRoute = null
+        monitorAppPackage = null
+        monitorPointKey = null
+        showSavedHistory = false
+        showNotifications = false
+        selectedHistoryPermissionName = null
+        showHistoryAppStatistics = false
+        onUserSelected(null)
+        selectedDestination = MainDestination.SETTINGS
+        openConnectionDetails = true
+    }
     val navigationBar: @Composable () -> Unit = {
         AppNavigationBar(
             selectedDestination = selectedDestination,
@@ -550,6 +566,7 @@ fun AppOpsRootScreen(
                     onTemplateApplyRequested(template, listOf(app))
                 },
                 onPermissionBatchRequested = onPermissionBatchRequested,
+                onOpenConnectionSettings = openConnectionSettings,
             )
         }
     } else if (showNotifications) {
@@ -705,6 +722,8 @@ fun AppOpsRootScreen(
                     onConfirmBackupImport = onConfirmBackupImport,
                     onDismissBackup = onDismissBackup,
                     bottomBar = navigationBar,
+                    openConnectionDetails = openConnectionDetails,
+                    onConnectionDetailsOpened = { openConnectionDetails = false },
                 )
             }
         }
