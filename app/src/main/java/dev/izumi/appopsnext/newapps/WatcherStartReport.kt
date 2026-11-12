@@ -24,11 +24,19 @@ data class WatcherStartReport(
         val killError: String?,
     )
 
-    /** The line about the watcher itself. */
-    fun runningLine(connectMillis: Long?, zone: ZoneId): String = buildString {
+    /**
+     * What tells this watcher from any other, or null when its start time is
+     * unknown: a PID alone may be reused by a later process.
+     */
+    val identity: String?
+        get() = startEpochMillis?.let { "$pid:$it" }
+
+    /** The line about the watcher itself. [reason] is why it was bound. */
+    fun runningLine(connectMillis: Long?, zone: ZoneId, reason: String? = null): String = buildString {
         append("Install watcher running. pid=$pid, uid=$uid, started=")
         append(startEpochMillis?.let { ProcessStats.formatTime(it, zone) } ?: "unknown")
         if (connectMillis != null) append(", connectMs=$connectMillis")
+        if (reason != null) append(", reason=$reason")
     }
 
     /** The line about the stale watchers it looked for, found or not. */
@@ -51,23 +59,30 @@ data class WatcherStartReport(
          * The lines for a watcher that just connected. [reportText] is what
          * [INewAppWatcher.startReport] returned, null when the watcher is too
          * old to answer it, in which case only the running line is written.
+         *
+         * A watcher outlives the app process, so a new process mostly connects
+         * to the one already running. [alreadyLogged] says whether this watcher's
+         * lines are in the log already, in which case nothing is written again.
          */
         fun connectLines(
             pid: Int,
             reportText: String?,
             connectMillis: Long?,
             zone: ZoneId,
-            staleAlreadyLogged: (WatcherStartReport) -> Boolean = { false },
+            reason: String? = null,
+            alreadyLogged: (WatcherStartReport) -> Boolean = { false },
         ): List<String> {
             val report = decode(reportText)?.takeIf { it.pid == pid }
                 ?: return listOf(
                     "Install watcher running. pid=$pid" +
                         (connectMillis?.let { ", connectMs=$it" }.orEmpty()) +
+                        (reason?.let { ", reason=$it" }.orEmpty()) +
                         ", startReport=unsupported",
                 )
-            return listOfNotNull(
-                report.runningLine(connectMillis, zone),
-                report.staleLine(zone).takeUnless { staleAlreadyLogged(report) },
+            if (alreadyLogged(report)) return emptyList()
+            return listOf(
+                report.runningLine(connectMillis, zone, reason),
+                report.staleLine(zone),
             )
         }
 

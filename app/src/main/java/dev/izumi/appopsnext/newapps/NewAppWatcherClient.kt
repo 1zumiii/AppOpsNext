@@ -13,6 +13,7 @@ import dev.izumi.appopsnext.BuildConfig
 import dev.izumi.appopsnext.appops.UserUids
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogLevel
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
+import dev.izumi.appopsnext.diagnostics.DiagnosticLogTier
 import java.time.ZoneId
 import rikka.shizuku.Shizuku
 
@@ -49,8 +50,8 @@ class NewAppWatcherClient(
     private var connectedAtMillis: Long? = null
     private var pendingRebind: String? = null
 
-    /** The watcher whose stale check is already in the log, so a reconnect does not repeat it. */
-    private var staleLoggedFor: Pair<Int, Long?>? = null
+    /** Why the current bind was asked for, written with its outcome. */
+    private var bindReason: String? = null
 
     private val rebind = Runnable { bindIfWanted(pendingRebind ?: "rebind") }
 
@@ -60,21 +61,25 @@ class NewAppWatcherClient(
             if (!bound || connected) return@Runnable
             bound = false
             val waited = sinceMillis(bindRequestedAtMillis)
+            val reason = bindReason
             val next = scheduleRebind()
-            log(DiagnosticLogLevel.WARNING, "Install watcher did not connect in time. waitedMs=$waited$next")
+            log(
+                DiagnosticLogLevel.WARNING,
+                "Install watcher did not connect in time. waitedMs=$waited, reason=$reason$next",
+            )
             logGivenUp(next)
         }
     }
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, binder: IBinder?) {
-            val connectMillis = synchronized(this@NewAppWatcherClient) {
+            val (connectMillis, reason) = synchronized(this@NewAppWatcherClient) {
                 connected = true
                 handler.removeCallbacks(connectTimeout)
                 val now = SystemClock.elapsedRealtime()
                 backoff.onConnected(now)
                 connectedAtMillis = now
-                bindRequestedAtMillis?.let { now - it }
+                bindRequestedAtMillis?.let { now - it } to bindReason
             }
             val watcher = runCatching { INewAppWatcher.Stub.asInterface(binder ?: error("empty binder")) }
             val result = watcher.mapCatching { it.watch(UserUids.userIdOf(Process.myUid())) }
@@ -87,7 +92,8 @@ class NewAppWatcherClient(
                     reportText = reportText,
                     connectMillis = connectMillis,
                     zone = ZoneId.systemDefault(),
-                    staleAlreadyLogged = ::staleAlreadyLogged,
+                    reason = reason,
+                    alreadyLogged = ::alreadyLogged,
                 ).forEach { log(DiagnosticLogLevel.INFO, it) }
             }.onFailure { error ->
                 synchronized(this@NewAppWatcherClient) {
@@ -100,6 +106,16 @@ class NewAppWatcherClient(
 
         override fun onServiceDisconnected(name: ComponentName) {
             synchronized(this@NewAppWatcherClient) {
+                when (WatcherDisconnect.of(bound, connected, shizukuAlive())) {
+                    WatcherDisconnect.ALREADY_ENDED -> return
+                    WatcherDisconnect.SHIZUKU_GONE -> {
+                        // The death listener still reads connectedAtMillis for its line.
+                        bound = false
+                        connected = false
+                        return
+                    }
+                    WatcherDisconnect.UNEXPECTED -> Unit
+                }
                 bound = false
                 connected = false
                 val connectedFor = sinceMillis(connectedAtMillis)
@@ -160,7 +176,8 @@ class NewAppWatcherClient(
             .onSuccess {
                 bound = true
                 bindRequestedAtMillis = SystemClock.elapsedRealtime()
-                log(DiagnosticLogLevel.INFO, "Install watcher bind requested. reason=$reason")
+                // Written with the running line, or with the timeout if none follows.
+                bindReason = reason
                 handler.postDelayed(connectTimeout, CONNECT_TIMEOUT_MILLIS)
             }
             .onFailure { error ->
@@ -214,12 +231,14 @@ class NewAppWatcherClient(
         )
     }
 
-    @Synchronized
-    private fun staleAlreadyLogged(report: WatcherStartReport): Boolean {
-        val key = report.pid to report.startEpochMillis
-        if (staleLoggedFor == key) return true
-        staleLoggedFor = key
-        return false
+    /**
+     * Whether this watcher's lines are in the log already. The note is kept
+     * with the log, so a new app process that finds the same watcher running,
+     * as after every force stop, writes nothing about it.
+     */
+    private fun alreadyLogged(report: WatcherStartReport): Boolean {
+        val identity = report.identity ?: return false
+        return !diagnosticLog.noteIfChanged(WATCHER_NOTE_KEY, identity)
     }
 
     /** Every line goes through the budget, so a restart loop cannot flood the log. */
@@ -227,7 +246,8 @@ class NewAppWatcherClient(
     private fun log(level: DiagnosticLogLevel, message: String) {
         if (!logBudget.take(SystemClock.elapsedRealtime(), ::logDropped)) return
         when (level) {
-            DiagnosticLogLevel.INFO -> diagnosticLog.info(LOG_SOURCE, message)
+            // The watcher's lifecycle is kept with the other important lines.
+            DiagnosticLogLevel.INFO -> diagnosticLog.info(LOG_SOURCE, message, DiagnosticLogTier.IMPORTANT)
             DiagnosticLogLevel.WARNING -> diagnosticLog.warning(LOG_SOURCE, message)
             DiagnosticLogLevel.ERROR -> diagnosticLog.error(LOG_SOURCE, message)
         }
@@ -245,6 +265,8 @@ class NewAppWatcherClient(
         handler.removeCallbacks(connectTimeout)
     }
 
+    private fun shizukuAlive(): Boolean = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+
     private fun shizukuReady(): Boolean = runCatching {
         Shizuku.pingBinder() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
     }.getOrDefault(false)
@@ -252,6 +274,7 @@ class NewAppWatcherClient(
     private companion object {
         const val LOG_SOURCE = "NewAppWatcher"
         const val GIVEN_UP = ", rebind=given_up"
+        const val WATCHER_NOTE_KEY = "newAppWatcher.identity"
 
         /** Longer than the 30 seconds Shizuku itself waits for a service to start. */
         const val CONNECT_TIMEOUT_MILLIS = 45_000L

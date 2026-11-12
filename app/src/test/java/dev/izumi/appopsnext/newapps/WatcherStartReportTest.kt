@@ -91,11 +91,30 @@ class WatcherStartReportTest {
         )
     }
 
-    @Test fun `a reconnect to the same watcher does not repeat its stale check`() {
+    @Test fun `a reconnect to a watcher already in the log writes nothing`() {
         val text = WatcherStartReport.encode(WatcherStartReport(4321, 2000, 1_700_000_000_000L, emptyList()))
 
-        val lines = WatcherStartReport.connectLines(4321, text, 10, zone, staleAlreadyLogged = { true })
+        val lines = WatcherStartReport.connectLines(4321, text, 10, zone, alreadyLogged = { true })
 
-        assertEquals(1, lines.size)
+        assertEquals(emptyList<String>(), lines)
+    }
+
+    @Test fun `the bind reason is written with a watcher that is new to the log`() {
+        val text = WatcherStartReport.encode(WatcherStartReport(4321, 2000, 1_700_000_000_000L, emptyList()))
+
+        assertEquals(
+            "Install watcher running. pid=4321, uid=2000, started=2023-11-14T22:13:20Z, connectMs=850, " +
+                "reason=rebind_attempt_1",
+            WatcherStartReport.connectLines(4321, text, 850, zone, reason = "rebind_attempt_1").first(),
+        )
+        assertEquals(
+            listOf("Install watcher running. pid=4321, reason=turned_on, startReport=unsupported"),
+            WatcherStartReport.connectLines(4321, null, null, zone, reason = "turned_on"),
+        )
+    }
+
+    @Test fun `a watcher is told apart by its PID and start time`() {
+        assertEquals("4321:1700000000000", WatcherStartReport(4321, 2000, 1_700_000_000_000L, emptyList()).identity)
+        assertNull(WatcherStartReport(4321, 2000, null, emptyList()).identity)
     }
 }
