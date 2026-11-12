@@ -166,7 +166,21 @@ fun NotificationsScreen(
             }
             if (newAppResults.isNotEmpty()) {
                 item {
-                    ExperimentalSectionTitle(stringResource(R.string.new_app_policy_notification_channel))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            ExperimentalSectionTitle(stringResource(R.string.new_app_policy_notification_channel))
+                        }
+                        // Only the record of what happened goes; the rules and the
+                        // settings they applied stay.
+                        TextButton(
+                            onClick = { scope.launch { application.newAppPolicyCoordinator.clearResults() } },
+                        ) {
+                            Text(stringResource(R.string.notifications_new_app_clear))
+                        }
+                    }
                     ExperimentalGroup {
                         newAppResults.take(MAX_NEW_APP_RESULTS).forEachIndexed { index, result ->
                             if (index > 0) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))

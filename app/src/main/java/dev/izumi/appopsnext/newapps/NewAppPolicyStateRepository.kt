@@ -19,10 +19,10 @@ import kotlinx.coroutines.flow.map
 private val Context.newAppPolicyDataStore: DataStore<Preferences> by
     preferencesDataStore(name = "new_app_policy")
 
-class NewAppPolicyStateRepository(
-    context: Context,
+class NewAppPolicyStateRepository internal constructor(
+    private val dataStore: DataStore<Preferences>,
 ) {
-    private val dataStore = context.newAppPolicyDataStore
+    constructor(context: Context) : this(context.newAppPolicyDataStore)
 
     /** The rule outcomes kept for recent installations, the latest installation first. */
     val results: Flow<List<NewAppResult>> = dataStore.data
@@ -101,6 +101,28 @@ class NewAppPolicyStateRepository(
             preferences[Keys.RULE_PROGRESS] = records.filter { it.installation in retained }
                 .mapTo(mutableSetOf(), NewAppRuleProgressCodec::encode)
         }
+    }
+
+    /**
+     * Forgets the outcomes shown for installations that are done. Which
+     * installations were seen and which are still waiting stays as it is, so no
+     * app is taken for new again. An installation still waiting keeps its
+     * outcomes, because the next attempt resumes from them instead of applying
+     * the rules that already succeeded a second time.
+     *
+     * Returns the installations whose outcomes were forgotten.
+     */
+    suspend fun clearResults(): Set<InstalledPackageFingerprint> {
+        var cleared = emptySet<InstalledPackageFingerprint>()
+        dataStore.edit { preferences ->
+            val pending = decode(preferences[Keys.PENDING_INSTALLATIONS])
+            val (kept, dropped) = preferences[Keys.RULE_PROGRESS].orEmpty().partition { encoded ->
+                NewAppRuleProgressCodec.decode(encoded)?.installation in pending
+            }
+            preferences[Keys.RULE_PROGRESS] = kept.toSet()
+            cleared = dropped.mapNotNullTo(mutableSetOf()) { NewAppRuleProgressCodec.decode(it)?.installation }
+        }
+        return cleared
     }
 
     suspend fun reset() {

@@ -168,6 +168,7 @@
     <string name="notifications_current_mode">当前为“%1$s”</string>
     <string name="notifications_operation_in_user">%1$s · 用户 %2$d</string>
     <string name="notifications_guard_section">守护记录</string>
+    <string name="notifications_new_app_clear">清空</string>
     <string name="app_op_mode_foreground">仅前台</string>
     <string name="app_op_mode_ask">询问</string>
     <string name="action_apply">应用修改</string>
