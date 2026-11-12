@@ -14,6 +14,8 @@ data class BackupPreview(
     val templates: TemplateMergeResult?,
     val monitorAppCount: Int?,
     val monitorPointCount: Int?,
+    /** Null when the backup has no monitor templates section. */
+    val monitorTemplates: MonitorTemplateMergeResult?,
     /** Null when the backup has no guard section. */
     val guard: GuardImportPlan?,
 )
@@ -58,6 +60,7 @@ class AppBackupService(
                 ),
                 monitorTargets = monitorTargetsRepository.targets.first(),
                 monitorPoints = monitorTargetsRepository.pointSettings.first(),
+                monitorTemplates = monitorTargetsRepository.templates.first(),
                 guard = GuardBackup(
                     mode = guardRepository.mode.first(),
                     rules = guardRepository.rules.first(),
@@ -83,6 +86,11 @@ class AppBackupService(
             },
             monitorAppCount = backup.monitorTargets?.size,
             monitorPointCount = backup.monitorPoints?.size,
+            monitorTemplates = backup.monitorTemplates?.let { imported ->
+                MonitorTemplateImportMerge.merge(monitorTargetsRepository.templates.first(), imported) {
+                    UUID.randomUUID().toString()
+                }
+            },
             guard = backup.guard?.let { guard ->
                 val rules = guard.rules.mapNotNull { rule ->
                     packageUid(rule.packageName)?.let { uid -> rule.copy(uid = uid) }
@@ -99,6 +107,7 @@ class AppBackupService(
         if (backup.monitorTargets != null || backup.monitorPoints != null) {
             monitorTargetsRepository.replace(backup.monitorTargets, backup.monitorPoints)
         }
+        backup.monitorTemplates?.let { monitorTargetsRepository.importTemplates(it) }
         guard?.let { guardRepository.import(it.backup.mode, it.backup.rules) }
     }
 }
