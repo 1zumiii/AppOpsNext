@@ -1,5 +1,7 @@
 package dev.izumi.appopsnext.appops.parser
 
+import dev.izumi.appopsnext.appops.model.MiuiOps
+
 /** A snapshot of registrations, not evidence that a callback was delivered. */
 data class AppOpsWatcherSnapshot(
     val recognized: Boolean,
@@ -22,6 +24,22 @@ data class AppOpsWatcherSnapshot(
                 }
             }
         ) WatchRegistration.CONFIRMED else WatchRegistration.MISSING
+    }
+
+    /**
+     * The MIUI private codes listed for [callerUid]'s watches of every uid, by
+     * watch. A watch whose entries could not be read is left out, and the whole
+     * answer is null when the dump was not recognized.
+     */
+    fun vendorCodes(callerUid: Int): Map<AccessWatchKind, Set<Int>>? {
+        if (!recognized || callerUid < 0) return null
+        return AccessWatchKind.entries
+            .filterNot { it in malformedAccessKinds }
+            .associateWith { kind ->
+                accessWatchers
+                    .filter { it.kind == kind && it.callerUid == callerUid && it.watchingUid == -1 }
+                    .flatMapTo(mutableSetOf()) { watcher -> watcher.operations.mapNotNull(MiuiOps::codeOfPrinted) }
+            }
     }
 }
 
@@ -88,7 +106,11 @@ object AppOpsWatchersParser {
                     }
                     line.startsWith("[") && line.endsWith("]") && entryPending -> {
                         val names = line.drop(1).dropLast(1).split(',').map(String::trim)
-                        operations = names.takeIf { it.isNotEmpty() && it.all(OP::matches) }?.toSet()
+                        // A MIUI private operation is printed in a spelling of its
+                        // own, which names the operation as clearly as a standard one.
+                        operations = names.takeIf { list ->
+                            list.isNotEmpty() && list.all { OP.matches(it) || MiuiOps.codeOfPrinted(it) != null }
+                        }?.toSet()
                         if (operations == null) malformed += accessKind
                     }
                     else -> {
