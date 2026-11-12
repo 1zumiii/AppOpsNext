@@ -239,8 +239,8 @@ object AppOpChangeRecords {
      * again: the records of its earlier installation, one per operation. A
      * record at package scope outweighs one at UID scope, since the UID is new.
      *
-     * An operation whose chosen record was changed elsewhere is left out. Its
-     * last mode was not this app's, and the record does not know which it was.
+     * A record changed elsewhere is restored like any other, to the mode this
+     * app set. What was set elsewhere is not tracked well enough to restore.
      */
     fun restorable(
         records: List<AppOpChangeRecord>,
@@ -259,7 +259,6 @@ object AppOpChangeRecords {
                     .thenByDescending(AppOpChangeRecord::timeMillis),
             ).first()
         }
-        .filterNot(AppOpChangeRecord::changedElsewhere)
         .sortedBy(AppOpChangeRecord::stableOperationName)
 }
 
