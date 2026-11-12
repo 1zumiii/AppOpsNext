@@ -243,6 +243,6 @@ class AppListViewModel(
     private companion object {
         const val LOG_SOURCE = "AppList"
         const val MIN_REFRESH_INDICATOR_MILLIS = 400L
-        const val SLOW_LOAD_MILLIS = 1_000L
+        const val SLOW_LOAD_MILLIS = 3_000L
     }
 }
