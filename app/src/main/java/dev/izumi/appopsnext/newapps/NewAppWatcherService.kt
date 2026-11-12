@@ -4,10 +4,13 @@ import android.content.Context
 import android.content.pm.PackageInstaller
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.SystemClock
+import android.system.ErrnoException
 import android.system.Os
 import android.system.OsConstants
 import android.util.Log
 import androidx.annotation.Keep
+import dev.izumi.appopsnext.diagnostics.ProcessStats
 import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.system.exitProcess
@@ -23,6 +26,9 @@ class NewAppWatcherService : INewAppWatcher.Stub {
     private val thread = HandlerThread("new-app-watcher").apply { start() }
     private val handler = Handler(thread.looper)
     private var watchedUserId: Int? = null
+
+    @Volatile
+    private var startReport: String? = null
 
     private val callback = object : PackageInstaller.SessionCallback() {
         override fun onCreated(sessionId: Int) = Unit
@@ -51,32 +57,62 @@ class NewAppWatcherService : INewAppWatcher.Stub {
         if (watchedUserId == null) {
             // Only the watcher the app is connected to gets here, so it is the
             // current one and any other is left over.
-            endStaleWatchers()
+            val stale = endStaleWatchers()
             installer.registerSessionCallback(callback, handler)
+            startReport = WatcherStartReport.encode(
+                WatcherStartReport(
+                    pid = Os.getpid(),
+                    uid = Os.getuid(),
+                    startEpochMillis = runCatching { startOf(File("/proc/self/stat")) }.getOrNull(),
+                    stale = stale.getOrNull(),
+                    scanError = stale.exceptionOrNull()?.let { "${it::class.java.simpleName}:${it.message}" },
+                ),
+            )
         }
         watchedUserId = userId
         return Os.getpid()
     }
+
+    override fun startReport(): String? = startReport
 
     override fun destroy() {
         runCatching { context?.packageManager?.packageInstaller?.unregisterSessionCallback(callback) }
         exitProcess(0)
     }
 
-    private fun endStaleWatchers() {
-        val packageName = context?.packageName ?: return
-        runCatching {
+    private fun endStaleWatchers(): Result<List<WatcherStartReport.StaleWatcher>> {
+        val packageName = context?.packageName
+            ?: return Result.failure(IllegalStateException("no package name"))
+        return runCatching {
             val ownUid = Os.getuid()
             StaleWatcherProcesses.find(
                 procDir = File("/proc"),
                 processName = "$packageName:$PROCESS_SUFFIX",
                 ownPid = Os.getpid(),
                 ownedBy = { Os.stat(it.path).st_uid == ownUid },
-            ).forEach { pid ->
+            ).map { pid ->
+                // Read before the kill, which removes the process's entry.
+                val started = runCatching { startOf(File("/proc/$pid/stat")) }.getOrNull()
                 Log.i(TAG, "Ending a stale watcher. pid=$pid")
-                runCatching { Os.kill(pid, OsConstants.SIGKILL) }
+                val killError = try {
+                    Os.kill(pid, OsConstants.SIGKILL)
+                    null
+                } catch (error: ErrnoException) {
+                    OsConstants.errnoName(error.errno) ?: error.errno.toString()
+                }
+                WatcherStartReport.StaleWatcher(pid, started, killError)
             }
         }.onFailure { Log.w(TAG, "Unable to look for stale watchers", it) }
+    }
+
+    /** The wall time a process started, from its `stat` file. */
+    private fun startOf(stat: File): Long? {
+        val ticks = ProcessStats.parse(stat.readText())?.startTicks ?: return null
+        return ProcessStats.startEpochMillis(
+            startTicks = ticks,
+            clockTicksPerSecond = Os.sysconf(OsConstants._SC_CLK_TCK),
+            bootEpochMillis = System.currentTimeMillis() - SystemClock.elapsedRealtime(),
+        )
     }
 
     private fun wakeApp(userId: Int) {
