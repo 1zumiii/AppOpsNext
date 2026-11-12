@@ -15,6 +15,7 @@ import dev.izumi.appopsnext.diagnostics.DiagnosticLogLevel
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogTier
 import java.time.ZoneId
+import kotlinx.coroutines.flow.StateFlow
 import rikka.shizuku.Shizuku
 
 /**
@@ -41,6 +42,13 @@ class NewAppWatcherClient(
     private val handler = Handler(Looper.getMainLooper())
     private val backoff = WatcherRebindBackoff()
     private val logBudget = WatcherLogBudget()
+    private val settlingState = WatcherSettling()
+
+    /**
+     * True while the watcher is still starting or the last one is still ending,
+     * so the switch that turns it on and off waits for that to finish.
+     */
+    val settling: StateFlow<Boolean> = settlingState.settling
 
     // Guarded by this.
     private var wanted = false
@@ -55,11 +63,36 @@ class NewAppWatcherClient(
 
     private val rebind = Runnable { bindIfWanted(pendingRebind ?: "rebind") }
 
+    /**
+     * Posted from the disconnect that ends a stopped watcher. Shizuku drops its
+     * connection object only after that callback returns, in the same message,
+     * so anything run from here binds with a new one.
+     */
+    private val endSeen = Runnable {
+        synchronized(this) {
+            handler.removeCallbacks(endOverdue)
+            if (settlingState.awaitingEnd) bindDeferred(settlingState.onEndSeen() ?: AFTER_STOP)
+        }
+    }
+
+    /** A watcher that never connected may never report its end. */
+    private val endOverdue = Runnable {
+        synchronized(this) {
+            val overdue = settlingState.onEndOverdue(SystemClock.elapsedRealtime()) ?: return@Runnable
+            log(
+                DiagnosticLogLevel.WARNING,
+                "Install watcher end not seen in time. waitedMs=${overdue.waitedMillis}",
+            )
+            bindDeferred(overdue.deferredReason ?: AFTER_STOP)
+        }
+    }
+
     /** Shizuku drops a service that does not start in time without saying so. */
     private val connectTimeout = Runnable {
         synchronized(this) {
             if (!bound || connected) return@Runnable
             bound = false
+            settlingState.onStartSettled()
             val waited = sinceMillis(bindRequestedAtMillis)
             val reason = bindReason
             val next = scheduleRebind()
@@ -76,6 +109,7 @@ class NewAppWatcherClient(
             val (connectMillis, reason) = synchronized(this@NewAppWatcherClient) {
                 connected = true
                 handler.removeCallbacks(connectTimeout)
+                settlingState.onStartSettled()
                 val now = SystemClock.elapsedRealtime()
                 backoff.onConnected(now)
                 connectedAtMillis = now
@@ -107,7 +141,12 @@ class NewAppWatcherClient(
         override fun onServiceDisconnected(name: ComponentName) {
             synchronized(this@NewAppWatcherClient) {
                 when (WatcherDisconnect.of(bound, connected, shizukuAlive())) {
-                    WatcherDisconnect.ALREADY_ENDED -> return
+                    WatcherDisconnect.ALREADY_ENDED -> {
+                        // The end of a watcher that was turned off, which a new
+                        // bind waits for.
+                        if (settlingState.awaitingEnd) handler.post(endSeen)
+                        return
+                    }
                     WatcherDisconnect.SHIZUKU_GONE -> {
                         // The death listener still reads connectedAtMillis for its line.
                         bound = false
@@ -145,6 +184,11 @@ class NewAppWatcherClient(
             connected = false
             connectedAtMillis = null
             cancelPending()
+            // Shizuku took the old watcher with it, and the next binder binds a
+            // new one as a wanted watcher always is.
+            handler.removeCallbacks(endOverdue)
+            settlingState.onEndSeen()
+            settlingState.onStartSettled()
         }
     }
 
@@ -157,7 +201,12 @@ class NewAppWatcherClient(
     @Synchronized
     fun setWanted(value: Boolean) {
         wanted = value
-        if (value) bindIfWanted("turned_on") else stop()
+        if (value) {
+            settlingState.onStartRequested()
+            bindDeferred("turned_on")
+        } else {
+            stop()
+        }
     }
 
     /**
@@ -170,6 +219,7 @@ class NewAppWatcherClient(
     @Synchronized
     private fun bindIfWanted(reason: String) {
         if (!wanted || bound || !shizukuReady()) return
+        if (!settlingState.mayBind(reason)) return
         handler.removeCallbacks(rebind)
         pendingRebind = null
         runCatching { Shizuku.bindUserService(args, connection) }
@@ -187,14 +237,38 @@ class NewAppWatcherClient(
             }
     }
 
+    /**
+     * Binds as the user asked, or as was deferred for it, and lets the switch go
+     * at once when no connection is coming: Shizuku away, the bind refused or
+     * nothing left to bind. After a stop it runs whether or not a bind was
+     * deferred, since one asked for while Shizuku was away is not kept.
+     */
+    @Synchronized
+    private fun bindDeferred(reason: String) {
+        bindIfWanted(reason)
+        val connecting = bound && !connected
+        if (!connecting && !settlingState.awaitingEnd) settlingState.onStartSettled()
+    }
+
     /** Ends the daemon too, which an unbind alone would leave running. */
     @Synchronized
     private fun stop() {
         cancelPending()
         backoff.reset()
-        if (!shizukuReady()) return
+        val hadWatcher = bound || connected
+        if (!shizukuReady()) {
+            settlingState.onStopped(hadWatcher = false, nowMillis = SystemClock.elapsedRealtime())
+            return
+        }
         runCatching { Shizuku.unbindUserService(args, connection, true) }
+            .onFailure {
+                settlingState.onStopped(hadWatcher = false, nowMillis = SystemClock.elapsedRealtime())
+            }
             .onSuccess {
+                settlingState.onStopped(hadWatcher, SystemClock.elapsedRealtime())?.let { delay ->
+                    handler.removeCallbacks(endOverdue)
+                    handler.postDelayed(endOverdue, delay)
+                }
                 if (bound) {
                     log(
                         DiagnosticLogLevel.INFO,
@@ -275,6 +349,9 @@ class NewAppWatcherClient(
         const val LOG_SOURCE = "NewAppWatcher"
         const val GIVEN_UP = ", rebind=given_up"
         const val WATCHER_NOTE_KEY = "newAppWatcher.identity"
+
+        /** The bind reason when the watcher is wanted again but no bind was deferred. */
+        const val AFTER_STOP = "after_stop"
 
         /** Longer than the 30 seconds Shizuku itself waits for a service to start. */
         const val CONNECT_TIMEOUT_MILLIS = 45_000L
