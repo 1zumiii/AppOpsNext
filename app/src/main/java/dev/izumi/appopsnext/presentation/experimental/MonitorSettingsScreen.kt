@@ -37,7 +37,6 @@ fun MonitorSettingsScreen(
     onBack: () -> Unit,
     onOpenTargets: () -> Unit,
     onOpenPoints: () -> Unit,
-    onOpenExamples: () -> Unit,
     onHeadsUpChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -110,18 +109,6 @@ fun MonitorSettingsScreen(
                                 )
                             },
                         )
-                    },
-                    trailingContent = { MainPageChevron() },
-                )
-                HorizontalDivider(modifier = Modifier.padding(start = 56.dp, end = 16.dp))
-                ExperimentalGroupRow(
-                    modifier = Modifier.clickable(onClick = onOpenExamples),
-                    leadingContent = { ExperimentalRowIcon(R.drawable.ic_ph_info) },
-                    headlineContent = {
-                        Text(text = stringResource(R.string.monitor_examples_entry))
-                    },
-                    supportingContent = {
-                        Text(text = stringResource(R.string.monitor_examples_summary))
                     },
                     trailingContent = { MainPageChevron() },
                 )

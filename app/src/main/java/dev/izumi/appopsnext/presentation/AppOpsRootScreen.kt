@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.izumi.appopsnext.AppOpsNextApplication
+import dev.izumi.appopsnext.R
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -52,7 +53,8 @@ import dev.izumi.appopsnext.presentation.experimental.ExperimentalUiState
 import dev.izumi.appopsnext.presentation.experimental.MonitorOperationsScreen
 import dev.izumi.appopsnext.presentation.experimental.MonitorSettingsScreen
 import dev.izumi.appopsnext.presentation.experimental.MonitorTargetsScreen
-import dev.izumi.appopsnext.presentation.experimental.MonitorExamplesScreen
+import dev.izumi.appopsnext.presentation.experimental.MonitorTemplatesScreen
+import dev.izumi.appopsnext.presentation.experimental.MonitorTemplatesViewModel
 import dev.izumi.appopsnext.presentation.experimental.MonitorLogScreen
 import dev.izumi.appopsnext.presentation.experimental.MonitorPointDetailScreen
 import dev.izumi.appopsnext.presentation.experimental.MonitorPointRow
@@ -140,6 +142,7 @@ fun AppOpsRootScreen(
     watchersUiState: WatchersUiState,
     onRefreshWatchers: () -> Unit,
     guardViewModel: GuardViewModel,
+    monitorTemplatesViewModel: MonitorTemplatesViewModel,
     openGuardRequest: Int,
     onMonitorEnabledChange: (Boolean) -> Unit,
     onStopBackgroundWork: () -> Unit,
@@ -278,8 +281,7 @@ fun AppOpsRootScreen(
             monitorAppPackage == null &&
             (
                 experimentalRoute == ROUTE_MONITOR_TARGETS ||
-                    experimentalRoute == ROUTE_MONITOR_POINTS ||
-                    experimentalRoute == ROUTE_MONITOR_EXAMPLES
+                    experimentalRoute == ROUTE_MONITOR_POINTS
                 ),
     ) {
         experimentalRoute = ROUTE_MONITOR_SETTINGS
@@ -292,7 +294,8 @@ fun AppOpsRootScreen(
                 experimentalRoute == ROUTE_MONITOR_SETTINGS ||
                     experimentalRoute == ROUTE_WATCHERS ||
                     experimentalRoute == ROUTE_GUARD ||
-                    experimentalRoute == ROUTE_MONITOR_LOG
+                    experimentalRoute == ROUTE_MONITOR_LOG ||
+                    experimentalRoute == ROUTE_MONITOR_TEMPLATES
                 ),
     ) {
         experimentalRoute = ROUTE_EXPERIMENTAL
@@ -365,7 +368,9 @@ fun AppOpsRootScreen(
                 // precedence over the route that opened that list.
 
                 monitorApp != null -> MonitorOperationsScreen(
-                    app = monitorApp,
+                    title = monitorApp.label,
+                    stateKey = monitorApp.packageName,
+                    hint = stringResource(R.string.monitor_operations_hint),
                     selected = experimentalUiState
                         .selectionByPackage[monitorApp.packageName]
                         .orEmpty(),
@@ -421,8 +426,15 @@ fun AppOpsRootScreen(
                     },
                 )
 
-                experimentalRoute == ROUTE_MONITOR_EXAMPLES -> MonitorExamplesScreen(
-                    onBack = { experimentalRoute = ROUTE_MONITOR_SETTINGS },
+                experimentalRoute == ROUTE_MONITOR_TEMPLATES -> MonitorTemplatesScreen(
+                    viewModel = monitorTemplatesViewModel,
+                    uiState = experimentalUiState,
+                    apps = appListUiState.allApps,
+                    sortOrder = appListUiState.sortOrder,
+                    onSortOrderChange = onAppSortOrderChange,
+                    onShowAllOperationsChange = onMonitorShowAllOperationsChange,
+                    onSuppressAllOperationsWarning = onMonitorSuppressAllOperationsWarning,
+                    onBack = { experimentalRoute = ROUTE_EXPERIMENTAL },
                 )
 
                 experimentalRoute == ROUTE_MONITOR_POINTS -> MonitorPointsScreen(
@@ -438,7 +450,6 @@ fun AppOpsRootScreen(
                     onBack = { experimentalRoute = ROUTE_EXPERIMENTAL },
                     onOpenTargets = { experimentalRoute = ROUTE_MONITOR_TARGETS },
                     onOpenPoints = { experimentalRoute = ROUTE_MONITOR_POINTS },
-                    onOpenExamples = { experimentalRoute = ROUTE_MONITOR_EXAMPLES },
                     onHeadsUpChange = onMonitorHeadsUpChange,
                 )
 
@@ -474,6 +485,7 @@ fun AppOpsRootScreen(
                     onStopBackgroundWork = onStopBackgroundWork,
                     onOpenGuard = { experimentalRoute = ROUTE_GUARD },
                     onOpenSettings = { experimentalRoute = ROUTE_MONITOR_SETTINGS },
+                    onOpenTemplates = { experimentalRoute = ROUTE_MONITOR_TEMPLATES },
                     logCount = monitorLogEntries().size,
                     onOpenLog = { experimentalRoute = ROUTE_MONITOR_LOG },
                     onOpenBatterySettings = onOpenBatterySettings,
@@ -768,7 +780,7 @@ private const val ROUTE_GUARD = "guard"
 private const val ROUTE_MONITOR_SETTINGS = "monitor_settings"
 private const val ROUTE_MONITOR_TARGETS = "monitor_targets"
 private const val ROUTE_MONITOR_POINTS = "monitor_points"
-private const val ROUTE_MONITOR_EXAMPLES = "monitor_examples"
+private const val ROUTE_MONITOR_TEMPLATES = "monitor_templates"
 private const val ROUTE_MONITOR_LOG = "monitor_log"
 
 /**

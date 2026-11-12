@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.monitor.MonitorOutcomes
+import dev.izumi.appopsnext.monitor.MonitorPointSettings
 import dev.izumi.appopsnext.monitor.MonitorThrottles
 
 /**
@@ -65,7 +66,6 @@ fun MonitorPointDetailScreen(
     onBackgroundOnlyChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val focusManager = LocalFocusManager.current
     val enabled = point.watched
     Scaffold(
         modifier = modifier,
@@ -112,76 +112,100 @@ fun MonitorPointDetailScreen(
                     color = MaterialTheme.colorScheme.error,
                 )
             }
-            ExperimentalGroup {
-                ExperimentalGroupRow(
-                    headlineContent = {
-                        Text(text = stringResource(R.string.monitor_point_throttle_title))
-                    },
-                    supportingContent = {
-                        Text(text = stringResource(R.string.monitor_point_throttle_summary))
-                    },
-                    trailingContent = {
-                        CompactSwitch(
-                            checked = point.settings.throttleSeconds != null,
-                            enabled = enabled,
-                            onCheckedChange = { on ->
-                                // The field is about to be removed, so the keyboard it
-                                // opened has to go with it.
-                                focusManager.clearFocus()
-                                onThrottleChange(if (on) MonitorThrottles.DEFAULT_SECONDS else null)
-                            },
-                        )
-                    },
-                )
-                point.settings.throttleSeconds?.let { seconds ->
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    IntervalRow(seconds = seconds, enabled = enabled, onChange = onThrottleChange)
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-            ExperimentalGroup {
-                ChoiceRow(
-                    title = stringResource(R.string.monitor_point_alert_title),
-                    summary = stringResource(R.string.monitor_point_alert_summary),
-                    selected = monitorAlertLabel(point.settings.headsUp),
-                    enabled = enabled,
-                    choices = listOf(
-                        monitorAlertLabel(null) to null,
-                        monitorAlertLabel(false) to false,
-                        monitorAlertLabel(true) to true,
-                    ),
-                    onSelected = onHeadsUpChange,
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ChoiceRow(
-                    title = stringResource(R.string.monitor_point_outcome_title),
-                    summary = stringResource(R.string.monitor_point_outcome_summary),
-                    selected = monitorOutcomesLabel(point.settings.outcomes, includeAll = true)
-                        ?: "",
-                    enabled = enabled,
-                    choices = MonitorOutcomes.entries.map { outcome ->
-                        (monitorOutcomesLabel(outcome, includeAll = true) ?: "") to outcome
-                    },
-                    onSelected = onOutcomesChange,
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ExperimentalGroupRow(
-                    headlineContent = {
-                        Text(text = stringResource(R.string.monitor_point_background_title))
-                    },
-                    supportingContent = {
-                        Text(text = stringResource(R.string.monitor_point_background_summary))
-                    },
-                    trailingContent = {
-                        CompactSwitch(
-                            checked = point.settings.backgroundOnly,
-                            enabled = enabled,
-                            onCheckedChange = onBackgroundOnlyChange,
-                        )
-                    },
-                )
-            }
+            MonitorPointSettingsControls(
+                settings = point.settings,
+                enabled = enabled,
+                onThrottleChange = onThrottleChange,
+                onHeadsUpChange = onHeadsUpChange,
+                onOutcomesChange = onOutcomesChange,
+                onBackgroundOnlyChange = onBackgroundOnlyChange,
+            )
         }
+    }
+}
+
+/**
+ * The controls for the four settings of a monitoring point, shared by a point's
+ * own page and a monitor template's rule, which set up the same thing.
+ */
+@Composable
+internal fun MonitorPointSettingsControls(
+    settings: MonitorPointSettings,
+    enabled: Boolean,
+    onThrottleChange: (Int?) -> Unit,
+    onHeadsUpChange: (Boolean?) -> Unit,
+    onOutcomesChange: (MonitorOutcomes) -> Unit,
+    onBackgroundOnlyChange: (Boolean) -> Unit,
+) {
+    val focusManager = LocalFocusManager.current
+    ExperimentalGroup {
+        ExperimentalGroupRow(
+            headlineContent = {
+                Text(text = stringResource(R.string.monitor_point_throttle_title))
+            },
+            supportingContent = {
+                Text(text = stringResource(R.string.monitor_point_throttle_summary))
+            },
+            trailingContent = {
+                CompactSwitch(
+                    checked = settings.throttleSeconds != null,
+                    enabled = enabled,
+                    onCheckedChange = { on ->
+                        // The field is about to be removed, so the keyboard it
+                        // opened has to go with it.
+                        focusManager.clearFocus()
+                        onThrottleChange(if (on) MonitorThrottles.DEFAULT_SECONDS else null)
+                    },
+                )
+            },
+        )
+        settings.throttleSeconds?.let { seconds ->
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            IntervalRow(seconds = seconds, enabled = enabled, onChange = onThrottleChange)
+        }
+    }
+    Spacer(Modifier.height(12.dp))
+    ExperimentalGroup {
+        ChoiceRow(
+            title = stringResource(R.string.monitor_point_alert_title),
+            summary = stringResource(R.string.monitor_point_alert_summary),
+            selected = monitorAlertLabel(settings.headsUp),
+            enabled = enabled,
+            choices = listOf(
+                monitorAlertLabel(null) to null,
+                monitorAlertLabel(false) to false,
+                monitorAlertLabel(true) to true,
+            ),
+            onSelected = onHeadsUpChange,
+        )
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+        ChoiceRow(
+            title = stringResource(R.string.monitor_point_outcome_title),
+            summary = stringResource(R.string.monitor_point_outcome_summary),
+            selected = monitorOutcomesLabel(settings.outcomes, includeAll = true)
+                ?: "",
+            enabled = enabled,
+            choices = MonitorOutcomes.entries.map { outcome ->
+                (monitorOutcomesLabel(outcome, includeAll = true) ?: "") to outcome
+            },
+            onSelected = onOutcomesChange,
+        )
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+        ExperimentalGroupRow(
+            headlineContent = {
+                Text(text = stringResource(R.string.monitor_point_background_title))
+            },
+            supportingContent = {
+                Text(text = stringResource(R.string.monitor_point_background_summary))
+            },
+            trailingContent = {
+                CompactSwitch(
+                    checked = settings.backgroundOnly,
+                    enabled = enabled,
+                    onCheckedChange = onBackgroundOnlyChange,
+                )
+            },
+        )
     }
 }
 

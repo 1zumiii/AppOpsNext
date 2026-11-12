@@ -66,6 +66,7 @@ fun ExperimentalScreen(
     onStopBackgroundWork: () -> Unit,
     onOpenGuard: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenTemplates: () -> Unit,
     logCount: Int,
     onOpenLog: () -> Unit,
     onOpenBatterySettings: () -> Unit,
@@ -156,6 +157,17 @@ fun ExperimentalScreen(
                             )
                         },
                         trailingContent = { if (!locked) MainPageChevron() },
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 56.dp, end = 16.dp))
+                    // Kept outside the settings page, which closes while the monitor
+                    // runs: templates can still be read and edited then, only
+                    // applying one waits for the monitor to be off.
+                    ExperimentalGroupRow(
+                        modifier = Modifier.clickable(onClick = onOpenTemplates),
+                        leadingContent = { ExperimentalRowIcon(R.drawable.ic_ph_list_plus) },
+                        headlineContent = { Text(stringResource(R.string.monitor_templates_title)) },
+                        supportingContent = { Text(stringResource(R.string.monitor_templates_summary)) },
+                        trailingContent = { MainPageChevron() },
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 56.dp, end = 16.dp))
                     ExperimentalGroupRow(

@@ -190,6 +190,15 @@ private fun BackupPreviewSheet(
                         ),
                     )
                 }
+                preview.monitorTemplates?.let { templates ->
+                    Text(
+                        text = stringResource(
+                            R.string.backup_preview_monitor_templates,
+                            templates.added,
+                            templates.unchanged,
+                        ),
+                    )
+                }
                 preview.guard?.let { guard ->
                     Text(text = stringResource(R.string.backup_preview_guard, guard.backup.rules.size))
                     guard.backup.mode?.let { mode ->
