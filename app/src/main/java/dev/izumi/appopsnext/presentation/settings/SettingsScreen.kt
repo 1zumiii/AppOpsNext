@@ -86,6 +86,7 @@ fun SettingsScreen(
     onShizukuAction: () -> Unit,
     onPrivilegedServiceRetry: () -> Unit,
     onClearDiagnosticLog: () -> Unit,
+    onDiagnosticReportOpened: () -> Unit,
     onExportBackup: (Uri) -> Unit,
     onOpenBackup: (Uri) -> Unit,
     onConfirmBackupImport: () -> Unit,
@@ -286,6 +287,7 @@ fun SettingsScreen(
                     DiagnosticLogModule(
                         uiState = diagnosticsUiState,
                         onClear = onClearDiagnosticLog,
+                        onReportOpened = onDiagnosticReportOpened,
                         compact = true,
                     )
                     SettingsGroupDivider()

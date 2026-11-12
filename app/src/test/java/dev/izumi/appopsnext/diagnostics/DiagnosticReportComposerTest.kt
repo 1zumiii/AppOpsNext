@@ -49,6 +49,7 @@ class DiagnosticReportComposerTest {
         assertTrue(report.contains("failure(BIND_TIMED_OUT)"))
         assertTrue(report.contains("event-line"))
         assertTrue(report.contains("review and redact"))
+        assertTrue(report.contains("[Processes]\nNot read in this session."))
     }
 
     @Test

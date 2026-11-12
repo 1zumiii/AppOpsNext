@@ -1,6 +1,9 @@
 package dev.izumi.appopsnext.presentation.diagnostics
 
 import android.app.Application
+import android.os.SystemClock
+import android.system.Os
+import android.system.OsConstants
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,6 +13,8 @@ import dev.izumi.appopsnext.appops.model.AppOpsReadState
 import dev.izumi.appopsnext.diagnostics.DiagnosticEnvironmentCollector
 import dev.izumi.appopsnext.appops.AppOpsReadCapabilities
 import dev.izumi.appopsnext.diagnostics.DiagnosticReportComposer
+import dev.izumi.appopsnext.diagnostics.ProcessStats
+import java.time.ZoneId
 import dev.izumi.appopsnext.model.DeviceSummary
 import dev.izumi.appopsnext.shizuku.ShizukuController
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
@@ -45,7 +50,8 @@ class DiagnosticsViewModel(
         getApplication<AppOpsNextApplication>().structuredAppOpsReads.enabled,
         AppOpsReadCapabilities::report,
     )
-    private val registryReports = combine(monitorReport, readPaths, ::Pair)
+    private val processes = MutableStateFlow("Not read in this session.")
+    private val registryReports = combine(monitorReport, readPaths, processes, ::Triple)
 
     private val device = DeviceSummary(
         manufacturer = diagnosticEnvironment.manufacturer,
@@ -60,7 +66,7 @@ class DiagnosticsViewModel(
         appOpsReadState,
         diagnosticLog.lines,
         registryReports,
-    ) { shizukuState, serviceState, readState, logLines, (watchers, reads) ->
+    ) { shizukuState, serviceState, readState, logLines, (watchers, reads, processList) ->
         DiagnosticsUiState(
             device = device,
             shizukuState = shizukuState,
@@ -74,6 +80,7 @@ class DiagnosticsViewModel(
                 eventLines = logLines,
                 watcherRegistry = watchers,
                 readPaths = reads,
+                processes = processList,
             ),
             diagnosticEventCount = logLines.size,
         )
@@ -132,9 +139,11 @@ class DiagnosticsViewModel(
                     }
                 } else {
                     watcherRegistry.value = "Backend unavailable; no current snapshot."
+                    processes.value = "Backend unavailable; no current snapshot."
                     AppOpsReadState.WaitingForBackend
                 }
                 if (state is PrivilegedServiceState.Connected) {
+                    processes.value = readProcesses()
                     watcherRegistry.value = try {
                         val snapshot = AppOpsWatchersRepository(privilegedServiceClient).read()
                         "capturedAt=${java.time.Instant.now()}, recognized=${snapshot.recognized}, " +
@@ -150,6 +159,41 @@ class DiagnosticsViewModel(
                 }
             }
         }
+    }
+
+    /** Reads the process list again, as when the report is opened. */
+    fun refreshProcesses() {
+        if (privilegedServiceClient.state.value !is PrivilegedServiceState.Connected) return
+        viewModelScope.launch { processes.value = readProcesses() }
+    }
+
+    /** Never fails the report: a failed read becomes the section's text. */
+    private suspend fun readProcesses(): String = try {
+        val packageName = getApplication<AppOpsNextApplication>().packageName
+        val result = privilegedServiceClient.getProcesses(packageName)
+        if (result.timedOut || result.exitCode != 0) {
+            "Process snapshot unavailable: exitCode=${result.exitCode}, timedOut=${result.timedOut}, " +
+                "stderr=${result.stderr.trim().take(MAX_PROCESS_ERROR_LENGTH)}"
+        } else {
+            val clockTicks = Os.sysconf(OsConstants._SC_CLK_TCK)
+            val now = System.currentTimeMillis()
+            ProcessStats.formatSnapshot(
+                entries = ProcessStats.decodeRaw(
+                    raw = result.stdout,
+                    packageName = packageName,
+                    clockTicksPerSecond = clockTicks,
+                    bootEpochMillis = now - SystemClock.elapsedRealtime(),
+                ),
+                capturedAtMillis = now,
+                clockTicksPerSecond = clockTicks,
+                packageName = packageName,
+                zone = ZoneId.systemDefault(),
+            )
+        }
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        "Process snapshot unavailable: ${error::class.java.simpleName}: ${error.message.orEmpty()}"
     }
 
     fun performShizukuAction() {
@@ -178,5 +222,6 @@ class DiagnosticsViewModel(
 
     private companion object {
         const val LOG_SOURCE = "Diagnostics"
+        const val MAX_PROCESS_ERROR_LENGTH = 200
     }
 }

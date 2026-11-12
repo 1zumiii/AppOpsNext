@@ -52,5 +52,7 @@ interface IPrivilegedAppOpsService {
     ) = 20;
     /** Only the time lines of `dumpsys package packages`, which in full exceeds a binder transaction. */
     ShellCommandResult getPackageTimes() = 21;
+    /** This app's processes, its native daemon and the Shizuku server, nothing else. */
+    ShellCommandResult getProcesses(String packageName) = 22;
     void destroy() = 16777114;
 }
