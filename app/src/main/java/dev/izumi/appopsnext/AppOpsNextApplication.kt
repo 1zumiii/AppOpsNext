@@ -155,6 +155,8 @@ class AppOpsNextApplication : Application() {
                 }
             },
             loadOpStates = appOpsRepository::loadOpStates,
+            markChangedElsewhere = appOpChangeLog::markChangedElsewhere,
+            betweenWrites = { action -> appOpsRepository.betweenWrites(action) },
             scope = applicationScope,
         )
     }

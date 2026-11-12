@@ -4,6 +4,7 @@ import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.appops.parser.OpStates
 import dev.izumi.appopsnext.apps.model.InstalledApp
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -122,11 +123,106 @@ class AppOpChangeDriftsTest {
         try {
             connected.value = true
             withTimeout(5_000) { monitor.drifts.first { it.size == 1 } }
-            assertEquals(listOf("CAMERA"), synchronized(readOperations) { readOperations.toList() })
+            // The change found is read once more before it is flagged, and nothing else is read.
+            assertEquals(setOf("CAMERA"), synchronized(readOperations) { readOperations.toSet() })
 
             // "Keep current value" removes the record, and the drift goes with it.
             records.value = emptyList()
             withTimeout(5_000) { monitor.drifts.first { it.isEmpty() } }
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun `only records not yet flagged that differ on the device are newly changed`() {
+        val differs = record(app.packageName, camera, AppOpMode.IGNORE)
+        val flagged = record(app.packageName, camera, AppOpMode.IGNORE, timeMillis = 900)
+            .copy(scope = AppOpScope.PACKAGE, changedElsewhere = true)
+        val same = record(app.packageName, "android:record_audio", AppOpMode.IGNORE)
+        val states = mapOf(
+            AppOpChangeRead(0, camera) to uidStates(app.uid to "allow"),
+            AppOpChangeRead(0, "android:record_audio") to uidStates(app.uid to "ignore"),
+        )
+
+        assertEquals(
+            listOf(differs),
+            AppOpChangeDrifts.newlyChanged(listOf(differs, flagged, same), apps, states),
+        )
+    }
+
+    @Test
+    fun `a flagged setting back at the recorded mode is no drift and one still changed is`() {
+        val flagged = record(app.packageName, camera, AppOpMode.IGNORE).copy(changedElsewhere = true)
+
+        val back = mapOf(AppOpChangeRead(0, camera) to uidStates(app.uid to "ignore"))
+        val still = mapOf(AppOpChangeRead(0, camera) to uidStates(app.uid to "foreground"))
+
+        assertTrue(AppOpChangeDrifts.find(listOf(flagged), apps, back).isEmpty())
+        assertEquals(1, AppOpChangeDrifts.find(listOf(flagged), apps, still).size)
+    }
+
+    @Test
+    fun `the monitor flags a change it reads again between writes`(): Unit = runBlocking {
+        val scope = CoroutineScope(Dispatchers.Default)
+        val original = record(app.packageName, camera, AppOpMode.IGNORE)
+        val records = MutableStateFlow(listOf(original))
+        val marked = mutableListOf<AppOpChangeRecord>()
+        var betweenWrites = 0
+        val monitor = AppOpChangeDriftMonitor(
+            records = records,
+            connected = MutableStateFlow(true),
+            loadApps = { listOf(app) },
+            loadOpStates = { _, _, _ -> uidStates(app.uid to "foreground") },
+            markChangedElsewhere = { seen ->
+                synchronized(marked) { marked += seen }
+                records.value = AppOpChangeRecords.markChangedElsewhere(records.value, seen)
+            },
+            betweenWrites = { action ->
+                synchronized(marked) { betweenWrites++ }
+                action()
+            },
+            scope = scope,
+            settleMillis = 0,
+        )
+        try {
+            withTimeout(5_000) { records.first { it.single().changedElsewhere } }
+            withTimeout(5_000) { monitor.drifts.first { it.singleOrNull()?.status?.record?.changedElsewhere == true } }
+            synchronized(marked) {
+                assertEquals(listOf(original), marked)
+                assertEquals(1, betweenWrites)
+            }
+        } finally {
+            scope.cancel()
+        }
+    }
+
+    @Test
+    fun `the monitor does not flag a mode that is back once writes are done`(): Unit = runBlocking {
+        val scope = CoroutineScope(Dispatchers.Default)
+        val records = MutableStateFlow(listOf(record(app.packageName, camera, AppOpMode.IGNORE)))
+        val marked = mutableListOf<AppOpChangeRecord>()
+        val confirmed = CompletableDeferred<Unit>()
+        var writing = true
+        val monitor = AppOpChangeDriftMonitor(
+            records = records,
+            connected = MutableStateFlow(true),
+            loadApps = { listOf(app) },
+            // A write of this app in progress shows another mode until it finishes or rolls back.
+            loadOpStates = { _, _, _ -> uidStates(app.uid to if (writing) "allow" else "ignore") },
+            markChangedElsewhere = { seen -> synchronized(marked) { marked += seen } },
+            betweenWrites = { action ->
+                writing = false
+                action()
+                confirmed.complete(Unit)
+            },
+            scope = scope,
+            settleMillis = 0,
+        )
+        try {
+            withTimeout(5_000) { confirmed.await() }
+            assertEquals(1, monitor.drifts.value.size)
+            assertTrue(synchronized(marked) { marked.isEmpty() })
         } finally {
             scope.cancel()
         }

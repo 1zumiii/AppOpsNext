@@ -264,6 +264,12 @@ class AppOpsRepository(
     }
 
     /**
+     * Runs [action] in the write queue, so its reads see no write half done.
+     * It must not change a mode itself, since the queue is not reentrant.
+     */
+    suspend fun <T> betweenWrites(action: suspend () -> T): T = writeCoordinator.serialize(action)
+
+    /**
      * Keep retries in one transaction. Inside this block use the supplied writer,
      * not the repository's standalone write methods (which acquire the queue).
      */

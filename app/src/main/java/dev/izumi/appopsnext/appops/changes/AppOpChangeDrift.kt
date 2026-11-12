@@ -61,6 +61,23 @@ object AppOpChangeDrifts {
             }
             .sortedByDescending { it.status.record.timeMillis }
 
+    /**
+     * The records not yet flagged as changed elsewhere whose mode on the
+     * device differs from the recorded one, each record on its own whatever
+     * the other scopes hold. A read missing from [states] counts as no change.
+     */
+    fun newlyChanged(
+        records: List<AppOpChangeRecord>,
+        appsByUser: Map<Int, Map<String, InstalledApp>>,
+        states: Map<AppOpChangeRead, OpStates>,
+    ): List<AppOpChangeRecord> =
+        current(records, appsByUser).mapNotNull { (app, record) ->
+            if (record.changedElsewhere) return@mapNotNull null
+            val opStates = states[AppOpChangeRead(record.userId, record.stableOperationName)]
+                ?: return@mapNotNull null
+            record.takeIf { opStates.modeAt(app.uid, app.packageName, it.scope) != it.recordedMode }
+        }
+
     private fun current(
         records: List<AppOpChangeRecord>,
         appsByUser: Map<Int, Map<String, InstalledApp>>,
