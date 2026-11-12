@@ -48,16 +48,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.LaunchedEffect
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.apps.AppSortOrder
 import dev.izumi.appopsnext.apps.model.InstalledApp
-import dev.izumi.appopsnext.monitor.AppOpCodes
+import dev.izumi.appopsnext.monitor.MonitorOpCodes
+import dev.izumi.appopsnext.monitor.VendorMonitorOps
 import dev.izumi.appopsnext.monitor.BuiltInMonitorTemplates
 import dev.izumi.appopsnext.monitor.MonitorOutcomes
 import dev.izumi.appopsnext.monitor.MonitorTemplate
 import dev.izumi.appopsnext.monitor.MonitorTemplateApplier
 import dev.izumi.appopsnext.monitor.MonitorTemplateRule
-import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
+import dev.izumi.appopsnext.presentation.app_detail.appOpDisplayLabel
 import dev.izumi.appopsnext.presentation.batch.StringSelectionSaver
 import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.presentation.components.CompactTextField
@@ -86,6 +88,13 @@ fun MonitorTemplatesScreen(
 ) {
     val templates by viewModel.templates.collectAsStateWithLifecycle()
     val outcome by viewModel.applyOutcome.collectAsStateWithLifecycle()
+    val vendorCodes by VendorMonitorOps.codes.collectAsStateWithLifecycle()
+    // Whether a private operation counts as available depends on the device,
+    // which is asked only when some template names one.
+    val namesVendorOps = templates.any { template -> template.operationNames.any(MonitorOpCodes::isVendor) }
+    LaunchedEffect(namesVendorOps) {
+        if (namesVendorOps) viewModel.probeVendorOps()
+    }
     val locked = uiState.monitorEnabled || uiState.monitorBusy
 
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -207,7 +216,7 @@ fun MonitorTemplatesScreen(
             packageNames = packages,
             targets = uiState.targets,
             points = uiState.points,
-            isAvailable = { AppOpCodes.codeOf(it) != null },
+            isAvailable = { MonitorOpCodes.codeOf(it, vendorCodes) != null },
         )
         AppBottomSheet(
             onDismissRequest = { confirming = false },
@@ -486,6 +495,7 @@ private fun MonitorTemplateEditor(
 ) {
     var renaming by rememberSaveable { mutableStateOf(false) }
     var deleting by rememberSaveable { mutableStateOf(false) }
+    val vendorCodes by VendorMonitorOps.codes.collectAsStateWithLifecycle()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -575,7 +585,7 @@ private fun MonitorTemplateEditor(
                 item {
                     ExperimentalGroup {
                         template.rules.forEachIndexed { index, rule ->
-                            val available = AppOpCodes.codeOf(rule.operationName) != null
+                            val available = MonitorOpCodes.codeOf(rule.operationName, vendorCodes) != null
                             ExperimentalGroupRow(
                                 modifier = Modifier.clickable { onOpenRule(rule) },
                                 headlineContent = {
@@ -975,7 +985,7 @@ private fun monitorTemplateName(template: MonitorTemplate): String =
 
 @Composable
 private fun operationLabel(operationName: String): String =
-    AppOpDisplayCatalog.labelResOf(operationName)?.let { stringResource(it) } ?: operationName
+    appOpDisplayLabel(operationName)
 
 @Composable
 private fun operationLabels(operationNames: List<String>): String =

@@ -119,6 +119,12 @@ class AppOpDisplayCatalogTest {
         assertEquals(1, items.count { MiuiOps.isMiuiOp(it.operationName) })
     }
 
+    @Test fun `every catalogued MIUI code has a label and the monitor's stored name finds it`() {
+        assertEquals(MiuiOps.CATALOGUED_CODES.toSet(), AppOpDisplayCatalog.miuiLabelledCodes)
+        assertEquals(R.string.miui_op_label_auto_start, AppOpDisplayCatalog.labelResOf("android:10008"))
+        assertEquals(null, AppOpDisplayCatalog.labelResOf("android:10054"))
+    }
+
     private fun label(resourceId: Int): String =
         labels[resourceId] ?: "label-$resourceId"
 

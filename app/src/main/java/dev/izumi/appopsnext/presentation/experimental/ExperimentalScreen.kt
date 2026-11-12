@@ -49,6 +49,10 @@ import dev.izumi.appopsnext.presentation.components.MainPageEntryIcon
 import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.monitor.MonitorSelfCheckResult
 import dev.izumi.appopsnext.monitor.MonitorStatus
+import dev.izumi.appopsnext.monitor.MonitorOpCodes
+import dev.izumi.appopsnext.monitor.VendorOpWatch
+import dev.izumi.appopsnext.monitor.VendorWatchState
+import dev.izumi.appopsnext.presentation.app_detail.appOpDisplayLabel
 import dev.izumi.appopsnext.appops.parser.WatchRegistration
 
 /**
@@ -318,6 +322,7 @@ private fun MonitorFeature(
             }
         }
         MonitorStatusText(uiState)
+        uiState.status?.vendorOps?.takeIf { it.isNotEmpty() }?.let { VendorWatchText(it) }
         if (!uiState.monitorEnabled && !uiState.monitorBusy &&
             uiState.selfCheckResult is MonitorSelfCheckResult.Unconfirmed
         ) {
@@ -460,6 +465,50 @@ private fun MonitorStatusText(uiState: ExperimentalUiState) {
             MaterialTheme.colorScheme.primary
         },
     )
+}
+
+/**
+ * The MIUI private operations by outcome, one line each, apart from the line
+ * above, which speaks for the standard watches. A refusal carries the reason
+ * the system gave, since that is what a report from such a device needs.
+ */
+@Composable
+private fun VendorWatchText(watches: List<VendorOpWatch>) {
+    val separator = stringResource(R.string.list_separator)
+    val registered = watches.filter { it.state == VendorWatchState.REGISTERED }
+        .map { appOpDisplayLabel(MonitorOpCodes.vendorName(it.code)) }
+    val refused = watches.filter { it.state == VendorWatchState.REFUSED }.map { watch ->
+        stringResource(
+            R.string.monitor_vendor_refused_item,
+            appOpDisplayLabel(MonitorOpCodes.vendorName(watch.code)),
+            watch.failures.distinct().joinToString(separator),
+        )
+    }
+    val unknown = watches.filter { it.state == VendorWatchState.UNKNOWN }
+        .map { appOpDisplayLabel(MonitorOpCodes.vendorName(it.code)) }
+    val lines = buildList {
+        if (registered.isNotEmpty()) {
+            add(stringResource(R.string.monitor_vendor_registered, registered.joinToString(separator)) to false)
+        }
+        if (refused.isNotEmpty()) {
+            add(stringResource(R.string.monitor_vendor_refused, refused.joinToString(separator)) to true)
+        }
+        if (unknown.isNotEmpty()) {
+            add(stringResource(R.string.monitor_vendor_unknown, unknown.joinToString(separator)) to true)
+        }
+    }
+    Column(
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        lines.forEach { (text, isError) ->
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }
 
 /** Names the watches that did not register, instead of claiming full coverage. */

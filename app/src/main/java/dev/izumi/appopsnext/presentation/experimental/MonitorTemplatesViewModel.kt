@@ -4,7 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.izumi.appopsnext.AppOpsNextApplication
-import dev.izumi.appopsnext.monitor.AppOpCodes
+import dev.izumi.appopsnext.monitor.MonitorOpCodes
 import dev.izumi.appopsnext.monitor.BuiltInMonitorTemplates
 import dev.izumi.appopsnext.monitor.MonitorOutcomes
 import dev.izumi.appopsnext.monitor.MonitorTemplate
@@ -101,8 +101,11 @@ class MonitorTemplatesViewModel(application: Application) : AndroidViewModel(app
                 mutableApplyOutcome.value = MonitorTemplateApplyOutcome.Locked
                 return@launch
             }
+            // Applying must not skip a private operation only because the
+            // device was not asked yet.
+            if (template.operationNames.any(MonitorOpCodes::isVendor)) probeVendorOps(packageNames)
             val result = repository.applyTemplate(template, packageNames) { operationName ->
-                AppOpCodes.codeOf(operationName) != null
+                MonitorOpCodes.codeOf(operationName) != null
             }
             mutableApplyOutcome.value = MonitorTemplateApplyOutcome.Applied(
                 appCount = result.packageNames.size,
@@ -110,6 +113,11 @@ class MonitorTemplatesViewModel(application: Application) : AndroidViewModel(app
                 skippedOperations = result.skippedOperations,
             )
         }
+    }
+
+    /** See [AppOpsNextApplication.probeVendorOps]. */
+    suspend fun probeVendorOps(packageNames: Collection<String> = emptyList()) {
+        getApplication<AppOpsNextApplication>().probeVendorOps(packageNames)
     }
 
     fun dismissApplyOutcome() {
