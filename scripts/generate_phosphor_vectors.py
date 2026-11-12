@@ -62,6 +62,7 @@ REGULAR_ICONS = (
     "phone-outgoing",
     "picture-in-picture",
     "play-circle",
+    "plugs",
     "plus",
     "shield",
     "squares-four",

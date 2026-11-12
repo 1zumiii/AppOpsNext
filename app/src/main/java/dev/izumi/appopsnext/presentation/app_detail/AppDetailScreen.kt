@@ -24,7 +24,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -71,6 +70,8 @@ import dev.izumi.appopsnext.presentation.batch.PermissionBatchSelection
 import dev.izumi.appopsnext.presentation.batch.TemplatePickerDialog
 import dev.izumi.appopsnext.presentation.components.AppIcon
 import dev.izumi.appopsnext.presentation.components.CompactSearchField
+import dev.izumi.appopsnext.presentation.components.EmptyStateContent
+import dev.izumi.appopsnext.presentation.components.EmptyStateIcons
 import dev.izumi.appopsnext.ui.theme.mainPageHeadingWeight
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
 import java.util.Locale
@@ -212,9 +213,11 @@ fun AppDetailScreen(
                     .padding(contentPadding),
             )
 
-            is AppDetailUiState.WaitingForBackend -> MessageContent(
-                app = uiState.app,
-                message = stringResource(R.string.app_detail_waiting_backend),
+            // The top bar already names the app, so the page is left to the wait.
+            is AppDetailUiState.WaitingForBackend -> EmptyStateContent(
+                icon = R.drawable.ic_ph_plugs,
+                title = stringResource(R.string.app_detail_waiting_backend_title),
+                detail = stringResource(R.string.app_detail_waiting_backend),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(contentPadding),
@@ -258,7 +261,6 @@ fun AppDetailScreen(
             )
 
             is AppDetailUiState.Failure -> FailureContent(
-                app = uiState.app,
                 reason = uiState.reason,
                 onRefresh = onRefresh,
                 modifier = Modifier
@@ -400,16 +402,19 @@ private fun ReadyContent(
             }
             if (displayItems.isEmpty()) {
                 item {
-                    Text(
-                        text = stringResource(
-                            if (state.snapshot.entries.isEmpty()) {
+                    val noRecords = state.snapshot.entries.isEmpty()
+                    EmptyStateContent(
+                        icon = if (noRecords) R.drawable.ic_ph_shield else EmptyStateIcons.NO_MATCHES,
+                        title = stringResource(
+                            if (noRecords) {
                                 R.string.app_detail_no_operations
                             } else {
                                 R.string.app_detail_no_matching_operations
                             },
                         ),
-                        modifier = Modifier.padding(vertical = 32.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .fillParentMaxWidth()
+                            .padding(vertical = 48.dp),
                     )
                 }
             } else {
@@ -692,66 +697,30 @@ private fun LoadingContent(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun MessageContent(
-    app: InstalledApp,
-    message: String,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            text = app.packageName,
-            style = MaterialTheme.typography.titleSmall,
-        )
-        Text(
-            text = message,
-            modifier = Modifier.padding(top = 12.dp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
 private fun FailureContent(
-    app: InstalledApp,
     reason: AppOpsReadFailureReason,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier.padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            text = stringResource(
-                when (reason) {
-                    AppOpsReadFailureReason.BACKEND_UNAVAILABLE ->
-                        R.string.status_appops_backend_unavailable_detail
+    EmptyStateContent(
+        icon = EmptyStateIcons.LOAD_FAILED,
+        title = stringResource(R.string.app_detail_load_failed_title),
+        detail = stringResource(
+            when (reason) {
+                AppOpsReadFailureReason.BACKEND_UNAVAILABLE ->
+                    R.string.status_appops_backend_unavailable_detail
 
-                    AppOpsReadFailureReason.COMMAND_FAILED ->
-                        R.string.status_appops_command_failed_detail
+                AppOpsReadFailureReason.COMMAND_FAILED ->
+                    R.string.status_appops_command_failed_detail
 
-                    AppOpsReadFailureReason.COMMAND_TIMED_OUT ->
-                        R.string.status_appops_command_timed_out_detail
-                },
-            ),
-        )
-        Text(
-            text = app.packageName,
-            modifier = Modifier.padding(top = 8.dp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        FilledTonalButton(
-            onClick = onRefresh,
-            modifier = Modifier.padding(top = 16.dp),
-        ) {
-            Text(text = stringResource(R.string.action_retry))
-        }
-    }
+                AppOpsReadFailureReason.COMMAND_TIMED_OUT ->
+                    R.string.status_appops_command_timed_out_detail
+            },
+        ),
+        actionLabel = stringResource(R.string.action_retry),
+        onAction = onRefresh,
+        modifier = modifier,
+    )
 }
 
 private fun AppDetailUiState.appOrNull(): InstalledApp? =

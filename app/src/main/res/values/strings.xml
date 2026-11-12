@@ -103,10 +103,12 @@
     <string name="app_type_system">System app · UID %1$d</string>
     <string name="app_type_user">User app · UID %1$d</string>
     <string name="app_detail_title">App details</string>
-    <string name="app_detail_waiting_backend">Details load automatically once the privileged backend connects.</string>
+    <string name="app_detail_waiting_backend">This app’s permissions load once it connects. Settings shows the connection status.</string>
+    <string name="app_detail_waiting_backend_title">Privileged backend not connected</string>
+    <string name="app_detail_load_failed_title">Could not read this app’s permissions</string>
     <string name="app_detail_operation_count">%1$d AppOps recorded</string>
     <string name="app_detail_loading_operations">Reading operations…</string>
-    <string name="app_detail_no_operations">This app has no AppOps records yet.</string>
+    <string name="app_detail_no_operations">This app has no AppOps records</string>
     <string name="app_detail_mode_button">%1$s ▾</string>
     <string name="app_detail_mode_confirm_title">Confirm AppOp change</string>
     <string name="app_detail_mode_confirm_operation">Operation: %1$s</string>
@@ -374,7 +376,7 @@
     <string name="batch_apply_short">Apply</string>
     <string name="app_detail_search_label">Search localized or system permission name</string>
     <string name="app_detail_filtered_count">Showing %1$d of %2$d permissions</string>
-    <string name="app_detail_no_matching_operations">No matching permissions.</string>
+    <string name="app_detail_no_matching_operations">No matching permissions</string>
     <string name="app_op_label_camera">Camera</string>
     <string name="app_op_label_record_audio">Microphone</string>
     <string name="app_op_label_coarse_location">Approximate location</string>
