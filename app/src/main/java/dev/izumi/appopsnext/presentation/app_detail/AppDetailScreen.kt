@@ -105,6 +105,7 @@ fun AppDetailScreen(
         List<PermissionBatchSelection>,
         AppOpMode,
     ) -> Unit,
+    onOpenConnectionSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val app = uiState.appOrNull()
@@ -218,6 +219,8 @@ fun AppDetailScreen(
                 icon = R.drawable.ic_ph_plugs,
                 title = stringResource(R.string.app_detail_waiting_backend_title),
                 detail = stringResource(R.string.app_detail_waiting_backend),
+                actionLabel = stringResource(R.string.app_detail_open_connection),
+                onAction = onOpenConnectionSettings,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(contentPadding),

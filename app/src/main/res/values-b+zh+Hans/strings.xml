@@ -103,8 +103,9 @@
     <string name="app_type_system">系统应用 · UID %1$d</string>
     <string name="app_type_user">用户应用 · UID %1$d</string>
     <string name="app_detail_title">应用详情</string>
-    <string name="app_detail_waiting_backend">连接后会自动读取此应用的权限。\n连接状态可在“设置”中查看。</string>
+    <string name="app_detail_waiting_backend">连接后会自动读取此应用的权限。</string>
     <string name="app_detail_waiting_backend_title">特权后端未连接</string>
+    <string name="app_detail_open_connection">查看连接状态</string>
     <string name="app_detail_load_failed_title">无法读取此应用的权限</string>
     <string name="app_detail_operation_count">记录到 %1$d 项 AppOps</string>
     <string name="app_detail_loading_operations">正在读取权限…</string>
