@@ -1,6 +1,8 @@
 package dev.izumi.appopsnext.presentation.permissions
 
 import androidx.compose.foundation.lazy.rememberLazyListState
+import dev.izumi.appopsnext.presentation.components.EmptyStateIcons
+import dev.izumi.appopsnext.presentation.components.EmptyStateContent
 import dev.izumi.appopsnext.presentation.components.topFadingEdge
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
@@ -63,7 +65,11 @@ fun PermissionListContent(
         ) {
             if (permissions.isEmpty()) {
                 item {
-                    Text(text = stringResource(R.string.app_detail_no_matching_operations))
+                    EmptyStateContent(
+                        icon = EmptyStateIcons.NO_MATCHES,
+                        title = stringResource(R.string.app_detail_no_matching_operations),
+                        modifier = Modifier.fillParentMaxSize(),
+                    )
                 }
             }
             items(items = permissions, key = AppOpDisplayItem::operationName) { permission ->

@@ -16,7 +16,8 @@
     <string name="permission_scope_uid">UID</string>
     <string name="permission_scope_package">Package</string>
     <string name="permission_all_modes">All modes</string>
-    <string name="permission_load_failed">Unable to load permission modes. Check the privileged service connection and retry.</string>
+    <string name="permission_load_failed">Check the privileged service connection.</string>
+    <string name="permission_load_failed_title">Could not load permission modes</string>
     <string name="permission_uid_affected">These apps share a UID with the selection and will change too:\n%1$s</string>
     <string name="app_name">AppOpsNext</string>
     <string name="status_device_title">Device</string>
@@ -90,6 +91,7 @@
     <string name="app_list_count">Showing %1$d of %2$d apps</string>
     <string name="app_list_load_failed">Could not load installed apps</string>
     <string name="app_list_empty_search">No matching apps</string>
+    <string name="app_list_empty">No apps to show</string>
     <string name="app_list_empty_changed">Apps appear here after their permissions are changed in AppOpsNext. Changes made before this version are not recorded.</string>
     <string name="permission_empty_changed">Apps appear here after this permission is changed in AppOpsNext. Changes made before this version are not recorded.</string>
     <string name="changes_empty_title">No changes yet</string>
@@ -158,7 +160,8 @@
     <string name="app_op_change_restore">Restore previous setting</string>
     <string name="app_op_change_keep">Keep current setting</string>
     <string name="notifications_title">Notifications</string>
-    <string name="notifications_empty">No notifications.</string>
+    <string name="notifications_empty">No notifications</string>
+    <string name="notifications_empty_detail">Permission settings changed outside AppOpsNext, guard events and new app policy results appear here.</string>
     <string name="notifications_changed_section">Changed permission settings</string>
     <string name="notifications_changed_summary">These permissions differ from the last settings applied by AppOpsNext. Restore those settings or keep the current ones.</string>
     <string name="notifications_restore_all">Restore all</string>
@@ -220,7 +223,8 @@
     <string name="history_permission_search">Search permission or system name</string>
     <string name="history_no_matching_permissions">No matching permissions.</string>
     <string name="history_management_selected_count">%1$d permissions selected. Changes are saved only after you apply them.</string>
-    <string name="history_no_selected_permissions">No permissions selected. Use the button in the top-right corner to choose some.</string>
+    <string name="history_no_selected_permissions">No permissions selected</string>
+    <string name="history_no_selected_permissions_detail">The access history of each chosen permission appears here.</string>
     <string name="history_auto_refresh_summary">Refreshes every %1$d minutes while this history screen is visible, the app is in the foreground, and Shizuku is connected. Last updated: %2$s</string>
     <string name="history_never_updated">Not updated yet</string>
     <string name="history_waiting_for_backend">History loads automatically once the privileged backend connects.</string>
@@ -295,7 +299,8 @@
     <string name="history_intervals_only_note">No individual records in this range. These are the access counts the system keeps per interval.</string>
     <string name="history_interval_end">Until %1$s</string>
     <string name="history_apps_involved">Apps involved</string>
-    <string name="history_apps_empty">No app records are available.</string>
+    <string name="history_apps_empty">No apps involved</string>
+    <string name="history_apps_empty_detail">No app accessed this permission in the selected range.</string>
     <string name="history_apps_context">%1$s · %2$s</string>
     <string name="history_apps_count">%1$d apps</string>
     <string name="history_apps_access_unit">accesses</string>
@@ -519,8 +524,9 @@
     <string name="monitor_log_hint">Tap an entry to open that app\'s permissions.</string>
     <string name="monitor_log_details_title">About the monitor log</string>
     <string name="monitor_log_details">Every access reported to a monitoring point is kept here, whether or not it was notified. Up to 50,000 entries, oldest removed first.</string>
-    <string name="monitor_log_empty">Nothing recorded yet. Entries appear while the monitor is running.</string>
-    <string name="monitor_log_empty_filtered">No entries match this filter.</string>
+    <string name="monitor_log_empty">Accesses reported while the monitor runs are recorded here.</string>
+    <string name="monitor_log_empty_title">No entries yet</string>
+    <string name="monitor_log_empty_filtered">No entries match this filter</string>
     <string name="monitor_log_clear">Clear monitor log</string>
     <string name="monitor_log_clear_confirm">This deletes all %1$d entries. It cannot be undone.</string>
     <string name="watchers_title">Permission change listeners</string>
@@ -536,7 +542,8 @@
     <string name="watchers_unavailable">Unable to read the registry. Check the privileged connection. This device may also use an unsupported format.</string>
     <string name="watchers_incomplete">Some registrations could not be parsed. This list may be incomplete.</string>
     <string name="watchers_snapshot_time">Snapshot taken: %1$s</string>
-    <string name="watchers_empty">No mode listeners were identified in this snapshot.</string>
+    <string name="watchers_empty">No mode listeners identified</string>
+    <string name="watchers_empty_detail">Pull down to take a new snapshot.</string>
     <string name="watchers_uid">UID %1$d</string>
     <string name="watchers_owner_summary">UID %1$d · PID %2$d · %3$d registrations</string>
     <string name="watchers_expand">Details</string>
@@ -661,7 +668,8 @@
         <item quantity="other">%1$d points configured</item>
     </plurals>
     <string name="monitor_points_hint">Set what each monitoring point reports, how loudly, and how often.</string>
-    <string name="monitor_points_empty">Nothing is being watched yet.</string>
+    <string name="monitor_points_empty">Nothing is being watched yet</string>
+    <string name="monitor_points_empty_detail">Monitoring points appear here after apps and permissions are picked under Watched apps.</string>
     <string name="monitor_points_retained_header">Kept, not in use</string>
     <string name="monitor_point_every_access">every access</string>
     <string name="monitor_point_every">every %1$s</string>
@@ -689,7 +697,7 @@
     <string name="monitor_all_ops_summary">Include uncommon and device-specific AppOps entries.</string>
     <string name="monitor_operations_section">Monitoring points</string>
     <string name="monitor_operations_search">Search monitoring points</string>
-    <string name="monitor_operations_empty">No matching monitoring points.</string>
+    <string name="monitor_operations_empty">No matching monitoring points</string>
     <string name="monitor_vendor_op_item">MIUI private operation %1$d · unverified</string>
     <string name="monitor_vendor_ops_hint">Monitoring MIUI private permissions is unverified. The system may reject registration or never report access.</string>
     <string name="monitor_vendor_registered">MIUI private operations registered: %1$s</string>

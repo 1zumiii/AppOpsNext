@@ -37,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.presentation.components.EmptyStateContent
 import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import java.text.DateFormat
 import java.util.Date
@@ -92,7 +93,14 @@ fun WatchersScreen(uiState: WatchersUiState, onRefresh: () -> Unit, onBack: () -
                             style = MaterialTheme.typography.bodySmall,
                         )
                         if (uiState.owners.isEmpty() && !uiState.incomplete) {
-                            Text(stringResource(R.string.watchers_empty), Modifier.padding(16.dp))
+                            EmptyStateContent(
+                                icon = R.drawable.ic_ph_broadcast,
+                                title = stringResource(R.string.watchers_empty),
+                                detail = stringResource(R.string.watchers_empty_detail),
+                                modifier = Modifier
+                                    .fillParentMaxWidth()
+                                    .padding(vertical = 48.dp),
+                            )
                         }
                     }
                 }

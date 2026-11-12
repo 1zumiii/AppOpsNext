@@ -14,7 +14,8 @@
     <string name="permission_scope_uid">UID 级</string>
     <string name="permission_scope_package">包级</string>
     <string name="permission_all_modes">全部模式</string>
-    <string name="permission_load_failed">无法读取权限模式。请检查特权服务连接后重试。</string>
+    <string name="permission_load_failed">请检查特权服务的连接。</string>
+    <string name="permission_load_failed_title">无法读取权限模式</string>
     <string name="permission_uid_affected">以下应用与所选应用共享 UID，也会一起被修改：\n%1$s</string>
     <string name="app_name">AppOpsNext</string>
     <string name="status_device_title">设备</string>
@@ -88,6 +89,7 @@
     <string name="app_list_count">显示 %1$d 个，共 %2$d 个应用</string>
     <string name="app_list_load_failed">无法读取已安装应用</string>
     <string name="app_list_empty_search">没有匹配的应用</string>
+    <string name="app_list_empty">没有可显示的应用</string>
     <string name="app_list_empty_changed">通过 AppOpsNext 修改权限后，对应应用将显示在此列表中。此功能启用前的修改不在记录范围内。</string>
     <string name="permission_empty_changed">通过 AppOpsNext 修改此项权限后，对应应用将显示在此列表中。此功能启用前的修改不在记录范围内。</string>
     <string name="changes_empty_title">暂无修改记录</string>
@@ -156,7 +158,8 @@
     <string name="app_op_change_restore">恢复此前设置</string>
     <string name="app_op_change_keep">保留当前设置</string>
     <string name="notifications_title">通知</string>
-    <string name="notifications_empty">暂无通知。</string>
+    <string name="notifications_empty">暂无通知</string>
+    <string name="notifications_empty_detail">权限设置被其他途径改动、守护记录到改动或新装应用套用规则后，会在这里提示。</string>
     <string name="notifications_changed_section">权限设置变更</string>
     <string name="notifications_changed_summary">以下权限与 AppOpsNext 上次的设置不一致。可恢复此前设置，或保留当前设置。</string>
     <string name="notifications_restore_all">全部恢复</string>
@@ -215,7 +218,8 @@
     <string name="history_permission_search">搜索权限名称或系统名</string>
     <string name="history_no_matching_permissions">没有匹配的权限。</string>
     <string name="history_management_selected_count">已选择 %1$d 项权限，确认应用后才会保存更改。</string>
-    <string name="history_no_selected_permissions">尚未选择要查看的权限，请点右上角的按钮选择。</string>
+    <string name="history_no_selected_permissions">尚未选择权限</string>
+    <string name="history_no_selected_permissions_detail">选择权限后，这里会显示各权限的访问历史。</string>
     <string name="history_auto_refresh_summary">历史页面可见、应用位于前台且 Shizuku 已连接时，每 %1$d 分钟自动刷新。最近更新：%2$s</string>
     <string name="history_never_updated">尚未更新</string>
     <string name="history_waiting_for_backend">特权后端连接后会自动加载历史记录。</string>
@@ -290,7 +294,8 @@
     <string name="history_intervals_only_note">所选范围内没有单条记录，以下是系统按时间段累计的访问次数。</string>
     <string name="history_interval_end">截至 %1$s</string>
     <string name="history_apps_involved">涉及应用</string>
-    <string name="history_apps_empty">没有可统计的应用记录。</string>
+    <string name="history_apps_empty">没有涉及的应用</string>
+    <string name="history_apps_empty_detail">所选范围内没有应用访问此权限。</string>
     <string name="history_apps_context">%1$s · %2$s</string>
     <string name="history_apps_count">共 %1$d 个应用</string>
     <string name="history_apps_access_unit">访问</string>
@@ -513,8 +518,9 @@
     <string name="monitor_log_hint">点击记录可打开对应应用的权限设置。</string>
     <string name="monitor_log_details_title">监测记录说明</string>
     <string name="monitor_log_details">这里保留监测点收到的所有访问，包括未通知的记录。最多保存 5 万条，超出后删除最早的。</string>
-    <string name="monitor_log_empty">还没有记录。监测运行期间收到的访问会记在这里。</string>
-    <string name="monitor_log_empty_filtered">没有符合筛选条件的记录。</string>
+    <string name="monitor_log_empty">监测运行期间收到的访问会记在这里。</string>
+    <string name="monitor_log_empty_title">暂无记录</string>
+    <string name="monitor_log_empty_filtered">没有符合筛选条件的记录</string>
     <string name="monitor_log_clear">清空监测记录</string>
     <string name="monitor_log_clear_confirm">将删除全部 %1$d 条记录，删除后无法恢复。</string>
     <string name="watchers_title">权限变更监听者</string>
@@ -530,7 +536,8 @@
     <string name="watchers_unavailable">无法读取监听表。请检查特权连接，此设备也可能使用了不支持的格式。</string>
     <string name="watchers_incomplete">部分注册无法解析，列表可能不完整。</string>
     <string name="watchers_snapshot_time">快照采集于：%1$s</string>
-    <string name="watchers_empty">此快照中未识别到模式监听者。</string>
+    <string name="watchers_empty">未识别到模式监听者</string>
+    <string name="watchers_empty_detail">下拉可重新采集快照。</string>
     <string name="watchers_uid">UID %1$d</string>
     <string name="watchers_owner_summary">UID %1$d · PID %2$d · %3$d 条注册</string>
     <string name="watchers_expand">详情</string>
@@ -653,7 +660,8 @@
         <item quantity="other">已配置 %1$d 个监测点</item>
     </plurals>
     <string name="monitor_points_hint">为每个监测点设置通报内容、提醒方式和通报间隔。</string>
-    <string name="monitor_points_empty">还没有监测任何权限。</string>
+    <string name="monitor_points_empty">还没有监测任何权限</string>
+    <string name="monitor_points_empty_detail">在“监测的应用”中选择应用和权限后，监测点会列在这里。</string>
     <string name="monitor_points_retained_header">已保留，当前未生效</string>
     <string name="monitor_point_every_access">每次都通报</string>
     <string name="monitor_point_every">每 %1$s</string>
@@ -681,7 +689,7 @@
     <string name="monitor_all_ops_summary">包含不常用及设备专有的 AppOps 项。</string>
     <string name="monitor_operations_section">监测点</string>
     <string name="monitor_operations_search">搜索监测点</string>
-    <string name="monitor_operations_empty">没有匹配的监测点。</string>
+    <string name="monitor_operations_empty">没有匹配的监测点</string>
     <string name="monitor_vendor_op_item">MIUI 私有权限 %1$d · 未经验证</string>
     <string name="monitor_vendor_ops_hint">MIUI 私有权限的监测尚未验证，系统可能拒绝监听或不上报访问。</string>
     <string name="monitor_vendor_registered">MIUI 私有权限已注册：%1$s</string>

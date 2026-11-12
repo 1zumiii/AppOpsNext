@@ -1,5 +1,7 @@
 package dev.izumi.appopsnext.presentation.app_list
 
+import dev.izumi.appopsnext.presentation.components.EmptyStateIcons
+import dev.izumi.appopsnext.presentation.components.EmptyStateContent
 import dev.izumi.appopsnext.presentation.components.topFadingEdge
 import androidx.activity.compose.BackHandler
 import dev.izumi.appopsnext.apps.model.AndroidUser
@@ -346,7 +348,10 @@ private fun AppListContent(
                     }
                 } else if (uiState.visibleApps.isEmpty()) {
                     item {
-                        EmptySearchContent(modifier = Modifier.fillParentMaxSize())
+                        EmptyAppsContent(
+                            searching = uiState.searchQuery.isNotBlank(),
+                            modifier = Modifier.fillParentMaxSize(),
+                        )
                     }
                 }
                 items(
@@ -583,33 +588,20 @@ private fun LoadFailureContent(
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier.padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            text = stringResource(R.string.app_list_load_failed),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        FilledTonalButton(
-            onClick = onRefresh,
-            modifier = Modifier.padding(top = 16.dp),
-        ) {
-            Text(text = stringResource(R.string.action_retry))
-        }
-    }
+    EmptyStateContent(
+        icon = EmptyStateIcons.LOAD_FAILED,
+        title = stringResource(R.string.app_list_load_failed),
+        actionLabel = stringResource(R.string.action_retry),
+        onAction = onRefresh,
+        modifier = modifier,
+    )
 }
 
 @Composable
-private fun EmptySearchContent(modifier: Modifier = Modifier) {
-    Box(
+private fun EmptyAppsContent(searching: Boolean, modifier: Modifier = Modifier) {
+    EmptyStateContent(
+        icon = if (searching) EmptyStateIcons.NO_MATCHES else R.drawable.ic_ph_squares_four,
+        title = stringResource(if (searching) R.string.app_list_empty_search else R.string.app_list_empty),
         modifier = modifier,
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = stringResource(R.string.app_list_empty_search),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
+    )
 }

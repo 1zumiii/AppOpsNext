@@ -47,6 +47,7 @@ import dev.izumi.appopsnext.newapps.NewAppResult
 import dev.izumi.appopsnext.presentation.app_detail.AppOpChangeStatusText
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 import dev.izumi.appopsnext.presentation.app_detail.modeLabel
+import dev.izumi.appopsnext.presentation.components.EmptyStateContent
 import dev.izumi.appopsnext.presentation.components.AppIcon
 import dev.izumi.appopsnext.presentation.experimental.ExperimentalGroup
 import dev.izumi.appopsnext.presentation.experimental.ExperimentalGroupRow
@@ -105,10 +106,11 @@ fun NotificationsScreen(
         ) {
             if (drifts.isEmpty() && guardEvents.isEmpty() && newAppResults.isEmpty()) {
                 item {
-                    Text(
-                        text = stringResource(R.string.notifications_empty),
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 24.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    EmptyStateContent(
+                        icon = R.drawable.ic_ph_bell,
+                        title = stringResource(R.string.notifications_empty),
+                        detail = stringResource(R.string.notifications_empty_detail),
+                        modifier = Modifier.fillParentMaxSize(),
                     )
                 }
             }

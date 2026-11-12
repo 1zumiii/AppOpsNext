@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.monitor.MonitorPointSettings
+import dev.izumi.appopsnext.presentation.components.EmptyStateContent
 import dev.izumi.appopsnext.presentation.components.AppIcon
 import dev.izumi.appopsnext.presentation.components.MainPageChevron
 
@@ -92,10 +93,13 @@ fun MonitorPointsScreen(
             }
             if (points.isEmpty()) {
                 item {
-                    Text(
-                        text = stringResource(R.string.monitor_points_empty),
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        style = MaterialTheme.typography.bodyMedium,
+                    EmptyStateContent(
+                        icon = R.drawable.ic_ph_list_checks,
+                        title = stringResource(R.string.monitor_points_empty),
+                        detail = stringResource(R.string.monitor_points_empty_detail),
+                        modifier = Modifier
+                            .fillParentMaxWidth()
+                            .padding(vertical = 48.dp),
                     )
                 }
             }
