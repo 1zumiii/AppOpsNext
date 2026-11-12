@@ -17,6 +17,12 @@ data class MonitorTemplateRule(
     val outcomes: MonitorOutcomes = MonitorOutcomes.ALL,
     val backgroundOnly: Boolean = false,
 ) {
+    /**
+     * Every setting at its default. Applying such a rule clears what the point
+     * had, since a point at its defaults is stored as no entry at all.
+     */
+    val isDefault: Boolean get() = settingsFor("").isDefault
+
     /** The point this rule sets up for [packageName]. */
     fun settingsFor(packageName: String): MonitorPointSettings =
         MonitorPointSettings(
