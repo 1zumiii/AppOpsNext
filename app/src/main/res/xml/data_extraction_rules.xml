@@ -23,6 +23,12 @@
         <exclude
             domain="file"
             path="appopsnext-diagnostic.log" />
+        <exclude
+            domain="file"
+            path="appopsnext-diagnostic-important.log" />
+        <exclude
+            domain="file"
+            path="appopsnext-diagnostic-marks.properties" />
     </cloud-backup>
     <device-transfer>
         <exclude
@@ -40,5 +46,11 @@
         <exclude
             domain="file"
             path="appopsnext-diagnostic.log" />
+        <exclude
+            domain="file"
+            path="appopsnext-diagnostic-important.log" />
+        <exclude
+            domain="file"
+            path="appopsnext-diagnostic-marks.properties" />
     </device-transfer>
 </data-extraction-rules>
