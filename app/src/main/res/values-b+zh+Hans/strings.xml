@@ -635,6 +635,9 @@
     <string name="monitor_template_count_apps">应用：%1$d 个</string>
     <string name="monitor_template_count_operations">权限（%1$d 项）：%2$s</string>
     <string name="monitor_template_confirm_replace">这些监测点的现有设置将被替换。其他应用和监测点不受影响。</string>
+    <string name="monitor_template_confirm_operations">权限（%1$d 项）及套用后的设置：</string>
+    <string name="monitor_template_confirm_defaults">显示为“每次都通报”的权限会恢复默认设置，原有设置将被移除。</string>
+    <string name="monitor_template_needs_rules">尚未添加权限，添加后才能套用此模板。</string>
     <string name="monitor_template_skipped">本机不支持，已跳过：%1$s</string>
     <string name="monitor_template_nothing_to_apply">本机不支持此模板中的任何权限。</string>
     <string name="monitor_template_applied_title">模板已套用</string>

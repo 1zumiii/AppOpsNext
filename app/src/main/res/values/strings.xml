@@ -641,6 +641,9 @@
     <string name="monitor_template_count_apps">Apps: %1$d</string>
     <string name="monitor_template_count_operations">Permissions (%1$d): %2$s</string>
     <string name="monitor_template_confirm_replace">The current settings of these monitoring points are replaced. Other apps and monitoring points do not change.</string>
+    <string name="monitor_template_confirm_operations">Permissions (%1$d), set to:</string>
+    <string name="monitor_template_confirm_defaults">A permission set to “every access” goes back to the default settings, and the settings it had are removed.</string>
+    <string name="monitor_template_needs_rules">No permissions yet. Add some to apply this template.</string>
     <string name="monitor_template_skipped">Skipped, not available on this device: %1$s</string>
     <string name="monitor_template_nothing_to_apply">None of this template\'s permissions are available on this device.</string>
     <string name="monitor_template_applied_title">Template applied</string>

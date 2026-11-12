@@ -1,6 +1,7 @@
 package dev.izumi.appopsnext.monitor
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -163,5 +164,18 @@ class MonitorTemplateApplierTest {
             BuiltInMonitorTemplates.all.flatMap(MonitorTemplate::operationNames)
                 .all { AppOpCodes.codeOf(it) != null },
         )
+    }
+
+    @Test
+    fun `a rule is default only when all four settings are`() {
+        assertTrue(MonitorTemplateRule("android:camera").isDefault)
+        assertFalse(MonitorTemplateRule("android:camera", throttleSeconds = 60).isDefault)
+        assertFalse(MonitorTemplateRule("android:camera", headsUp = false).isDefault)
+        assertFalse(MonitorTemplateRule("android:camera", outcomes = MonitorOutcomes.REFUSED).isDefault)
+        assertFalse(MonitorTemplateRule("android:camera", backgroundOnly = true).isDefault)
+        val byId = BuiltInMonitorTemplates.all.associateBy(MonitorTemplate::id)
+        // The clipboard template resets its points, which the confirmation has to say.
+        assertTrue(byId.getValue(BuiltInMonitorTemplates.PERSONAL_DATA_READS).rules.all(MonitorTemplateRule::isDefault))
+        assertTrue(byId.getValue(BuiltInMonitorTemplates.CAMERA_MICROPHONE).rules.none(MonitorTemplateRule::isDefault))
     }
 }

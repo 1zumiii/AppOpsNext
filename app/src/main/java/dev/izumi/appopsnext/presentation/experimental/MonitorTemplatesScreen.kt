@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -219,11 +220,37 @@ fun MonitorTemplatesScreen(
                     } else {
                         Text(
                             text = stringResource(
-                                R.string.monitor_template_count_operations,
+                                R.string.monitor_template_confirm_operations,
                                 preview.appliedOperations.size,
-                                operationLabels(preview.appliedOperations),
                             ),
                         )
+                        // What each point becomes, in the words the editor and the
+                        // points list use. A long template scrolls here rather than
+                        // pushing the buttons off the sheet.
+                        val rules = applying.rules
+                            .distinctBy(MonitorTemplateRule::operationName)
+                            .filter { it.operationName in preview.appliedOperations }
+                        Column(
+                            modifier = Modifier
+                                .heightIn(max = 200.dp)
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            rules.forEach { rule ->
+                                Text(
+                                    text = stringResource(
+                                        R.string.template_rule_summary,
+                                        operationLabel(rule.operationName),
+                                        monitorPointSummary(rule.settingsFor("")),
+                                    ),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        if (rules.any(MonitorTemplateRule::isDefault)) {
+                            Text(text = stringResource(R.string.monitor_template_confirm_defaults))
+                        }
                     }
                     if (preview.skippedOperations.isNotEmpty()) {
                         Text(
@@ -368,15 +395,30 @@ private fun MonitorTemplateList(
                         Text(text = template.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     },
                     supportingContent = {
-                        Text(
-                            text = if (template.rules.isEmpty()) {
-                                stringResource(R.string.template_no_permissions)
-                            } else {
-                                operationLabels(template.operationNames)
-                            },
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        Column {
+                            Text(
+                                text = if (template.rules.isEmpty()) {
+                                    stringResource(R.string.monitor_template_needs_rules)
+                                } else {
+                                    operationLabels(template.operationNames)
+                                },
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            // The button takes its own tap, so the rest of the card
+                            // still opens the editor.
+                            Box(
+                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                                contentAlignment = Alignment.CenterEnd,
+                            ) {
+                                FilledTonalButton(
+                                    onClick = { onApply(template) },
+                                    enabled = !locked && template.rules.isNotEmpty(),
+                                ) {
+                                    Text(text = stringResource(R.string.monitor_template_apply))
+                                }
+                            }
+                        }
                     },
                     trailingContent = { MainPageChevron() },
                 )
