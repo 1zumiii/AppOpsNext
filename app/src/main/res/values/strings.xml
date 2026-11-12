@@ -158,8 +158,8 @@
     <string name="app_op_change_modified">Changed by AppOpsNext</string>
     <string name="app_op_change_elsewhere">AppOpsNext last set this to %1$s. The current setting is different.</string>
     <string name="app_op_change_elsewhere_unknown">AppOpsNext last set this to %1$s. The current mode is not recognized.</string>
-    <string name="app_op_change_restore">Restore previous setting</string>
-    <string name="app_op_change_keep">Keep current setting</string>
+    <string name="app_op_change_restore">Restore previous</string>
+    <string name="app_op_change_keep">Keep current</string>
     <string name="notifications_title">Notifications</string>
     <string name="notifications_empty">No notifications</string>
     <string name="notifications_empty_detail">Permission settings changed outside AppOpsNext, guard events and new app policy results appear here.</string>
