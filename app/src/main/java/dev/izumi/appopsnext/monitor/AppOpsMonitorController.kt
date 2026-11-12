@@ -38,6 +38,11 @@ class AppOpsMonitorController(
     private val diagnosticLog: DiagnosticLogRepository,
     private val eventLog: MonitorEventLog,
     private val notifier: MonitorNotifier = MonitorNotifier(context),
+    /**
+     * Finds out whether the device has MIUI private operations, reading the
+     * given packages first. Only a selection that names one asks.
+     */
+    private val probeVendorOps: suspend (Collection<String>) -> Set<Int> = { emptySet() },
 ) {
     private val foregroundStates = ForegroundStateProbe(gateway)
     private val client = AppOpsMonitorClient()
@@ -72,6 +77,12 @@ class AppOpsMonitorController(
         val points: Map<Pair<String, String>, MonitorPointSettings>,
         val accumulator: MonitorAccessAccumulator = MonitorAccessAccumulator(),
     ) {
+        /** The private registration calls of the current registration. */
+        var vendorOutcomes: List<VendorWatchOutcome> = emptyList()
+
+        /** Private codes whose first event has been written to the diagnostic log. */
+        val loggedVendorCodes: MutableSet<Int> = mutableSetOf()
+
         /**
          * Whether the registry has matched this session's registration. Until
          * it has, a miss may only mean this device prints the registry
@@ -95,9 +106,26 @@ class AppOpsMonitorController(
                 Result.success(lifecycle.start { session ->
                     val targets = targetsRepository.targets.first()
                     val names = targets.flatMapTo(mutableSetOf()) { it.operationNames }
-                    val codes = names.mapNotNull(AppOpCodes::codeOf).toIntArray()
-                    check(codes.isNotEmpty()) { "No operations are selected" }
-                    check(codes.size == names.size) { "Some selected operations have no known watch code" }
+                    // A selection of standard operations alone never reads anything
+                    // extra, so such a session starts as it always has.
+                    if (names.any(MonitorOpCodes::isVendor)) {
+                        // A failed read leaves the private operations without a
+                        // code, which the check below reports like any unknown one.
+                        val offered = try {
+                            probeVendorOps(targets.map(MonitorTarget::packageName))
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (error: Exception) {
+                            diagnosticLog.warning(LOG_SOURCE, "MIUI operation probe failed: ${error.message}")
+                            emptySet()
+                        }
+                        diagnosticLog.info(LOG_SOURCE, "MIUI operations offered on this device: $offered")
+                    }
+                    val split = MonitorOpCodes.split(names)
+                    val codes = split.standard
+                    val vendorCodes = split.vendor
+                    check(codes.isNotEmpty() || vendorCodes.isNotEmpty()) { "No operations are selected" }
+                    check(split.unknown.isEmpty()) { "Some selected operations have no known watch code" }
                     val watchedOperations = targets.associate { it.packageName to it.operationNames }
                     val defaultHeadsUp = settingsRepository.settings.first().monitorHeadsUp
                     // Settings for a point that is no longer watched are kept in
@@ -128,7 +156,7 @@ class AppOpsMonitorController(
                         val wallTime = System.currentTimeMillis()
                         val elapsedTime = SystemClock.elapsedRealtime()
                         lifecycle.publish(session) {
-                            val name = AppOpCodes.nameOf(event.opCode)
+                            val name = MonitorOpCodes.nameOf(event.opCode)
                             // The user handle keeps other profiles, such as a private
                             // space, out even when they hold the same package name. An
                             // app that is missing from the snapshot was installed after
@@ -160,25 +188,31 @@ class AppOpsMonitorController(
                     fun register(): MonitorStatus {
                         val revision = registrationRevision.incrementAndGet()
                         val malformed = AtomicReference<String?>(null)
-                        val registration = client.register(codes, onAccess) { reason ->
-                            lifecycle.publish(session) {
-                                if (registrationRevision.get() == revision) {
-                                    malformed.set(reason)
-                                    mutableStatus.value = mutableStatus.value?.copy(callbackFailure = reason)
-                                    diagnosticLog.warning(LOG_SOURCE, "Rejected AppOps callback: $reason")
+                        val registration = client.register(
+                            codes,
+                            onAccess,
+                            onMalformed = { reason ->
+                                lifecycle.publish(session) {
+                                    if (registrationRevision.get() == revision) {
+                                        malformed.set(reason)
+                                        mutableStatus.value = mutableStatus.value?.copy(callbackFailure = reason)
+                                        diagnosticLog.warning(LOG_SOURCE, "Rejected AppOps callback: $reason")
+                                    }
                                 }
-                            }
-                        }
-                        check(registration.any) {
-                            "No watch could be registered: ${registration.failures.joinToString()}"
-                        }
-                        val result = MonitorStatus(
-                            registration.active, registration.noted, registration.started,
-                            registration.transactionCodesFromPlatform, targets.size, names.size,
+                            },
+                            vendorOpCodes = vendorCodes,
+                        )
+                        logVendorRegistration(registration)
+                        val result = MonitorSessionStatus.of(
+                            hasStandard = codes.isNotEmpty(),
+                            registration = registration,
+                            watchedPackages = targets.size,
+                            watchedOperations = names.size,
                         )
                         diagnosticLog.info(LOG_SOURCE, "Monitor registered. status=$result, " +
                             "failures=${registration.failures.joinToString()}")
                         lifecycle.publish(session) {
+                            data.vendorOutcomes = registration.vendor
                             sessionData = data
                             mutableFailure.value = null
                             mutableStatus.value = result.copy(callbackFailure = malformed.get())
@@ -192,12 +226,13 @@ class AppOpsMonitorController(
                         // asked about an access that would otherwise be reported.
                         for (queued in events) {
                             val event = queued.event
-                            val name = AppOpCodes.nameOf(event.opCode) ?: continue
+                            val name = MonitorOpCodes.nameOf(event.opCode) ?: continue
                             // Written down before any setting decides whether it interrupts.
                             eventLog.record(
                                 MonitorLogEntry(queued.wallTime, event.uid, event.packageName, name, event.allowed),
                                 queued.elapsedTime,
                             )
+                            if (MonitorOpCodes.isVendor(name)) logFirstVendorEvent(session, data, event)
                             val settings = data.points[event.packageName to name]
                             // Someone watching a permission they have just denied
                             // wants the refusals, not everything.
@@ -354,16 +389,22 @@ class AppOpsMonitorController(
     private suspend fun checkRegistration(): WatchRegistration {
         val session = lifecycle.session() ?: return WatchRegistration.UNKNOWN
         val expected = lifecycle.publish(session) {
-            sessionData?.operationNames to mutableStatus.value
+            Triple(sessionData?.operationNames, mutableStatus.value, sessionData?.vendorOutcomes.orEmpty())
         } ?: return WatchRegistration.UNKNOWN
         val status = expected.second ?: return WatchRegistration.UNKNOWN
+        val vendorOutcomes = expected.third
         val kinds = buildSet {
             if (status.activeWatch) add(AccessWatchKind.ACTIVE)
             if (status.startedWatch) add(AccessWatchKind.STARTED)
             if (status.notedWatch) add(AccessWatchKind.NOTED)
         }
+        // The private watches are read from the same dump but never decide the
+        // result: the registry check, and with it the watchdog, covers the
+        // standard watches only.
+        var vendorRegistry: Map<AccessWatchKind, Set<Int>>? = null
         val result = try {
             val snapshot = watchers.read()
+            if (vendorOutcomes.isNotEmpty()) vendorRegistry = snapshot.vendorCodes(Shizuku.getUid())
             snapshot.registration(expected.first.orEmpty(), kinds, Shizuku.getUid()).also {
                 diagnosticLog.info(LOG_SOURCE, "Watcher registry=$it, expected=${expected.first}, " +
                     "kinds=$kinds, registrations=${snapshot.accessWatchers}")
@@ -374,11 +415,54 @@ class AppOpsMonitorController(
             diagnosticLog.warning(LOG_SOURCE, "Watcher registry unavailable: ${error.message}")
             WatchRegistration.UNKNOWN
         }
+        val vendorOps = if (vendorOutcomes.isEmpty()) {
+            emptyList()
+        } else {
+            VendorWatches.evaluate(vendorOutcomes, vendorRegistry).also { watches ->
+                diagnosticLog.info(
+                    LOG_SOURCE,
+                    "MIUI watch registry=${vendorRegistry?.mapKeys { it.key.name.lowercase() } ?: "unreadable"}\n" +
+                        watches.joinToString("\n", transform = VendorWatches::describe),
+                )
+            }
+        }
         lifecycle.publish(session) {
-            mutableStatus.value = mutableStatus.value?.copy(registry = result)
+            mutableStatus.value = mutableStatus.value?.copy(registry = result, vendorOps = vendorOps)
             if (result == WatchRegistration.CONFIRMED) sessionData?.registryConfirmed = true
         }
         return result
+    }
+
+    /** Which private codes went to which watch and what the system said, for reports from the field. */
+    private fun logVendorRegistration(registration: AppOpsMonitorClient.Registration) {
+        if (registration.vendor.isEmpty()) return
+        registration.vendorBatchFailures.forEach { failure ->
+            diagnosticLog.warning(LOG_SOURCE, "MIUI watch batch refused, retrying each code alone: $failure")
+        }
+        registration.vendor.forEach { outcome ->
+            val watch = "MIUI watch ${outcome.kind.name.lowercase()} ${outcome.codes}"
+            if (outcome.failure == null) {
+                diagnosticLog.info(LOG_SOURCE, "$watch: accepted")
+            } else {
+                diagnosticLog.warning(LOG_SOURCE, "$watch: refused: ${outcome.failure}")
+            }
+        }
+    }
+
+    /** The first event of each private code shows that the system really reports it. */
+    private fun logFirstVendorEvent(
+        session: MonitorLifecycle.Session,
+        data: SessionData,
+        event: AppOpAccessEvent,
+    ) {
+        val first = lifecycle.publish(session) { data.loggedVendorCodes.add(event.opCode) } ?: return
+        if (first) {
+            diagnosticLog.info(
+                LOG_SOURCE,
+                "MIUI op ${event.opCode} reported: kind=${event.kind.name.lowercase()}, " +
+                    "package=${event.packageName}, allowed=${event.allowed}",
+            )
+        }
     }
 
     private companion object {

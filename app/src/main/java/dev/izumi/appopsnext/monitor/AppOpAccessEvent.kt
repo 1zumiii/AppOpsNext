@@ -45,6 +45,11 @@ data class MonitorStatus(
     val watchedOperations: Int,
     val registry: WatchRegistration = WatchRegistration.UNKNOWN,
     val callbackFailure: String? = null,
+    /**
+     * Each selected MIUI private operation, apart from the flags above, which
+     * describe the standard watches whenever the session has any.
+     */
+    val vendorOps: List<VendorOpWatch> = emptyList(),
 ) {
     val partial: Boolean
         get() = !(activeWatch && notedWatch && startedWatch)

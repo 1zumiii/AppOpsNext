@@ -32,6 +32,7 @@ import dev.izumi.appopsnext.history.HistorySnapshotStore
 import dev.izumi.appopsnext.monitor.AppOpsMonitorController
 import dev.izumi.appopsnext.monitor.MonitorEventLog
 import dev.izumi.appopsnext.monitor.MonitorTargetsRepository
+import dev.izumi.appopsnext.monitor.VendorMonitorOps
 import dev.izumi.appopsnext.newapps.NewAppPolicyCoordinator
 import dev.izumi.appopsnext.newapps.NewAppPolicyStateRepository
 import java.io.File
@@ -254,7 +255,24 @@ class AppOpsNextApplication : Application() {
             settingsRepository = userSettingsRepository,
             diagnosticLog = diagnosticLogRepository,
             eventLog = monitorEventLog,
+            probeVendorOps = ::probeVendorOps,
         )
+    }
+
+    /**
+     * Whether this device has MIUI private operations the monitor can offer,
+     * see [VendorMonitorOps]. [packages] are read first, then this app and a
+     * few user apps, which the security center is most likely to have set.
+     */
+    suspend fun probeVendorOps(packages: Collection<String> = emptyList()): Set<Int> {
+        VendorMonitorOps.codes.value?.takeIf { it.isNotEmpty() }?.let { return it }
+        val userApps = installedAppsRepository.loadInstalledApps()
+            .filterNot { it.isSystemApp }
+            .map { it.packageName }
+        return VendorMonitorOps.discovery.probe(packages.toList() + packageName + userApps) { target ->
+            (appOpsRepository.loadPackageOps(target) as? PackageOpsLoadResult.Success)
+                ?.snapshot?.entries?.map { it.name }
+        }
     }
 
     override fun onCreate() {
