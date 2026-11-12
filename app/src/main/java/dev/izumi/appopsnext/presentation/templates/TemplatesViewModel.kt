@@ -23,16 +23,21 @@ class TemplatesViewModel(
     private val settingsRepository =
         getApplication<AppOpsNextApplication>().userSettingsRepository
 
+    private val watcherSettling =
+        getApplication<AppOpsNextApplication>().newAppPolicyCoordinator.watcherSettling
+
     val uiState = combine(
         repository.templates,
         selectedTemplateId,
         settingsRepository.settings,
-    ) { templates, selectedId, settings ->
+        watcherSettling,
+    ) { templates, selectedId, settings, settling ->
         TemplatesUiState(
             templates = templates,
             selectedTemplate = templates.firstOrNull { it.id == selectedId },
             autoApplyNewAppTemplate = settings.autoApplyNewAppTemplate,
             instantNewAppRules = settings.instantNewAppRules,
+            instantNewAppRulesSettling = settling,
             restoreOnReinstall = settings.restoreOnReinstall,
         )
     }.stateIn(

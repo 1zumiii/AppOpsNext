@@ -226,6 +226,7 @@ fun TemplatesScreen(
                     onAutoApplyNewAppTemplateChange =
                         onAutoApplyNewAppTemplateChange,
                     instantNewAppRules = uiState.instantNewAppRules,
+                    instantNewAppRulesSettling = uiState.instantNewAppRulesSettling,
                     onInstantNewAppRulesChange = onInstantNewAppRulesChange,
                     restoreOnReinstall = uiState.restoreOnReinstall,
                     onRestoreOnReinstallChange = onRestoreOnReinstallChange,
@@ -328,6 +329,7 @@ private fun TemplateList(
     autoApplyNewAppTemplate: Boolean,
     onAutoApplyNewAppTemplateChange: (Boolean) -> Unit,
     instantNewAppRules: Boolean,
+    instantNewAppRulesSettling: Boolean,
     onInstantNewAppRulesChange: (Boolean) -> Unit,
     restoreOnReinstall: Boolean,
     onRestoreOnReinstallChange: (Boolean) -> Unit,
@@ -362,6 +364,7 @@ private fun TemplateList(
                     enabled = autoApplyNewAppTemplate,
                     onEnabledChange = onAutoApplyNewAppTemplateChange,
                     instant = instantNewAppRules,
+                    instantSettling = instantNewAppRulesSettling,
                     onInstantChange = onInstantNewAppRulesChange,
                     restore = restoreOnReinstall,
                     onRestoreChange = onRestoreOnReinstallChange,
@@ -403,6 +406,7 @@ private fun NewAppPolicyCard(
     enabled: Boolean,
     onEnabledChange: (Boolean) -> Unit,
     instant: Boolean,
+    instantSettling: Boolean,
     onInstantChange: (Boolean) -> Unit,
     restore: Boolean,
     onRestoreChange: (Boolean) -> Unit,
@@ -506,6 +510,9 @@ private fun NewAppPolicyCard(
                         checked = instant,
                         onCheckedChange = onInstantChange,
                         enabled = watches,
+                        // Held while the watcher it starts or stops has not
+                        // finished, which a quick second tap would trip over.
+                        switchEnabled = !instantSettling,
                     )
                 }
             }
@@ -534,6 +541,8 @@ private fun NewAppOptionRow(
     onCheckedChange: (Boolean) -> Unit,
     summary: String? = null,
     enabled: Boolean = true,
+    /** Only the switch waits, so the row does not flicker for a moment's wait. */
+    switchEnabled: Boolean = true,
 ) {
     val alpha = if (enabled) 1f else DISABLED_CONTENT_ALPHA
     Row(
@@ -558,7 +567,7 @@ private fun NewAppOptionRow(
         CompactSwitch(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            enabled = enabled,
+            enabled = enabled && switchEnabled,
         )
     }
 }
