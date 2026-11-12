@@ -1,5 +1,7 @@
 package dev.izumi.appopsnext.presentation.permissions
 
+import dev.izumi.appopsnext.presentation.components.EmptyStateIcons
+import dev.izumi.appopsnext.presentation.components.EmptyStateContent
 import dev.izumi.appopsnext.presentation.components.topFadingEdge
 import dev.izumi.appopsnext.appops.changes.AppOpChangeRecord
 import dev.izumi.appopsnext.appops.changes.AppOpChangeRecords
@@ -33,7 +35,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -237,19 +238,17 @@ fun PermissionDetailScreen(
                 ) {
                     when {
                         uiState.failed || appListState.loadFailed -> item {
-                            Column(
-                                modifier = Modifier.fillParentMaxSize(),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                            ) {
-                                Text(text = stringResource(R.string.permission_load_failed))
-                                TextButton(onClick = {
+                            EmptyStateContent(
+                                icon = EmptyStateIcons.LOAD_FAILED,
+                                title = stringResource(R.string.permission_load_failed_title),
+                                detail = stringResource(R.string.permission_load_failed),
+                                actionLabel = stringResource(R.string.action_retry),
+                                onAction = {
                                     onRefresh()
                                     if (appListState.loadFailed) onRefreshApps()
-                                }) {
-                                    Text(text = stringResource(R.string.action_retry))
-                                }
-                            }
+                                },
+                                modifier = Modifier.fillParentMaxSize(),
+                            )
                         }
                         uiState.states == null || appListState.isLoading -> item {
                             Box(
@@ -267,7 +266,14 @@ fun PermissionDetailScreen(
                             )
                         }
                         visibleApps.isEmpty() -> item {
-                            Text(text = stringResource(R.string.app_list_empty_search))
+                            val filtering = search.isNotBlank() || filter != null
+                            EmptyStateContent(
+                                icon = if (filtering) EmptyStateIcons.NO_MATCHES else R.drawable.ic_ph_squares_four,
+                                title = stringResource(
+                                    if (filtering) R.string.app_list_empty_search else R.string.app_list_empty,
+                                ),
+                                modifier = Modifier.fillParentMaxSize(),
+                            )
                         }
                         else -> items(items = visibleApps, key = InstalledApp::packageName) { app ->
                             PermissionAppListItem(

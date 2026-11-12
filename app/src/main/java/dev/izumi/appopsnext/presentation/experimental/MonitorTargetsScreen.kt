@@ -1,5 +1,7 @@
 package dev.izumi.appopsnext.presentation.experimental
 
+import dev.izumi.appopsnext.presentation.components.EmptyStateIcons
+import dev.izumi.appopsnext.presentation.components.EmptyStateContent
 import dev.izumi.appopsnext.presentation.components.topFadingEdge
 import dev.izumi.appopsnext.apps.AppSortOrder
 import dev.izumi.appopsnext.presentation.components.AppSortMenu
@@ -173,10 +175,15 @@ fun MonitorTargetsScreen(
             }
             if (watched.isEmpty() && others.isEmpty()) {
                 item {
-                    Text(
-                        text = stringResource(R.string.app_list_empty_search),
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    val searching = query.isNotBlank()
+                    EmptyStateContent(
+                        icon = if (searching) EmptyStateIcons.NO_MATCHES else R.drawable.ic_ph_squares_four,
+                        title = stringResource(
+                            if (searching) R.string.app_list_empty_search else R.string.app_list_empty,
+                        ),
+                        modifier = Modifier
+                            .fillParentMaxWidth()
+                            .padding(vertical = 48.dp),
                     )
                 }
             }
@@ -477,10 +484,12 @@ fun MonitorOperationsScreen(
             }
             if (visibleOptions.isEmpty()) {
                 item {
-                    Text(
-                        text = stringResource(R.string.monitor_operations_empty),
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 24.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    EmptyStateContent(
+                        icon = EmptyStateIcons.NO_MATCHES,
+                        title = stringResource(R.string.monitor_operations_empty),
+                        modifier = Modifier
+                            .fillParentMaxWidth()
+                            .padding(vertical = 48.dp),
                     )
                 }
             }

@@ -75,6 +75,7 @@ import dev.izumi.appopsnext.ui.theme.mainPageHeadingWeight
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.history.model.AppOpHistoryFailureReason
 import dev.izumi.appopsnext.history.model.HistoryPermission
+import dev.izumi.appopsnext.presentation.components.EmptyStateContent
 import dev.izumi.appopsnext.presentation.components.AppIcon
 import dev.izumi.appopsnext.presentation.components.MainPageSectionTitle
 import dev.izumi.appopsnext.presentation.components.MainPageEntryIcon
@@ -168,6 +169,7 @@ fun HistoryOverviewScreen(
                 onTimeRangeChange = onTimeRangeChange,
                 onPermissionSelected = onPermissionSelected,
                 onPermissionOrderChanged = onPermissionOrderChanged,
+                onManagePermissions = { showPermissionManagement = true },
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -201,6 +203,7 @@ private fun HistoryOverviewContent(
     onTimeRangeChange: (HistoryTimeRange) -> Unit,
     onPermissionSelected: (HistoryPermission) -> Unit,
     onPermissionOrderChanged: (List<String>) -> Unit,
+    onManagePermissions: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var displayedPermissions by remember {
@@ -375,10 +378,15 @@ private fun HistoryOverviewContent(
             }
             if (uiState.permissions.isEmpty()) {
                 item {
-                    HistoryStatusCard(
-                        text = stringResource(
-                            R.string.history_no_selected_permissions,
-                        ),
+                    EmptyStateContent(
+                        icon = R.drawable.ic_ph_list_checks,
+                        title = stringResource(R.string.history_no_selected_permissions),
+                        detail = stringResource(R.string.history_no_selected_permissions_detail),
+                        actionLabel = stringResource(R.string.history_manage_permissions),
+                        onAction = onManagePermissions,
+                        modifier = Modifier
+                            .fillParentMaxWidth()
+                            .padding(vertical = 48.dp),
                     )
                 }
             } else {

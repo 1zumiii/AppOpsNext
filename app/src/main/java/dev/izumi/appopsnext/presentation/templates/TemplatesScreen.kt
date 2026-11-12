@@ -46,6 +46,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import dev.izumi.appopsnext.presentation.components.EmptyStateContent
 import dev.izumi.appopsnext.presentation.components.CompactSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -334,26 +335,12 @@ private fun TemplateList(
     modifier: Modifier = Modifier,
 ) {
     if (templates.isEmpty()) {
-        Column(
+        EmptyStateContent(
+            icon = R.drawable.ic_ph_file_text,
+            title = stringResource(R.string.templates_empty),
+            detail = stringResource(R.string.templates_empty_detail),
             modifier = modifier,
-        ) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(32.dp),
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Text(
-                    text = stringResource(R.string.templates_empty),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    text = stringResource(R.string.templates_empty_detail),
-                    modifier = Modifier.padding(top = 8.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+        )
         return
     }
 

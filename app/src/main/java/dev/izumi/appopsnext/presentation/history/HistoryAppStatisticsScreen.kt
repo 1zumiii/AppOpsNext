@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.history.model.HistoryPermission
+import dev.izumi.appopsnext.presentation.components.EmptyStateContent
 import dev.izumi.appopsnext.presentation.components.AppIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -157,12 +158,13 @@ fun HistoryAppStatisticsScreen(
             }
             if (summaries.isEmpty()) {
                 item {
-                    Text(
-                        text = stringResource(
-                            R.string.history_apps_empty,
-                        ),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    EmptyStateContent(
+                        icon = R.drawable.ic_ph_chart_bar,
+                        title = stringResource(R.string.history_apps_empty),
+                        detail = stringResource(R.string.history_apps_empty_detail),
+                        modifier = Modifier
+                            .fillParentMaxWidth()
+                            .padding(vertical = 48.dp),
                     )
                 }
             } else {

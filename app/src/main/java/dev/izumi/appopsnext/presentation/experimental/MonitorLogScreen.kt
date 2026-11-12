@@ -40,6 +40,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.izumi.appopsnext.R
+import dev.izumi.appopsnext.presentation.components.EmptyStateIcons
+import dev.izumi.appopsnext.presentation.components.EmptyStateContent
 import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.monitor.MonitorLogEntry
@@ -166,13 +168,16 @@ fun MonitorLogScreen(
             val shown = rows ?: return@LazyColumn
             if (shown.isEmpty()) {
                 item {
-                    Text(
-                        text = stringResource(
-                            if (entries.isEmpty()) R.string.monitor_log_empty else R.string.monitor_log_empty_filtered,
+                    val nothingRecorded = entries.isEmpty()
+                    EmptyStateContent(
+                        icon = if (nothingRecorded) R.drawable.ic_ph_clock_counter_clockwise else EmptyStateIcons.NO_MATCHES,
+                        title = stringResource(
+                            if (nothingRecorded) R.string.monitor_log_empty_title else R.string.monitor_log_empty_filtered,
                         ),
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        detail = if (nothingRecorded) stringResource(R.string.monitor_log_empty) else null,
+                        modifier = Modifier
+                            .fillParentMaxWidth()
+                            .padding(vertical = 48.dp),
                     )
                 }
             }
