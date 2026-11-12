@@ -6,9 +6,9 @@ import org.junit.Test
 
 class AppOpsCallbackDecoderTest {
     private fun input(kind: AppOpAccessKind, modern: Boolean, mode: Int = 0, active: Int = 1,
-                      tailAdjustment: Int = 0): AppOpsCallbackInput {
+                      tailAdjustment: Int = 0, op: Int = 29): AppOpsCallbackInput {
         val buffer = ByteBuffer.allocate(256)
-        buffer.putInt(29).putInt(10001)
+        buffer.putInt(op).putInt(10001)
         for (text in listOf("example.app", "tag")) {
             val bytes = text.toByteArray(Charsets.UTF_8)
             buffer.putInt(bytes.size).put(bytes)
@@ -83,6 +83,15 @@ class AppOpsCallbackDecoderTest {
                 assertNotNull("$kind mode=$mode", event)
                 assertFalse("$kind mode=$mode", event!!.allowed)
             }
+        }
+    }
+
+    @Test fun `a private operation decodes like any other and keeps its stored name`() {
+        for (kind in AppOpAccessKind.entries) for (modern in listOf(false, true)) {
+            val event = AppOpsCallbackDecoder.decode(kind, input(kind, modern, op = 10021))!!
+            assertEquals(10021, event.opCode)
+            assertEquals("example.app", event.packageName)
+            assertEquals("android:10021", MonitorOpCodes.nameOf(event.opCode))
         }
     }
 }
