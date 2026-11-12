@@ -13,6 +13,7 @@ import dev.izumi.appopsnext.appops.WatcherResponseCodec
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.ShellCommandResult
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
+import dev.izumi.appopsnext.diagnostics.DiagnosticLogTier
 import dev.izumi.appopsnext.nativebackend.NativeDaemonBootstrapper
 import dev.izumi.appopsnext.nativebackend.InvalidDaemonArgumentException
 import dev.izumi.appopsnext.nativebackend.NativeDaemonGateway
@@ -108,6 +109,7 @@ class PrivilegedServiceClient(
                             "UserService connected. uid=${serviceInfo.uid}, " +
                                 "pid=${serviceInfo.pid}, " +
                                 "api=${serviceInfo.apiLevel}",
+                        tier = DiagnosticLogTier.IMPORTANT,
                     )
                 }
             }.onFailure { error ->
@@ -173,12 +175,10 @@ class PrivilegedServiceClient(
             PrivilegedBackendType.NATIVE_DAEMON,
         )
         val generation = ++connectionGeneration
-        diagnosticLog.info(
-            source = NATIVE_LOG_SOURCE,
-            message =
-                "Starting native daemon backend. api=${Build.VERSION.SDK_INT}, " +
-                    "clientVersion=${BuildConfig.VERSION_CODE}",
-        )
+        // Written with the connection when one follows, and on its own otherwise.
+        val startingMessage =
+            "Starting native daemon backend. api=${Build.VERSION.SDK_INT}, " +
+                "clientVersion=${BuildConfig.VERSION_CODE}"
         nativeConnectionJob = connectionScope.launch {
             val result = runCatching {
                 withContext(Dispatchers.IO) {
@@ -189,6 +189,11 @@ class PrivilegedServiceClient(
             }
             if (generation != connectionGeneration) {
                 result.getOrNull()?.close()
+                diagnosticLog.info(
+                    source = NATIVE_LOG_SOURCE,
+                    message = "$startingMessage, superseded=true",
+                    tier = DiagnosticLogTier.IMPORTANT,
+                )
                 return@launch
             }
             result.onSuccess { gateway ->
@@ -214,10 +219,17 @@ class PrivilegedServiceClient(
                     message =
                         "Native daemon connected. " +
                             "protocol=${daemonInfo.protocolVersion}, " +
-                            "uid=${daemonInfo.uid}, pid=${daemonInfo.pid}",
+                            "uid=${daemonInfo.uid}, pid=${daemonInfo.pid}, " +
+                            "api=${Build.VERSION.SDK_INT}, clientVersion=${BuildConfig.VERSION_CODE}",
+                    tier = DiagnosticLogTier.IMPORTANT,
                 )
             }.onFailure { error ->
                 Log.w(TAG, "Native daemon backend unavailable", error)
+                diagnosticLog.info(
+                    source = NATIVE_LOG_SOURCE,
+                    message = startingMessage,
+                    tier = DiagnosticLogTier.IMPORTANT,
+                )
                 diagnosticLog.warning(
                     source = NATIVE_LOG_SOURCE,
                     message =
@@ -239,6 +251,7 @@ class PrivilegedServiceClient(
             message =
                 "Binding UserService fallback. api=${Build.VERSION.SDK_INT}, " +
                     "clientVersion=${BuildConfig.VERSION_CODE}",
+            tier = DiagnosticLogTier.IMPORTANT,
         )
         runCatching {
             Shizuku.bindUserService(userServiceArgs, connection)
@@ -267,6 +280,7 @@ class PrivilegedServiceClient(
         diagnosticLog.info(
             source = NATIVE_LOG_SOURCE,
             message = "Manual privileged backend retry requested.",
+            tier = DiagnosticLogTier.IMPORTANT,
         )
         disconnect()
         connect()
@@ -289,6 +303,7 @@ class PrivilegedServiceClient(
             diagnosticLog.info(
                 source = NATIVE_LOG_SOURCE,
                 message = "Privileged backend connection state cleared.",
+                tier = DiagnosticLogTier.IMPORTANT,
             )
         }
         service = null

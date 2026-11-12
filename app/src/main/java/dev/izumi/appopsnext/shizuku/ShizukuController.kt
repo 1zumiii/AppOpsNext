@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.util.Log
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
+import dev.izumi.appopsnext.diagnostics.DiagnosticLogTier
 import dev.izumi.appopsnext.shizuku.model.ShizukuState
 import dev.izumi.appopsnext.shizuku.model.ShizukuFailureReason
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,8 +23,13 @@ class ShizukuController(
 
     private var started = false
 
+    /** Set until the first state is read, which the start line then reports. */
+    private var announceStart = false
+
+    // A binder that arrives changes the state, which refresh() writes. The sticky
+    // registration in start() also calls this for a binder that was already
+    // there, which is no news beyond the start line.
     private val binderReceivedListener = Shizuku.OnBinderReceivedListener {
-        diagnosticLog.info(LOG_SOURCE, "Shizuku binder received.")
         refresh()
     }
 
@@ -37,7 +43,7 @@ class ShizukuController(
             if (requestCode != PERMISSION_REQUEST_CODE) return@OnRequestPermissionResultListener
 
             mutableState.value = if (grantResult == PackageManager.PERMISSION_GRANTED) {
-                diagnosticLog.info(LOG_SOURCE, "Shizuku permission granted.")
+                diagnosticLog.info(LOG_SOURCE, "Shizuku permission granted.", DiagnosticLogTier.IMPORTANT)
                 readReadyState()
             } else {
                 diagnosticLog.warning(LOG_SOURCE, "Shizuku permission denied.")
@@ -48,7 +54,7 @@ class ShizukuController(
     fun start() {
         if (started) return
         started = true
-        diagnosticLog.info(LOG_SOURCE, "Shizuku controller started.")
+        announceStart = true
         Shizuku.addBinderReceivedListenerSticky(binderReceivedListener)
         Shizuku.addBinderDeadListener(binderDeadListener)
         Shizuku.addRequestPermissionResultListener(permissionResultListener)
@@ -87,10 +93,18 @@ class ShizukuController(
             ShizukuState.Failure(ShizukuFailureReason.STATE_READ_FAILED)
         }
         mutableState.value = nextState
-        if (previousState != nextState) {
+        if (announceStart) {
+            announceStart = false
+            diagnosticLog.info(
+                source = LOG_SOURCE,
+                message = "Shizuku controller started. state=$nextState",
+                tier = DiagnosticLogTier.IMPORTANT,
+            )
+        } else if (previousState != nextState) {
             diagnosticLog.info(
                 source = LOG_SOURCE,
                 message = "State changed: $previousState -> $nextState",
+                tier = DiagnosticLogTier.IMPORTANT,
             )
         }
     }
