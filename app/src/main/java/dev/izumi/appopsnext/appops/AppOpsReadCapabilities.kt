@@ -11,6 +11,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import dev.izumi.appopsnext.appops.binder.HiddenApiAccess
 import dev.izumi.appopsnext.apps.InstalledAppsRepository
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
+import dev.izumi.appopsnext.diagnostics.DiagnosticLogTier
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -98,7 +99,8 @@ class AppOpsReadCapabilities(
             dataStore.edit { it[PROBE_KEY] = StoredReadProbeCodec.encode(record) }
             structured.enable(record.capabilities)
             mutableStatus.value = Status(Source.PROBED, record)
-            log.info(SOURCE, "Read probe: ${describe(record)}")
+            // Once per system build and app version, and what every later read relies on.
+            log.info(SOURCE, "Read probe: ${describe(record)}", DiagnosticLogTier.IMPORTANT)
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {

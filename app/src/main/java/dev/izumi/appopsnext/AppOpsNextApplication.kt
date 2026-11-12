@@ -17,6 +17,7 @@ import dev.izumi.appopsnext.apps.UserAppsRepository
 import dev.izumi.appopsnext.backup.AppBackupService
 import dev.izumi.appopsnext.diagnostics.DiagnosticEnvironmentCollector
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
+import dev.izumi.appopsnext.diagnostics.DiagnosticLogTier
 import dev.izumi.appopsnext.guard.GuardController
 import dev.izumi.appopsnext.guard.GuardNotifier
 import dev.izumi.appopsnext.guard.GuardRepository
@@ -292,6 +293,7 @@ class AppOpsNextApplication : Application() {
                     "user=${environment.userHandle}, " +
                     "processUid=${environment.processUid}, " +
                     "shizukuManager=${environment.shizukuManagerVersion}",
+            tier = DiagnosticLogTier.IMPORTANT,
         )
         newAppPolicyCoordinator.start()
         historyArchiveRecorder.start()

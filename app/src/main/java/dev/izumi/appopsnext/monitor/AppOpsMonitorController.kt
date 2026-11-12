@@ -11,6 +11,7 @@ import dev.izumi.appopsnext.appops.parser.AccessWatchKind
 import dev.izumi.appopsnext.appops.parser.WatchRegistration
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
+import dev.izumi.appopsnext.diagnostics.DiagnosticLogTier
 import dev.izumi.appopsnext.settings.UserSettingsRepository
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
@@ -53,6 +54,14 @@ class AppOpsMonitorController(
     private val ownUid = context.applicationInfo.uid
     // Accessed only inside lifecycle.publish/clear/stop.
     private var sessionData: SessionData? = null
+
+    /**
+     * The registry lines last written, so the watchdog repeats one only when
+     * it says something new. Its check every few minutes would otherwise fill
+     * the log with the same two lines.
+     */
+    @Volatile
+    private var lastRegistryLines: List<String> = emptyList()
 
     val status = mutableStatus.asStateFlow()
     val failure = mutableFailure.asStateFlow()
@@ -119,7 +128,11 @@ class AppOpsMonitorController(
                             diagnosticLog.warning(LOG_SOURCE, "MIUI operation probe failed: ${error.message}")
                             emptySet()
                         }
-                        diagnosticLog.info(LOG_SOURCE, "MIUI operations offered on this device: $offered")
+                        diagnosticLog.info(
+                            LOG_SOURCE,
+                            "MIUI operations offered on this device: $offered",
+                            DiagnosticLogTier.IMPORTANT,
+                        )
                     }
                     val split = MonitorOpCodes.split(names)
                     val codes = split.standard
@@ -209,8 +222,12 @@ class AppOpsMonitorController(
                             watchedPackages = targets.size,
                             watchedOperations = names.size,
                         )
-                        diagnosticLog.info(LOG_SOURCE, "Monitor registered. status=$result, " +
-                            "failures=${registration.failures.joinToString()}")
+                        diagnosticLog.info(
+                            LOG_SOURCE,
+                            "Monitor registered. status=$result, " +
+                                "failures=${registration.failures.joinToString()}",
+                            DiagnosticLogTier.IMPORTANT,
+                        )
                         lifecycle.publish(session) {
                             data.vendorOutcomes = registration.vendor
                             sessionData = data
@@ -287,7 +304,7 @@ class AppOpsMonitorController(
                     session.scope.launch {
                         while (isActive) {
                             delay(WATCHDOG_INTERVAL_MILLIS)
-                            val registry = checkRegistration()
+                            val registry = checkRegistration(periodic = true)
                             val confirmed = lifecycle.publish(session) { data.registryConfirmed } ?: break
                             // A session the user enabled without a registry match
                             // falls back to asking whether the service is alive.
@@ -386,7 +403,12 @@ class AppOpsMonitorController(
         }
     }
 
-    private suspend fun checkRegistration(): WatchRegistration {
+    /**
+     * Compares the registration with the system registry. A [periodic] check,
+     * the watchdog's, writes its lines only when they differ from the last
+     * ones written; every other check writes them as registration results.
+     */
+    private suspend fun checkRegistration(periodic: Boolean = false): WatchRegistration {
         val session = lifecycle.session() ?: return WatchRegistration.UNKNOWN
         val expected = lifecycle.publish(session) {
             Triple(sessionData?.operationNames, mutableStatus.value, sessionData?.vendorOutcomes.orEmpty())
@@ -402,12 +424,13 @@ class AppOpsMonitorController(
         // result: the registry check, and with it the watchdog, covers the
         // standard watches only.
         var vendorRegistry: Map<AccessWatchKind, Set<Int>>? = null
+        val registryLines = mutableListOf<String>()
         val result = try {
             val snapshot = watchers.read()
             if (vendorOutcomes.isNotEmpty()) vendorRegistry = snapshot.vendorCodes(Shizuku.getUid())
             snapshot.registration(expected.first.orEmpty(), kinds, Shizuku.getUid()).also {
-                diagnosticLog.info(LOG_SOURCE, "Watcher registry=$it, expected=${expected.first}, " +
-                    "kinds=$kinds, registrations=${snapshot.accessWatchers}")
+                registryLines += "Watcher registry=$it, expected=${expected.first}, " +
+                    "kinds=$kinds, registrations=${snapshot.accessWatchers}"
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -419,13 +442,21 @@ class AppOpsMonitorController(
             emptyList()
         } else {
             VendorWatches.evaluate(vendorOutcomes, vendorRegistry).also { watches ->
+                registryLines +=
+                    "MIUI watch registry=${vendorRegistry?.mapKeys { it.key.name.lowercase() } ?: "unreadable"}\n" +
+                        watches.joinToString("\n", transform = VendorWatches::describe)
+            }
+        }
+        if (!periodic || registryLines != lastRegistryLines) {
+            registryLines.forEach { line ->
                 diagnosticLog.info(
                     LOG_SOURCE,
-                    "MIUI watch registry=${vendorRegistry?.mapKeys { it.key.name.lowercase() } ?: "unreadable"}\n" +
-                        watches.joinToString("\n", transform = VendorWatches::describe),
+                    line,
+                    if (periodic) DiagnosticLogTier.ROUTINE else DiagnosticLogTier.IMPORTANT,
                 )
             }
         }
+        lastRegistryLines = registryLines
         lifecycle.publish(session) {
             mutableStatus.value = mutableStatus.value?.copy(registry = result, vendorOps = vendorOps)
             if (result == WatchRegistration.CONFIRMED) sessionData?.registryConfirmed = true
@@ -442,7 +473,7 @@ class AppOpsMonitorController(
         registration.vendor.forEach { outcome ->
             val watch = "MIUI watch ${outcome.kind.name.lowercase()} ${outcome.codes}"
             if (outcome.failure == null) {
-                diagnosticLog.info(LOG_SOURCE, "$watch: accepted")
+                diagnosticLog.info(LOG_SOURCE, "$watch: accepted", DiagnosticLogTier.IMPORTANT)
             } else {
                 diagnosticLog.warning(LOG_SOURCE, "$watch: refused: ${outcome.failure}")
             }
@@ -457,10 +488,12 @@ class AppOpsMonitorController(
     ) {
         val first = lifecycle.publish(session) { data.loggedVendorCodes.add(event.opCode) } ?: return
         if (first) {
+            // The first report of a code confirms its registration, so it is kept with those.
             diagnosticLog.info(
                 LOG_SOURCE,
                 "MIUI op ${event.opCode} reported: kind=${event.kind.name.lowercase()}, " +
                     "package=${event.packageName}, allowed=${event.allowed}",
+                DiagnosticLogTier.IMPORTANT,
             )
         }
     }

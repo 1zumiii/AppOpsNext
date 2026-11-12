@@ -177,12 +177,8 @@ class AppListViewModel(
             if (!quiet) isLoading.value = true
             loadFailed.value = false
             val startedAt = SystemClock.elapsedRealtime()
-            diagnosticLog.info(
-                source = LOG_SOURCE,
-                message = "Loading installed applications.",
-            )
+            val selected = userApps.selectedUserId.value
             runCatching {
-                val selected = userApps.selectedUserId.value
                 if (selected == null) {
                     repository.loadInstalledApps(forceRefresh = forceRefresh)
                 } else {
@@ -191,13 +187,22 @@ class AppListViewModel(
             }.onSuccess { apps ->
                 installedApps.value = apps
                 pruneChanges(userApps.selectedUserId.value, apps)
-                diagnosticLog.info(
-                    source = LOG_SOURCE,
-                    message =
-                        "Installed applications loaded. count=${apps.size}, " +
-                            "durationMs=" +
-                            (SystemClock.elapsedRealtime() - startedAt),
+                // The list reloads on every resume. A load that found the same
+                // number of apps as the last line said, in the usual time, adds
+                // nothing to a report.
+                val durationMillis = SystemClock.elapsedRealtime() - startedAt
+                val countChanged = diagnosticLog.noteIfChanged(
+                    key = "appList.count.${selected ?: "current"}",
+                    value = apps.size.toString(),
                 )
+                if (countChanged || durationMillis > SLOW_LOAD_MILLIS) {
+                    diagnosticLog.info(
+                        source = LOG_SOURCE,
+                        message =
+                            "Installed applications loaded. count=${apps.size}, " +
+                                "durationMs=$durationMillis",
+                    )
+                }
             }.onFailure { error ->
                 if (error is CancellationException) throw error
                 loadFailed.value = true
@@ -238,5 +243,6 @@ class AppListViewModel(
     private companion object {
         const val LOG_SOURCE = "AppList"
         const val MIN_REFRESH_INDICATOR_MILLIS = 400L
+        const val SLOW_LOAD_MILLIS = 1_000L
     }
 }

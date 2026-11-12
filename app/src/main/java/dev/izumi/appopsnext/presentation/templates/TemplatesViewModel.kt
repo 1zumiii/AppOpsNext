@@ -44,11 +44,14 @@ class TemplatesViewModel(
     init {
         viewModelScope.launch {
             repository.templates.collect { templates ->
-                diagnosticLog.info(
-                    source = LOG_SOURCE,
-                    message =
-                        "Stored templates loaded. count=${templates.size}",
-                )
+                // Every visit to the page loads them again; only a new count says anything.
+                if (diagnosticLog.noteIfChanged("templates.count", templates.size.toString())) {
+                    diagnosticLog.info(
+                        source = LOG_SOURCE,
+                        message =
+                            "Stored templates loaded. count=${templates.size}",
+                    )
+                }
             }
         }
     }

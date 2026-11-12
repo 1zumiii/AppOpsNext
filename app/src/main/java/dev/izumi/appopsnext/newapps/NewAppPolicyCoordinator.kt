@@ -7,19 +7,16 @@ import android.content.IntentFilter
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeOutcome
 import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeExecutor
 import dev.izumi.appopsnext.appops.AppOpsRepository
 import dev.izumi.appopsnext.appops.changes.AppOpChangeRecord
 import dev.izumi.appopsnext.appops.RevokedCompatRetry
 import dev.izumi.appopsnext.appops.RevokedCompatWriteMemory
 import dev.izumi.appopsnext.appops.model.AppOpIdentifier
-import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
 import dev.izumi.appopsnext.appops.model.AppOpNames
 import dev.izumi.appopsnext.batch.BatchAppOpsExecutor
 import dev.izumi.appopsnext.batch.model.BatchOperationReport
 import dev.izumi.appopsnext.newapps.model.InstalledPackageFingerprint
-import dev.izumi.appopsnext.batch.model.BatchOperationTarget
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
 import dev.izumi.appopsnext.newapps.model.InstalledPackageRecord
 import dev.izumi.appopsnext.settings.UserSettingsRepository
@@ -102,12 +99,20 @@ class NewAppPolicyCoordinator(
                 )
             }
         }
-        diagnosticLog.info(
-            source = LOG_SOURCE,
-            message = outcome.toDiagnosticMessage(target),
-        )
+        val failure = NewAppRuleLog.failureLine(target, outcome)
+        if (failure != null) {
+            diagnosticLog.warning(source = LOG_SOURCE, message = failure)
+        } else {
+            NewAppRuleLog.appliedEntry(target, outcome)?.let(appliedRules::add)
+        }
         outcome.result
     }
+
+    /**
+     * The rules that worked for the package being processed, for its summary
+     * line. Only touched under [workMutex], which runs one package at a time.
+     */
+    private val appliedRules = mutableListOf<String>()
     private var started = false
 
     private val packageAddedReceiver = object : BroadcastReceiver() {
@@ -310,6 +315,7 @@ class NewAppPolicyCoordinator(
             }
 
             val previous = stateRepository.progress(fingerprint)
+            appliedRules.clear()
             val results = NewAppPolicyRuleRunner(
                 apply = { target ->
                     executor.execute(
@@ -345,9 +351,14 @@ class NewAppPolicyCoordinator(
             }
             diagnosticLog.info(
                 source = LOG_SOURCE,
-                message = "New-app policy progress. package=${fingerprint.packageName}, " +
-                    "restored=${restorable.isNotEmpty()}, " +
-                    "success=${report.successCount}, failure=${report.failureCount}, complete=$complete",
+                message = NewAppRuleLog.progressLine(
+                    packageName = fingerprint.packageName,
+                    restored = restorable.isNotEmpty(),
+                    successCount = report.successCount,
+                    failureCount = report.failureCount,
+                    complete = complete,
+                    applied = appliedRules.toList(),
+                ),
             )
 
         }
@@ -389,26 +400,6 @@ class NewAppPolicyCoordinator(
         val records = stateRepository.progress(InstalledPackageFingerprint(packageName, installedAt))
         if (records.isEmpty()) return null
         return BatchOperationReport(records.first().item.target.appLabel, records.map { it.item })
-    }
-
-    private fun AdaptiveScopeModeChangeOutcome.toDiagnosticMessage(
-        target: BatchOperationTarget,
-    ): String {
-        val resultSummary = when (val modeResult = result) {
-            is AppOpModeChangeResult.Success ->
-                "success:${modeResult.appliedMode.name}"
-
-            is AppOpModeChangeResult.Failure ->
-                "failure:${modeResult.phase.name}:" +
-                    modeResult.restorationStatus.name
-        }
-        return "New-app rule completed. " +
-            "package=${target.packageName}, " +
-            "operation=${target.stableOperationName}, " +
-            "preferredScope=${target.preferredScope.name}, " +
-            "resolvedScope=${appliedScope.name}, " +
-            "fallback=$fallbackAttempted, " +
-            "permissionFlag=$permissionFlagApplied, result=$resultSummary"
     }
 
     private companion object {

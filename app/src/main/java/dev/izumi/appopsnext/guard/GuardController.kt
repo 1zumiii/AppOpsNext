@@ -158,6 +158,9 @@ class GuardController(
         }
     }
 
+    /** Touched only by the collector in [start], one value at a time. */
+    private var appliedMode: GuardMode? = null
+
     private fun applyMode(mode: GuardMode) {
         val workManager = WorkManager.getInstance(context)
         if (mode == GuardMode.PERIODIC) {
@@ -181,7 +184,13 @@ class GuardController(
         } else {
             GuardWatchService.stop(context)
         }
-        diagnosticLog.info(LOG_SOURCE, "Guard mode applied. mode=${mode.name}")
+        // Applied at every process start, where off, the default, says nothing.
+        // Turning a running guard off is still written.
+        val previous = appliedMode
+        appliedMode = mode
+        if (mode != GuardMode.OFF || (previous != null && previous != GuardMode.OFF)) {
+            diagnosticLog.info(LOG_SOURCE, "Guard mode applied. mode=${mode.name}")
+        }
     }
 
     private suspend fun readMode(rule: GuardRule): AppOpMode? =

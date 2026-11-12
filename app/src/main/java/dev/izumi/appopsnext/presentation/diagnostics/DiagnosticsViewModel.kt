@@ -104,10 +104,9 @@ class DiagnosticsViewModel(
         viewModelScope.launch {
             privilegedServiceClient.state.collect { state ->
                 appOpsReadState.value = if (state is PrivilegedServiceState.Connected) {
-                    diagnosticLog.info(
-                        source = LOG_SOURCE,
-                        message = "Starting AppOps self-check.",
-                    )
+                    // One line for the check, written with its result: the result
+                    // follows within a moment and its start adds nothing to it.
+                    val startedAt = SystemClock.elapsedRealtime()
                     appOpsReadState.value = AppOpsReadState.Reading
                     appOpsRepository.readPackageOps(
                         packageName = application.packageName,
@@ -118,7 +117,9 @@ class DiagnosticsViewModel(
                                 val message =
                                     "AppOps self-check succeeded. " +
                                         "operationCount=" +
-                                        result.operationCount
+                                        result.operationCount +
+                                        ", durationMs=" +
+                                        (SystemClock.elapsedRealtime() - startedAt)
                                 Log.i(LOG_SOURCE, message)
                                 diagnosticLog.info(
                                     source = LOG_SOURCE,
@@ -131,7 +132,8 @@ class DiagnosticsViewModel(
                                     source = LOG_SOURCE,
                                     message =
                                         "AppOps self-check failed. " +
-                                            "reason=${result.reason}",
+                                            "reason=${result.reason}, durationMs=" +
+                                            (SystemClock.elapsedRealtime() - startedAt),
                                 )
 
                             else -> Unit
