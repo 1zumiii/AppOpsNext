@@ -24,7 +24,9 @@ import kotlinx.coroutines.launch
  *
  * A setting found changed elsewhere for the first time is read once more
  * between writes and then flagged in the log, so it is not marked as this
- * app's change again when its mode comes back to the recorded one.
+ * app's change again when its mode comes back to the recorded one. Nothing
+ * is flagged until [quietAfterWriteMillis] have passed since this app last
+ * wrote, see [scan].
  */
 class AppOpChangeDriftMonitor(
     records: Flow<List<AppOpChangeRecord>>,
@@ -38,10 +40,15 @@ class AppOpChangeDriftMonitor(
     ) -> OpStates,
     /** Flags records in the log, see [AppOpChangeLog.markChangedElsewhere]. */
     private val markChangedElsewhere: suspend (Collection<AppOpChangeRecord>) -> Unit = {},
-    /** Runs [action] while no write of this app is in progress. */
-    private val betweenWrites: suspend (action: suspend () -> Unit) -> Unit = { it() },
+    /**
+     * Runs [action] while no write of this app is in progress, with the time
+     * since the last one ended, null when there was none.
+     */
+    private val betweenWrites: suspend (action: suspend (sinceLastWriteMillis: Long?) -> Unit) -> Unit =
+        { it(null) },
     scope: CoroutineScope,
     private val settleMillis: Long = SETTLE_MILLIS,
+    private val quietAfterWriteMillis: Long = QUIET_AFTER_WRITE_MILLIS,
 ) {
     private val refreshes = MutableStateFlow(0)
     private val mutableDrifts = MutableStateFlow<List<AppOpChangeDrift>>(emptyList())
@@ -87,13 +94,28 @@ class AppOpChangeDriftMonitor(
         // and a failed write puts the old mode back. Read again once no write
         // is running, so neither is taken for a change made elsewhere. A record
         // a write replaced in the meantime no longer matches and stays as it is.
+        //
+        // Android can also move a mode on its own after a write has ended, as
+        // when it derives a runtime-permission operation from the grant again
+        // after rejecting a write. A mode read in that time is this app's
+        // doing, not a change elsewhere, so nothing is flagged until the writes
+        // have been quiet for a while, and the settings are read again then.
+        var waitMillis = 0L
         attempt {
-            betweenWrites {
+            betweenWrites { sinceLastWriteMillis ->
+                if (sinceLastWriteMillis != null && sinceLastWriteMillis < quietAfterWriteMillis) {
+                    waitMillis = quietAfterWriteMillis - sinceLastWriteMillis
+                    return@betweenWrites
+                }
                 val confirmed = AppOpChangeDrifts.newlyChanged(
                     candidates, appsByUser, read(candidates, appsByUser),
                 )
                 if (confirmed.isNotEmpty()) markChangedElsewhere(confirmed)
             }
+        }
+        if (waitMillis > 0) {
+            delay(waitMillis)
+            refresh()
         }
     }
 
@@ -119,5 +141,8 @@ class AppOpChangeDriftMonitor(
 
     private companion object {
         const val SETTLE_MILLIS = 400L
+
+        /** Longer than the ten seconds a mode has been seen to take to settle after a write. */
+        const val QUIET_AFTER_WRITE_MILLIS = 15_000L
     }
 }
