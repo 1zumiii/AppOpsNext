@@ -114,29 +114,40 @@ object MonitorPointSettingsCodec {
         val packageName = fields[0]
         val operationName = AppOpNames.stableName(fields[1])
         if (packageName.isEmpty() || operationName.isEmpty()) return null
-        var settings = MonitorPointSettings(packageName, operationName)
-        for (field in fields.drop(2)) {
+        return readFields(MonitorPointSettings(packageName, operationName), fields.drop(2))
+    }
+
+    /**
+     * Reads the `name=value` settings onto [settings]. Monitor templates write a
+     * rule's settings in the same fields, so a rule and a point read alike.
+     */
+    internal fun readFields(
+        settings: MonitorPointSettings,
+        fields: List<String>,
+    ): MonitorPointSettings {
+        var read = settings
+        for (field in fields) {
             val name = field.substringBefore('=')
             val raw = field.substringAfter('=', missingDelimiterValue = field)
-            settings = when {
+            read = when {
                 // An earlier build wrote the interval as a bare number.
-                name == raw && raw.toIntOrNull() != null -> settings.withThrottle(raw)
-                name == THROTTLE -> settings.withThrottle(raw)
-                name == HEADS_UP && raw == ON -> settings.copy(headsUp = true)
-                name == HEADS_UP && raw == OFF -> settings.copy(headsUp = false)
-                name == BACKGROUND && raw == ON -> settings.copy(backgroundOnly = true)
-                name == BACKGROUND && raw == OFF -> settings.copy(backgroundOnly = false)
-                name == OUTCOME -> settings.copy(
+                name == raw && raw.toIntOrNull() != null -> read.withThrottle(raw)
+                name == THROTTLE -> read.withThrottle(raw)
+                name == HEADS_UP && raw == ON -> read.copy(headsUp = true)
+                name == HEADS_UP && raw == OFF -> read.copy(headsUp = false)
+                name == BACKGROUND && raw == ON -> read.copy(backgroundOnly = true)
+                name == BACKGROUND && raw == OFF -> read.copy(backgroundOnly = false)
+                name == OUTCOME -> read.copy(
                     outcomes = MonitorOutcomes.entries
                         .firstOrNull { it.name.equals(raw, ignoreCase = true) }
                         ?: MonitorOutcomes.ALL,
                 )
                 // An unreadable field is dropped rather than taken as a default,
                 // so one bad setting cannot discard the rest of the line.
-                else -> settings
+                else -> read
             }
         }
-        return settings
+        return read
     }
 
     private fun MonitorPointSettings.withThrottle(raw: String): MonitorPointSettings {
@@ -148,17 +159,20 @@ object MonitorPointSettingsCodec {
         settings
             .filterNot(MonitorPointSettings::isDefault)
             .joinToString(separator = "\n") { point ->
-                buildList {
-                    add(point.packageName)
-                    add(point.operationName)
-                    point.throttleSeconds
-                        ?.takeIf(MonitorThrottles::isValid)
-                        ?.let { add("$THROTTLE=$it") }
-                    point.headsUp?.let { add("$HEADS_UP=${if (it) ON else OFF}") }
-                    if (point.outcomes != MonitorOutcomes.ALL) {
-                        add("$OUTCOME=${point.outcomes.name.lowercase()}")
-                    }
-                    if (point.backgroundOnly) add("$BACKGROUND=$ON")
-                }.joinToString(" ")
+                (listOf(point.packageName, point.operationName) + writeFields(point))
+                    .joinToString(" ")
             }
+
+    /** The settings of [point] that differ from the default, as `name=value` fields. */
+    internal fun writeFields(point: MonitorPointSettings): List<String> =
+        buildList {
+            point.throttleSeconds
+                ?.takeIf(MonitorThrottles::isValid)
+                ?.let { add("$THROTTLE=$it") }
+            point.headsUp?.let { add("$HEADS_UP=${if (it) ON else OFF}") }
+            if (point.outcomes != MonitorOutcomes.ALL) {
+                add("$OUTCOME=${point.outcomes.name.lowercase()}")
+            }
+            if (point.backgroundOnly) add("$BACKGROUND=$ON")
+        }
 }

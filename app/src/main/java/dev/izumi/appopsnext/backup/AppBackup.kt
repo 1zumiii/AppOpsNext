@@ -8,6 +8,8 @@ import dev.izumi.appopsnext.monitor.MonitorPointSettings
 import dev.izumi.appopsnext.monitor.MonitorPointSettingsCodec
 import dev.izumi.appopsnext.monitor.MonitorTarget
 import dev.izumi.appopsnext.monitor.MonitorTargetsCodec
+import dev.izumi.appopsnext.monitor.MonitorTemplate
+import dev.izumi.appopsnext.monitor.MonitorTemplatesCodec
 import dev.izumi.appopsnext.templates.PermissionTemplateCodec
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
 
@@ -46,13 +48,16 @@ data class AppBackup(
     val settings: UserSettingsBackup? = null,
     val monitorTargets: List<MonitorTarget>? = null,
     val monitorPoints: List<MonitorPointSettings>? = null,
+    /** The user's monitor templates. Built-in ones are part of the app and never written. */
+    val monitorTemplates: List<MonitorTemplate>? = null,
     val guard: GuardBackup? = null,
     /** Sections passed over because this build does not know them or their version. */
     val skippedSections: List<String> = emptyList(),
 ) {
     val hasContent: Boolean
         get() = templates != null || settings != null ||
-            monitorTargets != null || monitorPoints != null || guard != null
+            monitorTargets != null || monitorPoints != null || monitorTemplates != null ||
+            guard != null
 }
 
 /**
@@ -71,6 +76,7 @@ object AppBackupCodec {
     private const val SETTINGS = "settings"
     private const val MONITOR_TARGETS = "monitor_targets"
     private const val MONITOR_POINTS = "monitor_points"
+    private const val MONITOR_TEMPLATES = "monitor_templates"
     private const val GUARD = "guard"
     private const val VERSION = 1
 
@@ -97,6 +103,15 @@ object AppBackupCodec {
                 }
                 backup.monitorPoints?.let {
                     add(BackupSection(MONITOR_POINTS, VERSION, MonitorPointSettingsCodec.encode(it).bodyLines()))
+                }
+                backup.monitorTemplates?.let {
+                    add(
+                        BackupSection(
+                            MONITOR_TEMPLATES,
+                            VERSION,
+                            MonitorTemplatesCodec.encode(it).bodyLines(),
+                        ),
+                    )
                 }
                 backup.guard?.let { guard ->
                     val lines = listOfNotNull(guard.mode?.let { "$GUARD_MODE=${it.name}" }) +
@@ -130,6 +145,9 @@ object AppBackupCodec {
                 )
                 MONITOR_POINTS -> backup.copy(
                     monitorPoints = MonitorPointSettingsCodec.decode(section.lines.joinToString("\n")),
+                )
+                MONITOR_TEMPLATES -> backup.copy(
+                    monitorTemplates = MonitorTemplatesCodec.decode(section.lines.joinToString("\n")),
                 )
                 GUARD -> backup.copy(guard = decodeGuard(section.lines))
                 else -> {

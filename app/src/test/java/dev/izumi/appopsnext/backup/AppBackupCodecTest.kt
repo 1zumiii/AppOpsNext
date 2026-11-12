@@ -7,11 +7,15 @@ import dev.izumi.appopsnext.guard.GuardMode
 import dev.izumi.appopsnext.guard.GuardRule
 import dev.izumi.appopsnext.monitor.MonitorOutcomes
 import dev.izumi.appopsnext.monitor.MonitorPointSettings
+import dev.izumi.appopsnext.monitor.BuiltInMonitorTemplates
 import dev.izumi.appopsnext.monitor.MonitorTarget
+import dev.izumi.appopsnext.monitor.MonitorTemplate
+import dev.izumi.appopsnext.monitor.MonitorTemplateRule
 import dev.izumi.appopsnext.templates.NewAppPolicyTemplate
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
 import dev.izumi.appopsnext.templates.model.PermissionTemplateRule
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.fail
 import org.junit.Test
@@ -46,6 +50,17 @@ class AppBackupCodecTest {
                 outcomes = MonitorOutcomes.REFUSED,
             ),
         ),
+        monitorTemplates = listOf(
+            MonitorTemplate(
+                id = "watch",
+                name = "夜间 / Night watch 100%",
+                rules = listOf(
+                    MonitorTemplateRule("android:camera", headsUp = true, backgroundOnly = true),
+                    MonitorTemplateRule("android:read_sms", throttleSeconds = 30, outcomes = MonitorOutcomes.REFUSED),
+                ),
+            ),
+            MonitorTemplate(id = "empty", name = "@section x 1", rules = emptyList()),
+        ),
         guard = GuardBackup(
             mode = GuardMode.PERIODIC,
             rules = listOf(
@@ -66,7 +81,54 @@ class AppBackupCodecTest {
         assertNull(decoded.templates)
         assertNull(decoded.settings)
         assertNull(decoded.monitorPoints)
+        assertNull(decoded.monitorTemplates)
         assertEquals(backup.monitorTargets, decoded.monitorTargets)
+    }
+
+    @Test fun `an older backup without monitor templates leaves them alone`() {
+        val text = """
+            APP_OPS_NEXT_BACKUP 1
+            @section monitor_targets 1
+            dev.izumi.one android:camera
+            @end
+            @section monitor_points 1
+            dev.izumi.one android:camera throttle=60
+            @end
+        """.trimIndent()
+        val decoded = AppBackupCodec.decode(text)
+        assertNull(decoded.monitorTemplates)
+        assertEquals(backup.monitorTargets, decoded.monitorTargets)
+        assertEquals(emptyList<String>(), decoded.skippedSections)
+    }
+
+    @Test fun `monitor templates alone make an importable backup`() {
+        val decoded = AppBackupCodec.decode(AppBackupCodec.encode(AppBackup(monitorTemplates = backup.monitorTemplates)))
+        assertEquals(backup.monitorTemplates, decoded.monitorTemplates)
+        assertNull(decoded.monitorTargets)
+    }
+
+    @Test fun `built-in monitor templates are never written to a backup`() {
+        val text = AppBackupCodec.encode(
+            AppBackup(monitorTemplates = BuiltInMonitorTemplates.all + backup.monitorTemplates!!),
+        )
+        BuiltInMonitorTemplates.all.forEach { assertFalse(text.contains(it.id)) }
+        assertEquals(backup.monitorTemplates, AppBackupCodec.decode(text).monitorTemplates)
+    }
+
+    @Test fun `a damaged monitor template line is dropped without failing the backup`() {
+        val text = """
+            APP_OPS_NEXT_BACKUP 1
+            @section monitor_templates 1
+            template ok Fine
+            rule android:camera headsup=on
+            template
+            rule android:read_sms
+            @end
+        """.trimIndent()
+        assertEquals(
+            listOf(MonitorTemplate("ok", "Fine", listOf(MonitorTemplateRule("android:camera", headsUp = true)))),
+            AppBackupCodec.decode(text).monitorTemplates,
+        )
     }
 
     @Test fun `a guard section without a mode leaves the mode alone`() {

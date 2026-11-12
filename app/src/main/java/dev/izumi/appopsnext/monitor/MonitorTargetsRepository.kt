@@ -7,7 +7,10 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import dev.izumi.appopsnext.backup.MonitorTemplateImportMerge
+import dev.izumi.appopsnext.backup.MonitorTemplateMergeResult
 import java.io.IOException
+import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -37,6 +40,55 @@ class MonitorTargetsRepository(
             if (error is IOException) emit(emptyPreferences()) else throw error
         }
         .map { preferences -> MonitorPointSettingsCodec.decode(preferences[Keys.POINTS]) }
+
+    /** The user's own templates. The built-in ones are not stored; see [BuiltInMonitorTemplates]. */
+    val templates: Flow<List<MonitorTemplate>> = dataStore.data
+        .catch { error ->
+            if (error is IOException) emit(emptyPreferences()) else throw error
+        }
+        .map { preferences -> MonitorTemplatesCodec.decode(preferences[Keys.TEMPLATES]) }
+
+    suspend fun updateTemplates(change: (List<MonitorTemplate>) -> List<MonitorTemplate>) {
+        dataStore.edit { preferences ->
+            val current = MonitorTemplatesCodec.decode(preferences[Keys.TEMPLATES])
+            preferences[Keys.TEMPLATES] = MonitorTemplatesCodec.encode(change(current))
+        }
+    }
+
+    /** Adds a backup's templates to the stored ones; see [MonitorTemplateImportMerge]. */
+    suspend fun importTemplates(imported: List<MonitorTemplate>): MonitorTemplateMergeResult {
+        lateinit var result: MonitorTemplateMergeResult
+        updateTemplates { templates ->
+            MonitorTemplateImportMerge.merge(templates, imported) {
+                UUID.randomUUID().toString()
+            }.also { result = it }.templates
+        }
+        return result
+    }
+
+    /**
+     * Applies [template] to [packageNames] in a single edit, so the watched
+     * operations and their settings can never be seen half written.
+     */
+    suspend fun applyTemplate(
+        template: MonitorTemplate,
+        packageNames: Collection<String>,
+        isAvailable: (String) -> Boolean,
+    ): MonitorTemplateApplication {
+        lateinit var result: MonitorTemplateApplication
+        dataStore.edit { preferences ->
+            result = MonitorTemplateApplier.apply(
+                template = template,
+                packageNames = packageNames,
+                targets = MonitorTargetsCodec.decode(preferences[Keys.TARGETS]),
+                points = MonitorPointSettingsCodec.decode(preferences[Keys.POINTS]),
+                isAvailable = isAvailable,
+            )
+            preferences[Keys.TARGETS] = MonitorTargetsCodec.encode(result.targets)
+            preferences[Keys.POINTS] = MonitorPointSettingsCodec.encode(result.points)
+        }
+        return result
+    }
 
     suspend fun setOperations(packageName: String, operationNames: Set<String>) {
         update(packageName) {
@@ -142,5 +194,6 @@ class MonitorTargetsRepository(
     private object Keys {
         val TARGETS = stringPreferencesKey("monitor_targets")
         val POINTS = stringPreferencesKey("monitor_throttles")
+        val TEMPLATES = stringPreferencesKey("monitor_templates")
     }
 }
