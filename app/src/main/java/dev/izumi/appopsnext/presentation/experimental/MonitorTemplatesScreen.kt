@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -326,6 +325,12 @@ private fun MonitorTemplateList(
                 },
                 navigationIcon = { BackButton(onBack) },
                 actions = {
+                    IconButton(onClick = { creating = true }) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_ph_plus),
+                            contentDescription = stringResource(R.string.monitor_template_create),
+                        )
+                    }
                     IconButton(onClick = { showDetails = true }) {
                         Icon(
                             painter = painterResource(R.drawable.ic_ph_info),
@@ -343,7 +348,7 @@ private fun MonitorTemplateList(
             item {
                 Text(
                     text = stringResource(R.string.monitor_templates_hint),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -397,40 +402,45 @@ private fun MonitorTemplateList(
                 }
             }
             items(templates, key = MonitorTemplate::id) { template ->
-                ExperimentalListCard(
-                    modifier = Modifier.clickable { onOpen(template) },
-                    leadingContent = { ExperimentalRowIcon(R.drawable.ic_ph_note_pencil) },
-                    headlineContent = {
-                        Text(text = template.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    },
-                    supportingContent = {
-                        Column {
-                            Text(
-                                text = if (template.rules.isEmpty()) {
-                                    stringResource(R.string.monitor_template_needs_rules)
-                                } else {
-                                    operationLabels(template.operationNames)
-                                },
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            // The button takes its own tap, so the rest of the card
-                            // still opens the editor.
-                            Box(
-                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                                contentAlignment = Alignment.CenterEnd,
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                ) {
+                    Column {
+                        ExperimentalGroupRow(
+                            modifier = Modifier.clickable { onOpen(template) },
+                            leadingContent = { ExperimentalRowIcon(R.drawable.ic_ph_note_pencil) },
+                            headlineContent = {
+                                Text(text = template.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            },
+                            supportingContent = {
+                                Text(
+                                    text = if (template.rules.isEmpty()) {
+                                        stringResource(R.string.monitor_template_needs_rules)
+                                    } else {
+                                        operationLabels(template.operationNames)
+                                    },
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            },
+                            trailingContent = { MainPageChevron() },
+                        )
+                        Box(
+                            modifier = Modifier.fillMaxWidth()
+                                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                            contentAlignment = Alignment.CenterEnd,
+                        ) {
+                            FilledTonalButton(
+                                onClick = { onApply(template) },
+                                enabled = !locked && template.rules.isNotEmpty(),
                             ) {
-                                FilledTonalButton(
-                                    onClick = { onApply(template) },
-                                    enabled = !locked && template.rules.isNotEmpty(),
-                                ) {
-                                    Text(text = stringResource(R.string.monitor_template_apply))
-                                }
+                                Text(text = stringResource(R.string.monitor_template_apply))
                             }
                         }
-                    },
-                    trailingContent = { MainPageChevron() },
-                )
+                    }
+                }
             }
             item { ExperimentalSectionTitle(stringResource(R.string.monitor_templates_advice_header)) }
             item {
@@ -845,7 +855,7 @@ private fun ExampleCard(
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -874,35 +884,18 @@ private fun ExampleCard(
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                example.settingRes.forEach { labelRes ->
-                    ExampleSettingChip(stringResource(labelRes))
-                }
-            }
+            Text(
+                text = example.settingRes.map { stringResource(it) }
+                    .joinToString(stringResource(R.string.app_op_usage_separator)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             action?.let {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                     it()
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun ExampleSettingChip(text: String) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f),
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-        )
     }
 }
 

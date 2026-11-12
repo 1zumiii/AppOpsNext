@@ -1,6 +1,7 @@
 package dev.izumi.appopsnext.presentation.experimental
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -139,12 +140,17 @@ private fun PointRow(point: MonitorPointRow, onClick: () -> Unit) {
             )
         },
         supportingContent = {
-            Text(
-                text = "${point.operationLabel} · ${monitorPointSummary(point.settings)}",
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                color = muted,
-            )
+            Column {
+                Text(
+                    text = point.operationLabel,
+                    color = muted,
+                )
+                Text(
+                    text = monitorPointSummary(point.settings),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = muted,
+                )
+            }
         },
         trailingContent = {
             MainPageChevron()
