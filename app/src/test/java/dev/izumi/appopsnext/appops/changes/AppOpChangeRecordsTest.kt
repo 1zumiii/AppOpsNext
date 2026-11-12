@@ -397,17 +397,33 @@ class AppOpChangeRecordsTest {
         assertEquals(listOf(flagged), back)
     }
 
-    @Test fun `a setting changed elsewhere is not restored on reinstall`() {
+    @Test fun `a setting changed elsewhere is restored to the mode this app set`() {
         val records = listOf(
             record(AppOpMode.IGNORE, scope = AppOpScope.PACKAGE, time = 100).copy(changedElsewhere = true),
-            record(AppOpMode.IGNORE, scope = AppOpScope.UID, time = 120),
+            record(AppOpMode.ALLOW, scope = AppOpScope.UID, time = 120),
             record(AppOpMode.IGNORE, time = 100, operation = "android:camera"),
         )
 
         val restorable = AppOpChangeRecords.restorable(records, 0, PACKAGE, firstInstallTimeMillis = 200)
 
-        // The UID record does not stand in for the package one that was changed elsewhere.
-        assertEquals(listOf("android:camera"), restorable.map(AppOpChangeRecord::stableOperationName))
+        assertEquals(
+            listOf("android:camera" to AppOpMode.IGNORE, OPERATION to AppOpMode.IGNORE),
+            restorable.map { it.stableOperationName to it.recordedMode },
+        )
+    }
+
+    @Test fun `the write that restores a flagged setting clears the flag`() {
+        val earlier = record(AppOpMode.IGNORE, time = 100)
+            .copy(removedAtMillis = 5_000, changedElsewhere = true)
+
+        val restored = AppOpChangeRecords.merge(
+            listOf(earlier), change(AppOpMode.ALLOW, AppOpMode.IGNORE), userId = 0, nowMillis = 9_000,
+        )
+
+        assertEquals(false, restored.single().changedElsewhere)
+        assertEquals(AppOpMode.IGNORE, restored.single().recordedMode)
+        assertNull(restored.single().removedAtMillis)
+        assertEquals(9_000L, AppOpChangeRecords.latestTime(restored, 0, PACKAGE, firstInstallTimeMillis = 8_000))
     }
 
     private companion object {
