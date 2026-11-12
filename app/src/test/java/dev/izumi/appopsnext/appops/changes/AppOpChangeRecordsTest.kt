@@ -5,6 +5,7 @@ import dev.izumi.appopsnext.appops.model.AppOpIdentifier
 import dev.izumi.appopsnext.appops.model.AppOpScope
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -303,6 +304,110 @@ class AppOpChangeRecordsTest {
         assertEquals(kept, AppOpChangeCodec.decode(AppOpChangeCodec.encode(kept)))
         assertNull(AppOpChangeCodec.decode(AppOpChangeCodec.encode(kept) + "\tx"))
         assertNull(AppOpChangeCodec.decode(AppOpChangeCodec.encode(record(AppOpMode.IGNORE)) + "\tx"))
+    }
+
+    @Test fun `a setting changed elsewhere and back is not marked as this app's change`() {
+        val records = AppOpChangeRecords.merge(
+            emptyList(), change(AppOpMode.ALLOW, AppOpMode.IGNORE, scope = AppOpScope.UID),
+            userId = 0, nowMillis = 5,
+        )
+        fun statusAt(records: List<AppOpChangeRecord>, mode: AppOpMode) =
+            AppOpChangeRecords.status(records, OPERATION) { mode }
+
+        assertTrue(statusAt(records, AppOpMode.IGNORE) is AppOpChangeStatus.Modified)
+        // System Settings sets "allow only while in use".
+        val elsewhere = statusAt(records, AppOpMode.FOREGROUND) as AppOpChangeStatus.ChangedElsewhere
+        val flagged = AppOpChangeRecords.markChangedElsewhere(records, listOf(elsewhere.record))
+        assertTrue(flagged.single().changedElsewhere)
+        assertTrue(statusAt(flagged, AppOpMode.FOREGROUND) is AppOpChangeStatus.ChangedElsewhere)
+        // Then "don't allow", the mode this app recorded.
+        assertNull(statusAt(flagged, AppOpMode.IGNORE))
+        assertNull(AppOpChangeRecords.latestTime(flagged, 0, PACKAGE, firstInstallTimeMillis = 1))
+    }
+
+    @Test fun `a write here clears the flag and keeps the first original mode`() {
+        val flagged = listOf(record(AppOpMode.IGNORE).copy(changedElsewhere = true))
+
+        val written = AppOpChangeRecords.merge(
+            flagged, change(AppOpMode.FOREGROUND, AppOpMode.IGNORE), userId = 0, nowMillis = 900,
+        )
+
+        val record = written.single()
+        assertEquals(false, record.changedElsewhere)
+        assertEquals(AppOpMode.DEFAULT, record.originalMode)
+        assertTrue(AppOpChangeRecords.status(written, OPERATION) { AppOpMode.IGNORE } is AppOpChangeStatus.Modified)
+        assertEquals(900L, AppOpChangeRecords.latestTime(written, 0, PACKAGE, firstInstallTimeMillis = 1))
+    }
+
+    @Test fun `marking leaves a record written again since and an unchanged log alone`() {
+        val seen = record(AppOpMode.IGNORE, time = 100)
+        val rewritten = record(AppOpMode.IGNORE, time = 200)
+        val other = record(AppOpMode.IGNORE, packageName = "other")
+        val records = listOf(rewritten, other)
+
+        assertSame(records, AppOpChangeRecords.markChangedElsewhere(records, listOf(seen)))
+        val flagged = AppOpChangeRecords.markChangedElsewhere(listOf(seen, other), listOf(seen))
+        assertEquals(listOf(true, false), flagged.map(AppOpChangeRecord::changedElsewhere))
+        assertSame(flagged, AppOpChangeRecords.markChangedElsewhere(flagged, listOf(seen)))
+    }
+
+    @Test fun `another scope still as this app left it keeps the marker`() {
+        val records = listOf(
+            record(AppOpMode.IGNORE, scope = AppOpScope.PACKAGE, time = 200).copy(changedElsewhere = true),
+            record(AppOpMode.IGNORE, scope = AppOpScope.UID, time = 100),
+        )
+
+        val status = AppOpChangeRecords.status(records, OPERATION) { AppOpMode.IGNORE }
+
+        assertEquals(AppOpScope.UID, (status as AppOpChangeStatus.Modified).record.scope)
+    }
+
+    @Test fun `records written before the flag decode as not changed elsewhere`() {
+        val current = AppOpChangeCodec.decode("C1\t0\tpkg\top\tUID\tALLOW\tIGNORE\t1")
+        val removed = AppOpChangeCodec.decode("C1\t0\tpkg\top\tUID\tALLOW\tIGNORE\t1\t7")
+
+        assertEquals(false, current?.changedElsewhere)
+        assertNull(current?.removedAtMillis)
+        assertEquals(false, removed?.changedElsewhere)
+        assertEquals(7L, removed?.removedAtMillis)
+    }
+
+    @Test fun `the flag survives encoding and other records keep the old format`() {
+        val plain = record(AppOpMode.IGNORE)
+        val flagged = plain.copy(changedElsewhere = true)
+        val flaggedRemoved = flagged.copy(removedAtMillis = 5_000)
+
+        assertEquals("C1\t0\t$PACKAGE\t$OPERATION\tPACKAGE\tDEFAULT\tIGNORE\t100", AppOpChangeCodec.encode(plain))
+        assertEquals(flagged, AppOpChangeCodec.decode(AppOpChangeCodec.encode(flagged)))
+        assertEquals(flaggedRemoved, AppOpChangeCodec.decode(AppOpChangeCodec.encode(flaggedRemoved)))
+        assertNull(AppOpChangeCodec.decode("C2\t0\tpkg\top\tUID\tALLOW\tIGNORE\t1\t\tx"))
+        assertNull(AppOpChangeCodec.decode("C2\t0\tpkg\top\tUID\tALLOW\tIGNORE\t1\ty\t1"))
+        assertNull(AppOpChangeCodec.decode("C1\t0\tpkg\top\tUID\tALLOW\tIGNORE\t1\t\t1"))
+    }
+
+    @Test fun `prune keeps the flag`() {
+        val flagged = record(AppOpMode.IGNORE, time = 100).copy(changedElsewhere = true)
+
+        val removed = AppOpChangeRecords.prune(
+            listOf(flagged), 0, emptyMap(), keepRemovedMillis = 1_000, nowMillis = 5_000,
+        )
+        val back = AppOpChangeRecords.prune(removed, 0, mapOf(PACKAGE to 50L), nowMillis = 6_000)
+
+        assertEquals(listOf(true), removed.map(AppOpChangeRecord::changedElsewhere))
+        assertEquals(listOf(flagged), back)
+    }
+
+    @Test fun `a setting changed elsewhere is not restored on reinstall`() {
+        val records = listOf(
+            record(AppOpMode.IGNORE, scope = AppOpScope.PACKAGE, time = 100).copy(changedElsewhere = true),
+            record(AppOpMode.IGNORE, scope = AppOpScope.UID, time = 120),
+            record(AppOpMode.IGNORE, time = 100, operation = "android:camera"),
+        )
+
+        val restorable = AppOpChangeRecords.restorable(records, 0, PACKAGE, firstInstallTimeMillis = 200)
+
+        // The UID record does not stand in for the package one that was changed elsewhere.
+        assertEquals(listOf("android:camera"), restorable.map(AppOpChangeRecord::stableOperationName))
     }
 
     private companion object {

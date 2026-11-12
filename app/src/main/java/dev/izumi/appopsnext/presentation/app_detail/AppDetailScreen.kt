@@ -346,6 +346,19 @@ private fun ReadyContent(
             changes, appUserId, state.app.packageName, state.app.firstInstallTimeMillis,
         )
     }
+    // The modes on screen trail a write of this app for a moment, so a setting
+    // that looks changed elsewhere here is not flagged from here. The monitor
+    // reads it again between writes and flags it in the log if it still is.
+    val seenChangedElsewhere = remember(packageChanges, entries) {
+        val shown = entries.mapTo(HashSet()) { AppOpNames.stableName(it.name) }
+        packageChanges.filter {
+            !it.changedElsewhere && it.stableOperationName in shown &&
+                entries.modeAt(it.stableOperationName, it.scope) != it.recordedMode
+        }
+    }
+    LaunchedEffect(seenChangedElsewhere) {
+        if (seenChangedElsewhere.isNotEmpty()) application.appOpChangeDriftMonitor.refresh()
+    }
     val allDisplayItems = remember(entries, context, alternateContext) {
         AppOpDisplayCatalog.build(
             entries = entries,

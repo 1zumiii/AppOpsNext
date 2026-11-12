@@ -35,6 +35,12 @@ data class AppOpChangeRecord(
      * change. Null while the record applies to the installed package.
      */
     val removedAtMillis: Long? = null,
+    /**
+     * Something outside this app was seen to change the mode since. It stays
+     * set when the mode comes back to [recordedMode], because the setting is
+     * then as someone else left it, until this app writes it again.
+     */
+    val changedElsewhere: Boolean = false,
 ) {
     val key: Key get() = Key(userId, packageName, stableOperationName, scope)
 
@@ -50,7 +56,7 @@ data class AppOpChangeRecord(
 sealed interface AppOpChangeStatus {
     val record: AppOpChangeRecord
 
-    /** The mode is still the one this app set. */
+    /** The mode is still the one this app set, and nothing else has changed it since. */
     data class Modified(override val record: AppOpChangeRecord) : AppOpChangeStatus
 
     /**
@@ -91,6 +97,7 @@ object AppOpChangeRecords {
         val originalMode = existing?.takeIf { it.removedAtMillis == null }?.originalMode
             ?: change.originalMode
         if (change.appliedMode == originalMode) return others
+        // A new record, so a write here takes back a setting changed elsewhere.
         val updated = AppOpChangeRecord(
             userId = key.userId,
             packageName = key.packageName,
@@ -131,7 +138,11 @@ object AppOpChangeRecords {
             isCurrent(it, firstInstallTimeMillis)
     }
 
-    /** The newest change to any operation of a package, for sorting. */
+    /**
+     * The newest change to any operation of a package, for sorting. A record
+     * changed elsewhere does not count, since the setting is no longer this
+     * app's change.
+     */
     fun latestTime(
         records: List<AppOpChangeRecord>,
         userId: Int,
@@ -141,7 +152,7 @@ object AppOpChangeRecords {
     ): Long? {
         val stableName = operationName?.let(AppOpNames::stableName)
         return forPackage(records, userId, packageName, firstInstallTimeMillis)
-            .filter { stableName == null || it.stableOperationName == stableName }
+            .filter { !it.changedElsewhere && (stableName == null || it.stableOperationName == stableName) }
             .maxOfOrNull(AppOpChangeRecord::timeMillis)
     }
 
@@ -150,6 +161,8 @@ object AppOpChangeRecords {
      * [currentMode] gives the mode at a scope, [AppOpMode.DEFAULT] where none
      * is stored and null where the stored mode has no known name. A change
      * elsewhere at any scope outweighs the scopes still as this app left them.
+     * A record once changed elsewhere is not marked again when the mode comes
+     * back to it, so with only such records left there is no status.
      */
     fun status(
         packageRecords: List<AppOpChangeRecord>,
@@ -167,7 +180,23 @@ object AppOpChangeRecords {
                 return AppOpChangeStatus.ChangedElsewhere(record, current)
             }
         }
-        return AppOpChangeStatus.Modified(records.first())
+        return records.firstOrNull { !it.changedElsewhere }?.let(AppOpChangeStatus::Modified)
+    }
+
+    /**
+     * Flags the records in [seen] as changed elsewhere. A record that differs
+     * from the one seen, for one because this app wrote the setting again
+     * since, is left as it is. Returns [records] itself when nothing changes.
+     */
+    fun markChangedElsewhere(
+        records: List<AppOpChangeRecord>,
+        seen: Collection<AppOpChangeRecord>,
+    ): List<AppOpChangeRecord> {
+        val targets = seen.mapTo(HashSet()) { it.copy(changedElsewhere = false) }
+        if (records.none { !it.changedElsewhere && it in targets }) return records
+        return records.map {
+            if (!it.changedElsewhere && it in targets) it.copy(changedElsewhere = true) else it
+        }
     }
 
     /** How long the settings of a removed package are kept for its next installation. */
@@ -209,6 +238,9 @@ object AppOpChangeRecords {
      * The settings to give a package installed at [firstInstallTimeMillis]
      * again: the records of its earlier installation, one per operation. A
      * record at package scope outweighs one at UID scope, since the UID is new.
+     *
+     * An operation whose chosen record was changed elsewhere is left out. Its
+     * last mode was not this app's, and the record does not know which it was.
      */
     fun restorable(
         records: List<AppOpChangeRecord>,
@@ -227,24 +259,46 @@ object AppOpChangeRecords {
                     .thenByDescending(AppOpChangeRecord::timeMillis),
             ).first()
         }
+        .filterNot(AppOpChangeRecord::changedElsewhere)
         .sortedBy(AppOpChangeRecord::stableOperationName)
 }
 
 /**
  * Tab-separated records, one per string, like the guard codec. A record that
  * does not parse is dropped rather than failing the whole log.
+ *
+ * A record changed elsewhere is written as [V2], which has the removal time
+ * in a field of its own, empty while there is none, and the flag after it.
+ * Every other record stays [V1], so an older version of this app still reads
+ * it, and records written before the flag read as not changed elsewhere.
  */
 internal object AppOpChangeCodec {
-    fun encode(record: AppOpChangeRecord): String = listOfNotNull(
-        V1, record.userId, record.packageName, record.stableOperationName,
-        record.scope.name, record.originalMode.name, record.recordedMode.name,
-        record.timeMillis, record.removedAtMillis,
-    ).joinToString(SEPARATOR)
+    fun encode(record: AppOpChangeRecord): String {
+        val common = listOf(
+            record.userId, record.packageName, record.stableOperationName,
+            record.scope.name, record.originalMode.name, record.recordedMode.name,
+            record.timeMillis,
+        )
+        val fields = if (record.changedElsewhere) {
+            listOf(V2) + common + listOf(record.removedAtMillis?.toString().orEmpty(), FLAG_SET)
+        } else {
+            listOf(V1) + common + listOfNotNull(record.removedAtMillis)
+        }
+        return fields.joinToString(SEPARATOR)
+    }
 
     fun decode(value: String): AppOpChangeRecord? {
         val fields = value.split(SEPARATOR)
-        // The ninth field is only written for a record of a removed package.
-        if (fields.size !in 8..9 || fields[0] != V1) return null
+        val changedElsewhere = when {
+            // The ninth field is only written for a record of a removed package.
+            fields[0] == V1 && fields.size in 8..9 -> false
+            fields[0] == V2 && fields.size == 10 -> when (fields[9]) {
+                FLAG_SET -> true
+                FLAG_CLEAR -> false
+                else -> return null
+            }
+            else -> return null
+        }
         return AppOpChangeRecord(
             userId = fields[1].toIntOrNull()?.takeIf { it >= 0 } ?: return null,
             packageName = fields[2].takeIf(String::isNotBlank) ?: return null,
@@ -253,7 +307,9 @@ internal object AppOpChangeCodec {
             originalMode = enumOrNull<AppOpMode>(fields[5]) ?: return null,
             recordedMode = enumOrNull<AppOpMode>(fields[6]) ?: return null,
             timeMillis = fields[7].toLongOrNull() ?: return null,
-            removedAtMillis = fields.getOrNull(8)?.let { it.toLongOrNull() ?: return null },
+            removedAtMillis = fields.getOrNull(8)?.takeUnless { fields[0] == V2 && it.isEmpty() }
+                ?.let { it.toLongOrNull() ?: return null },
+            changedElsewhere = changedElsewhere,
         )
     }
 
@@ -262,4 +318,7 @@ internal object AppOpChangeCodec {
 
     private const val SEPARATOR = "\t"
     private const val V1 = "C1"
+    private const val V2 = "C2"
+    private const val FLAG_SET = "1"
+    private const val FLAG_CLEAR = "0"
 }

@@ -69,6 +69,16 @@ class AppOpChangeLog(
         }
     }
 
+    /**
+     * The one place that flags settings as changed elsewhere, see
+     * [AppOpChangeRecords.markChangedElsewhere]. It runs after the changes
+     * queued before it, so a write this app made since keeps its new record.
+     */
+    suspend fun markChangedElsewhere(seen: Collection<AppOpChangeRecord>) {
+        if (seen.isEmpty()) return
+        update { AppOpChangeRecords.markChangedElsewhere(it, seen) }
+    }
+
     /** See [AppOpChangeRecords.prune]. */
     suspend fun prune(userId: Int?, installed: Map<String, Long?>, keepRemovedMillis: Long? = null) {
         update {

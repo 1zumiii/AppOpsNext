@@ -21,6 +21,10 @@ import kotlinx.coroutines.launch
  *
  * It reads again when the change log changes, when the backend connects and
  * on [refresh]. Without a backend the last list stays as it was.
+ *
+ * A setting found changed elsewhere for the first time is read once more
+ * between writes and then flagged in the log, so it is not marked as this
+ * app's change again when its mode comes back to the recorded one.
  */
 class AppOpChangeDriftMonitor(
     records: Flow<List<AppOpChangeRecord>>,
@@ -32,6 +36,10 @@ class AppOpChangeDriftMonitor(
         userId: Int,
         uids: Collection<Int>,
     ) -> OpStates,
+    /** Flags records in the log, see [AppOpChangeLog.markChangedElsewhere]. */
+    private val markChangedElsewhere: suspend (Collection<AppOpChangeRecord>) -> Unit = {},
+    /** Runs [action] while no write of this app is in progress. */
+    private val betweenWrites: suspend (action: suspend () -> Unit) -> Unit = { it() },
     scope: CoroutineScope,
     private val settleMillis: Long = SETTLE_MILLIS,
 ) {
@@ -49,28 +57,55 @@ class AppOpChangeDriftMonitor(
                 current ?: return@collectLatest
                 // A batch records one change after another. Read once it is quiet.
                 delay(settleMillis)
-                mutableDrifts.value = scan(current)
+                scan(current)
             }
         }
     }
 
-    /** Reads again, for a return to the app after settings may have changed. */
+    /**
+     * Reads again, for a return to the app after settings may have changed,
+     * or for a page that shows a setting changed elsewhere the log has not
+     * flagged yet.
+     */
     fun refresh() {
         refreshes.update { it + 1 }
     }
 
-    private suspend fun scan(records: List<AppOpChangeRecord>): List<AppOpChangeDrift> {
-        if (records.isEmpty()) return emptyList()
+    private suspend fun scan(records: List<AppOpChangeRecord>) {
+        if (records.isEmpty()) {
+            mutableDrifts.value = emptyList()
+            return
+        }
         val appsByUser = records.map(AppOpChangeRecord::userId).distinct().mapNotNull { userId ->
             attempt { loadApps(userId) }?.let { apps -> userId to apps.associateBy(InstalledApp::packageName) }
         }.toMap()
-        val states = AppOpChangeDrifts.reads(records, appsByUser).mapNotNull { (read, uids) ->
+        val states = read(records, appsByUser)
+        mutableDrifts.value = AppOpChangeDrifts.find(records, appsByUser, states)
+        val candidates = AppOpChangeDrifts.newlyChanged(records, appsByUser, states)
+        if (candidates.isEmpty()) return
+        // A write of this app sets the mode before its record reaches the log,
+        // and a failed write puts the old mode back. Read again once no write
+        // is running, so neither is taken for a change made elsewhere. A record
+        // a write replaced in the meantime no longer matches and stays as it is.
+        attempt {
+            betweenWrites {
+                val confirmed = AppOpChangeDrifts.newlyChanged(
+                    candidates, appsByUser, read(candidates, appsByUser),
+                )
+                if (confirmed.isNotEmpty()) markChangedElsewhere(confirmed)
+            }
+        }
+    }
+
+    private suspend fun read(
+        records: List<AppOpChangeRecord>,
+        appsByUser: Map<Int, Map<String, InstalledApp>>,
+    ): Map<AppOpChangeRead, OpStates> =
+        AppOpChangeDrifts.reads(records, appsByUser).mapNotNull { (read, uids) ->
             attempt {
                 loadOpStates(AppOpNames.shellName(read.stableOperationName), read.userId, uids)
             }?.let { read to it }
         }.toMap()
-        return AppOpChangeDrifts.find(records, appsByUser, states)
-    }
 
     /** A failed read leaves its settings out of this pass. The next pass reads again. */
     private inline fun <T> attempt(action: () -> T): T? =
