@@ -58,7 +58,13 @@ import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.presentation.components.CompactSearchField
 import dev.izumi.appopsnext.apps.AppListFilter
 import dev.izumi.appopsnext.apps.model.InstalledApp
+import dev.izumi.appopsnext.AppOpsNextApplication
+import dev.izumi.appopsnext.appops.model.MiuiOps
 import dev.izumi.appopsnext.monitor.AppOpCodes
+import dev.izumi.appopsnext.monitor.MonitorOpCodes
+import dev.izumi.appopsnext.monitor.VendorMonitorOps
+import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 import dev.izumi.appopsnext.presentation.components.AppIcon
 
@@ -299,8 +305,19 @@ fun MonitorOperationsScreen(
     onShowAllChange: (Boolean) -> Unit,
     onSuppressWarning: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Packages to read first when finding out whether the device has MIUI private operations. */
+    probePackages: List<String> = emptyList(),
 ) {
     val context = LocalContext.current
+    // MIUI private operations join the full list only once the device has
+    // shown that it has them, so every other device sees the list unchanged.
+    val vendorCodes by VendorMonitorOps.codes.collectAsStateWithLifecycle()
+    LaunchedEffect(showAll) {
+        if (showAll) (context.applicationContext as AppOpsNextApplication).probeVendorOps(probePackages)
+    }
+    val vendorNames = remember(showAll, vendorCodes) {
+        if (showAll) MonitorOpCodes.vendorNames(vendorCodes) else emptyList()
+    }
     var query by rememberSaveable(stateKey) { mutableStateOf("") }
     val initialSelection by rememberSaveable(stateKey, stateSaver = StringSelectionSaver) {
         mutableStateOf(selected.toSet())
@@ -309,18 +326,14 @@ fun MonitorOperationsScreen(
     // the watch, so everything the operation table knows can be offered instead.
     // An operation that is already picked stays on the list either way, so
     // turning the shortlist back on cannot hide a live selection.
-    val options = remember(showAll, selected, initialSelection, context) {
+    val options = remember(showAll, selected, initialSelection, context, vendorNames) {
         val names = if (showAll) {
-            (AppOpCodes.ALL_NAMES + initialSelection + selected).distinct()
+            (AppOpCodes.ALL_NAMES + vendorNames + initialSelection + selected).distinct()
         } else {
             (AppOpCodes.MONITORED_NAMES + initialSelection + selected).distinct()
         }
         names.map { name ->
-            name to (
-                AppOpDisplayCatalog.labelResOf(name)
-                    ?.let(context::getString)
-                    ?: name
-                )
+            name to AppOpDisplayCatalog.displayLabel(name, context.resources)
         }.sortedBy { it.second }
     }
     val orderedOptions = remember(options, initialSelection) {
@@ -423,6 +436,16 @@ fun MonitorOperationsScreen(
                     )
                 }
             }
+            if (vendorNames.isNotEmpty()) {
+                item {
+                    Text(
+                        text = stringResource(R.string.monitor_vendor_ops_hint),
+                        modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 20.dp, bottom = 8.dp),
@@ -470,6 +493,10 @@ fun MonitorOperationsScreen(
                         },
                         headlineContent = {
                             Text(text = label, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        },
+                        // Said on the row itself, so the warning needs no dialog.
+                        supportingContent = MiuiOps.codeOf(name)?.let { code ->
+                            { Text(text = stringResource(R.string.monitor_vendor_op_item, code)) }
                         },
                         trailingContent = {
                             Checkbox(

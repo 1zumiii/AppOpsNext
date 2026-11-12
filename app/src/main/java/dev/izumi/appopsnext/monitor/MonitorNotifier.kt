@@ -194,9 +194,7 @@ class MonitorNotifier(
 
     /** `使用了读取剪贴板`, the line that says what happened. */
     private fun action(access: MonitoredAccess): String {
-        val operationLabel = AppOpDisplayCatalog.labelResOf(access.operationName)
-            ?.let(context::getString)
-            ?: access.operationName
+        val operationLabel = AppOpDisplayCatalog.displayLabel(access.operationName, context.resources)
         return context.getString(
             if (access.allowed) {
                 R.string.monitor_access_allowed

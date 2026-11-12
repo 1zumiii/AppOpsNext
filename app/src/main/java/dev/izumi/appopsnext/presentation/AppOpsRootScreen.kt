@@ -24,7 +24,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.monitor.MonitorLogEntry
 import dev.izumi.appopsnext.monitor.MonitorOutcomes
-import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
+import dev.izumi.appopsnext.presentation.app_detail.appOpDisplayLabel
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.batch.model.BatchOperationReport
@@ -382,6 +382,7 @@ fun AppOpsRootScreen(
                     },
                     onShowAllChange = onMonitorShowAllOperationsChange,
                     onSuppressWarning = onMonitorSuppressAllOperationsWarning,
+                    probePackages = listOf(monitorApp.packageName),
                 )
 
                 experimentalRoute == ROUTE_MONITOR_TARGETS -> MonitorTargetsScreen(
@@ -798,9 +799,7 @@ private fun monitorPointRows(
             MonitorPointRow(
                 settings = settings,
                 appLabel = labels[settings.packageName] ?: settings.packageName,
-                operationLabel = AppOpDisplayCatalog.labelResOf(settings.operationName)
-                    ?.let { stringResource(it) }
-                    ?: settings.operationName,
+                operationLabel = appOpDisplayLabel(settings.operationName),
                 watched = uiState.isWatched(settings.packageName, settings.operationName),
             )
         }

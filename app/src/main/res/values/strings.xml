@@ -478,6 +478,7 @@
     <string name="miui_op_label_read_record">Read recordings</string>
     <string name="miui_op_label_read_note">Read notes</string>
     <string name="miui_op_label_auto_start_switch">Autostart switch</string>
+    <string name="miui_op_label_fallback">MIUI private operation %1$d</string>
     <string name="app_op_usage_separator">" · "</string>
     <string name="app_op_usage_less_than_minute">Less than 1 minute</string>
     <string name="app_op_usage_ago">%1$s ago</string>
@@ -684,6 +685,12 @@
     <string name="monitor_operations_section">Monitoring points</string>
     <string name="monitor_operations_search">Search monitoring points</string>
     <string name="monitor_operations_empty">No matching monitoring points.</string>
+    <string name="monitor_vendor_op_item">MIUI private operation %1$d · unverified</string>
+    <string name="monitor_vendor_ops_hint">Entries marked unverified are MIUI private operations. The system may refuse to watch them or never report them.</string>
+    <string name="monitor_vendor_registered">MIUI private operations registered: %1$s</string>
+    <string name="monitor_vendor_refused">MIUI private operations refused by the system: %1$s</string>
+    <string name="monitor_vendor_unknown">MIUI private operations in an unknown state, accepted but not listed by the system: %1$s</string>
+    <string name="monitor_vendor_refused_item">%1$s (%2$s)</string>
     <string name="monitor_all_ops_warning_title">Before you turn this on</string>
     <string name="monitor_all_ops_warning_text">Noise: many of these permissions are used constantly by ordinary apps. Watching one without giving it an interval can fill the notification within seconds.\n\nCompatibility: only the usual shortlist has been tested. Some are never reported, may be numbered differently from one ROM to another, or mean something other than their name suggests.</string>
     <string name="action_confirm">Confirm</string>

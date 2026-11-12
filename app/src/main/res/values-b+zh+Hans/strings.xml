@@ -473,6 +473,7 @@
     <string name="miui_op_label_read_record">读取录音</string>
     <string name="miui_op_label_read_note">读取笔记</string>
     <string name="miui_op_label_auto_start_switch">自启动开关</string>
+    <string name="miui_op_label_fallback">MIUI 私有权限 %1$d</string>
     <string name="app_op_usage_separator">" · "</string>
     <string name="app_op_usage_less_than_minute">少于 1 分钟</string>
     <string name="app_op_usage_ago">%1$s前</string>
@@ -677,6 +678,12 @@
     <string name="monitor_operations_section">监测点</string>
     <string name="monitor_operations_search">搜索监测点</string>
     <string name="monitor_operations_empty">没有匹配的监测点。</string>
+    <string name="monitor_vendor_op_item">MIUI 私有权限 %1$d · 未经验证</string>
+    <string name="monitor_vendor_ops_hint">标有“未经验证”的项是 MIUI 私有权限，系统可能拒绝监听或从不回调。</string>
+    <string name="monitor_vendor_registered">MIUI 私有权限已注册：%1$s</string>
+    <string name="monitor_vendor_refused">MIUI 私有权限被系统拒绝：%1$s</string>
+    <string name="monitor_vendor_unknown">MIUI 私有权限状态未知，系统已接受但未列入注册表：%1$s</string>
+    <string name="monitor_vendor_refused_item">%1$s（%2$s）</string>
     <string name="monitor_all_ops_warning_title">开启前请注意</string>
     <string name="monitor_all_ops_warning_text">通知频率：某些 AppOps 项上报很频繁。如果不设置通报间隔，通知可能在数秒内大量出现。\n\n兼容性：目前只测试了常用监测点。其他监测点可能不上报，也可能因设备而有不同编号或含义。</string>
     <string name="action_confirm">确认</string>

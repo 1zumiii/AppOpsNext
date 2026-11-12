@@ -1,6 +1,9 @@
 package dev.izumi.appopsnext.presentation.app_detail
 
+import android.content.res.Resources
 import androidx.annotation.StringRes
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.appops.model.AppOpEntry
 import dev.izumi.appopsnext.appops.model.AppOpNames
@@ -134,6 +137,18 @@ object AppOpDisplayCatalog {
     /** The localized label for an operation, or null when it is not catalogued. */
     fun labelResOf(operationName: String): Int? =
         metadataOf(operationName)?.labelRes
+
+    /**
+     * The label to show for [operationName]: the catalogued one, then for a
+     * MIUI private operation without one its number in words, then the name.
+     */
+    fun displayLabel(operationName: String, resources: Resources): String =
+        labelResOf(operationName)?.let(resources::getString)
+            ?: MiuiOps.codeOf(operationName)?.let { resources.getString(R.string.miui_op_label_fallback, it) }
+            ?: operationName
+
+    /** The codes [miuiLabels] covers, for checking it against [MiuiOps.CATALOGUED_CODES]. */
+    internal val miuiLabelledCodes: Set<Int> get() = miuiLabels.keys
 
     private fun metadataOf(operationName: String): Metadata? =
         metadataByOperation[normalize(operationName)]
@@ -433,4 +448,13 @@ object AppOpDisplayCatalog {
             PRIORITY_SYSTEM_BEHAVIOR,
         ),
     )
+}
+
+/** [AppOpDisplayCatalog.displayLabel] inside a composition. */
+@Composable
+fun appOpDisplayLabel(operationName: String): String {
+    val labelRes = AppOpDisplayCatalog.labelResOf(operationName)
+    if (labelRes != null) return stringResource(labelRes)
+    val miuiCode = MiuiOps.codeOf(operationName) ?: return operationName
+    return stringResource(R.string.miui_op_label_fallback, miuiCode)
 }

@@ -44,7 +44,7 @@ import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.monitor.MonitorLogEntry
 import dev.izumi.appopsnext.monitor.MonitorOutcomes
-import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
+import dev.izumi.appopsnext.presentation.app_detail.appOpDisplayLabel
 import dev.izumi.appopsnext.presentation.components.AppIcon
 import java.time.Instant
 import java.time.LocalDate
@@ -143,7 +143,7 @@ fun MonitorLogScreen(
                         selected = operationFilter != null,
                         onClick = { filterDialog = "permission" },
                         label = { Text(operationFilter?.let { operation ->
-                            AppOpDisplayCatalog.labelResOf(operation)?.let { stringResource(it) } ?: operation
+                            appOpDisplayLabel(operation)
                         } ?: stringResource(R.string.filter_all_permissions)) },
                     )
                 }
@@ -198,7 +198,7 @@ fun MonitorLogScreen(
             MonitorFilterOption(
                 key = key,
                 label = if (filteringApps) appsByPackage[key]?.label ?: key
-                    else AppOpDisplayCatalog.labelResOf(key)?.let { stringResource(it) } ?: key,
+                    else appOpDisplayLabel(key),
             )
         }.sortedBy { it.label.lowercase() }
         MonitorLogFilterDialog(
@@ -271,8 +271,7 @@ private fun AccessRow(
     onOpenApp: (InstalledApp) -> Unit,
 ) {
     val label = app?.label ?: entry.packageName
-    val operation = AppOpDisplayCatalog.labelResOf(entry.operationName)?.let { stringResource(it) }
-        ?: entry.operationName
+    val operation = appOpDisplayLabel(entry.operationName)
     val time = remember(entry.timeMillis, zoneId) {
         Instant.ofEpochMilli(entry.timeMillis).atZone(zoneId).toLocalTime().format(TIME_FORMAT)
     }
