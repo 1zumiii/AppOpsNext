@@ -24,9 +24,14 @@ Official APKs are published **ONLY** on GitHub Releases. No guarantee is made fo
 ## Highlights
 
 - **Permission controls.** Set AppOps such as camera, location, and clipboard
-  per app, then read back each change to verify it.
+  per app, then read back each change to verify it. On MIUI and HyperOS, manage
+  the private operations of the system.
+- **Change marks and notifications.** See which settings AppOpsNext changed.
+  When something else changes one of them, find it in the in-app notifications
+  and restore or keep it.
 - **Templates.** Apply saved rules to several apps, or automatically to new apps
-  right after they are installed.
+  right after they are installed. Restore the earlier settings of an app when it
+  is installed again.
 - **History.** Filter by time and app, including counts of denied attempts. Save
   individual records on the device beyond Android's seven-day retention period.
 - **Access monitoring (experimental).** Watch chosen app permissions, get reports
@@ -43,14 +48,15 @@ Official APKs are published **ONLY** on GitHub Releases. No guarantee is made fo
 
 | Area | Features |
 | --- | --- |
-| Applications | Browse apps, search names and packages, sort by name, install time, or update time, and choose whether to show system apps. On a device with several users, switch to another user such as a work profile or private space. Switch to By permission to see the mode of every app for one operation and change it there. |
-| AppOps | Inspect package and UID modes, search operations by localized or system name, and verify changes by reading them back. |
-| Templates and batches | Create reusable rules, reorder them, apply a template to multiple apps, or change several operations in one app. Multi-select lists offer Select all for the items shown. Batch confirmations list the target mode and the items to change. When Setting guard is on, a template batch can also guard the settings it applied. |
-| Newly installed apps | Opt in to automatic template application and inspect saved per-rule results. With Apply right after install, a process kept in Shizuku watches for installs, so the template applies without opening AppOpsNext. A periodic background check handles anything missed. |
+| Applications | Browse apps, search names and packages, sort by name, install time, or update time, and choose whether to show system apps. On a device with several users, switch to another user such as a work profile or private space. Show only the apps that AppOpsNext changed, with the latest change first. Switch to By permission to see the mode of every app for one operation and change it there. |
+| AppOps | Inspect package and UID modes, search operations by localized or system name, and verify changes by reading them back. A permission that still has the mode AppOpsNext set shows Changed by AppOpsNext. After something else changes the setting, restore the previous setting or keep the current one. On MIUI and HyperOS, the list includes the private operations that the device reports. The operations that the security center asks about can use the Ask mode. |
+| In-app notifications | See the permissions whose current setting is different from the one AppOpsNext last set. Restore one item or all items, or keep the current setting. The page also shows new app rule results and Setting guard events. AppOpsNext compares the settings when it opens, when it returns to the foreground and when the records change. It does not compare while it is closed. |
+| Templates and batches | Create reusable rules, reorder them, apply a template to multiple apps, or change several operations in one app. Multi-select lists offer Select all for the items shown. Batch confirmations list the target mode and the items to change. After a batch finishes, run its failed changes again. When Setting guard is on, a template batch can also guard the settings it applied. |
+| Newly installed apps | Opt in to automatic template application and inspect saved per-rule results. With Apply right after install, a process kept in Shizuku watches for installs, so the template applies without opening AppOpsNext. A periodic background check handles anything missed. With Restore settings after reinstall, AppOpsNext keeps the change records of a removed app for 30 days and restores its settings when the app is installed again. |
 | History | Explore permission distribution, app statistics, and timelines by day range and app; choose and reorder the operations you follow. Optionally keep individual records past the seven days Android retains. |
 | Settings and diagnostics | Switch between English, Simplified Chinese, or the system language. Choose a theme: follow system, light, or dark. Inspect connection status and diagnostic reports, and see quietly whether a newer release exists. |
-| Backup and migration | Export templates, preferences, the access monitor selection, and Setting guard rules to a file. An import shows a preview of the changes and applies them only after you confirm. |
-| Experimental | Watch chosen operations for chosen apps, with per-point reporting intervals, outcome filters and off-screen-only reporting. Notification permission is required for alerts. A registry check reports confirmed or unconfirmed coverage. A monitor log keeps every reported access, allowed or refused, whatever the notification settings. Setting guard checks guarded settings hourly or in real time, and each rule can restore its target mode automatically, at most 3 attempts in 24 hours. Also inspect a snapshot of processes registered for permission mode changes. |
+| Backup and migration | Export templates, preferences, the access monitor selection, your own monitor templates, and Setting guard rules to a file. An import shows a preview of the changes and applies them only after you confirm. |
+| Experimental | Watch chosen operations for chosen apps, with per-point reporting intervals, outcome filters and off-screen-only reporting. Notification permission is required for alerts. A registry check reports confirmed or unconfirmed coverage. A monitor log keeps every reported access, allowed or refused, whatever the notification settings. A monitor template holds a set of permissions with their monitor settings, and you can apply it to several apps at one time. On MIUI and HyperOS, the monitor can try to watch the private permissions of the system, which is not verified. Setting guard checks guarded settings hourly or in real time, and each rule can restore its target mode automatically, at most 3 attempts in 24 hours. Stop background work turns off the access monitor and stops the install watcher in one step. Also inspect a snapshot of processes registered for permission mode changes. |
 
 ## Install and get started
 
@@ -287,7 +293,7 @@ Android packages live under `app/src/main/java/dev/izumi/appopsnext/`.
 | Location | Responsibility |
 | --- | --- |
 | `presentation/` | Compose screens, ViewModels, and UI state. |
-| `appops/` | Commands, parsers, scope handling, and verified write transactions. |
+| `appops/` | Commands, parsers, scope handling, verified write transactions, and change records. |
 | `nativebackend/`, `shizuku/` | Privileged connections, native pipes, and UserService fallback. |
 | `apps/`, `settings/` | App discovery, metadata caching, and preferences. |
 | `templates/`, `newapps/`, `batch/` | Template persistence, installation detection and the install watcher, resumable rule execution, and batch targets. |
