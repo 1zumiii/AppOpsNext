@@ -154,6 +154,13 @@ class AppListViewModel(
 
     fun refresh() = load(forceRefresh = true, holdIndicator = true)
 
+    /** App names are read in the app's language, so a new language reads them again, quietly. */
+    fun reloadForLanguage() {
+        loadJob?.cancel()
+        loadJob = null
+        load(forceRefresh = true, holdIndicator = false, quiet = true)
+    }
+
     /**
      * Installed packages rarely change while the user is away, so a resume reuses
      * the repository cache instead of enumerating and labelling every package again.
