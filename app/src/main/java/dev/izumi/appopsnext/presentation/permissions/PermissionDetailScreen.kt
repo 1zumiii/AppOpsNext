@@ -10,7 +10,6 @@ import dev.izumi.appopsnext.appops.parser.OpStates
 import dev.izumi.appopsnext.apps.AppSortOrder
 import dev.izumi.appopsnext.presentation.components.AppSortMenu
 import dev.izumi.appopsnext.presentation.components.ScrollToTopOnSortChange
-import dev.izumi.appopsnext.presentation.components.appSortTimeText
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
@@ -83,6 +82,8 @@ fun PermissionDetailScreen(
     onModeChangeRequested: (InstalledApp, AppOpMode) -> Unit,
     onBatchRequested: (String, List<BatchOperationTarget>) -> Unit,
     onSortOrderChange: (AppSortOrder) -> Unit,
+    /** Opens an app's details over this page; going back returns here. */
+    onAppSelected: (InstalledApp) -> Unit,
 ) {
     val operation = uiState.operation ?: return
     val title = permissionLabel(operation)
@@ -146,6 +147,10 @@ fun PermissionDetailScreen(
                 app.packageName.contains(query, ignoreCase = true)) &&
                 (filter == null || uiState.states?.effective(app.uid, app.packageName)?.mode == filter)
         }
+    }
+    // Names alone tell most apps apart. Where two share one, their packages are shown.
+    val duplicateLabels = remember(apps) {
+        apps.groupingBy(InstalledApp::label).eachCount().filterValues { it > 1 }.keys
     }
     val eligibleKeys = apps.map { it.packageName }.toSet()
     val visibleKeys = visibleApps.filter {
@@ -295,23 +300,25 @@ fun PermissionDetailScreen(
                             )
                         }
                         else -> items(items = visibleApps, key = InstalledApp::packageName) { app ->
+                            val effective = uiState.states.effective(app.uid, app.packageName)
                             PermissionAppListItem(
                                 app = app,
                                 operation = operation,
-                                state = uiState.states.effective(app.uid, app.packageName),
-                                runtimeGranted = uiState.runtimeGrants[app.packageName],
-                                sortTime = appSortTimeText(
-                                    app,
-                                    appListState.sortOrder,
-                                    modifiedMillis = modifiedTimeOf(app),
-                                ),
-                                sortTimeIsChange = appListState.sortOrder == AppSortOrder.CHANGED_ONLY,
-                                changeStatus = uiState.states.changeStatus(
-                                    records = packageChangesOf(app),
+                                state = effective,
+                                status = PermissionRowStatus.pick(
                                     app = app,
-                                    userId = userIdOf(app),
-                                    operation = operation,
+                                    order = appListState.sortOrder,
+                                    changedMillis = modifiedTimeOf(app),
+                                    changeStatus = uiState.states.changeStatus(
+                                        records = packageChangesOf(app),
+                                        app = app,
+                                        userId = userIdOf(app),
+                                        operation = operation,
+                                    ),
+                                    mode = effective.mode,
+                                    runtimeGranted = uiState.runtimeGrants[app.packageName],
                                 ),
+                                showPackageName = app.label in duplicateLabels,
                                 editEnabled = canEdit,
                                 isApplying = (modeChangeState as? AppOpModeChangeUiState.Applying)
                                     ?.request?.packageName == app.packageName,
@@ -321,6 +328,7 @@ fun PermissionDetailScreen(
                                     else selected - app.packageName
                                 },
                                 onModeSelected = { mode -> onModeChangeRequested(app, mode) },
+                                onOpen = { onAppSelected(app) },
                             )
                         }
                     }

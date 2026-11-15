@@ -11,8 +11,6 @@
     <string name="permission_info_fallback">包级写入遭到拒绝时，若没有其他应用共享该 UID，会尝试改写 UID 级模式。运行时权限写入还可能通过兼容性权限标志重试。</string>
     <string name="permission_info_selection">搜索或按模式筛选后，已选应用仍会保留。全选只加入当前显示的应用，取消全选只移除当前显示的应用。开启“隐藏系统应用”会取消选中的系统应用。</string>
     <string name="permission_info_unknown">无法识别的模式会按 Android 返回的原值显示。这些应用不能修改模式，也不能加入批量选择。</string>
-    <string name="permission_scope_uid">UID 级</string>
-    <string name="permission_scope_package">包级</string>
     <string name="permission_all_modes">全部模式</string>
     <string name="permission_load_failed">请检查特权服务的连接。</string>
     <string name="permission_load_failed_title">无法读取权限模式</string>
@@ -828,4 +826,6 @@
     <string name="favorite_intro_step_press">长按权限</string>
     <string name="favorite_intro_step_top">排在最前</string>
     <string name="permission_info_favorites">常用：长按权限，或点顶栏的星标，可设为常用。常用权限在“按权限”列表和应用详情中排在最前面。</string>
+    <string name="permission_info_open">点应用可打开它的详情，查看包名、UID 和修改记录。</string>
+    <string name="permission_row_changed_by">AppOpsNext · %1$s</string>
 </resources>

@@ -236,6 +236,7 @@ fun PermissionInfoDialog(onDismiss: () -> Unit) {
                 Text(text = stringResource(R.string.permission_info_fallback))
                 Text(text = stringResource(R.string.permission_info_selection))
                 Text(text = stringResource(R.string.permission_info_unknown))
+                Text(text = stringResource(R.string.permission_info_open))
                 Text(text = stringResource(R.string.permission_info_favorites))
             }
         },

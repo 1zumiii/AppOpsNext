@@ -13,8 +13,6 @@
     <string name="permission_info_fallback">A rejected package write may retry at UID level if no other app shares that UID. Runtime permission writes may also retry through the compatibility permission flag.</string>
     <string name="permission_info_selection">Selections remain when you search or filter by mode. Select all adds the visible apps. Deselect all removes only the visible apps. Hiding system apps removes them from the selection.</string>
     <string name="permission_info_unknown">Unrecognized modes are shown as reported by Android. These rows cannot be edited or selected for batch changes.</string>
-    <string name="permission_scope_uid">UID</string>
-    <string name="permission_scope_package">Package</string>
     <string name="permission_all_modes">All modes</string>
     <string name="permission_load_failed">Check the privileged service connection.</string>
     <string name="permission_load_failed_title">Could not load permission modes</string>
@@ -842,4 +840,6 @@
     <string name="favorite_intro_step_press">Long-press</string>
     <string name="favorite_intro_step_top">Stays on top</string>
     <string name="permission_info_favorites">Frequently used: long-press a permission or tap the star in the top bar. Frequently used permissions come first in By permission and in app details.</string>
+    <string name="permission_info_open">Tap an app to open its details, with its package, UID and change history.</string>
+    <string name="permission_row_changed_by">AppOpsNext · %1$s</string>
 </resources>
