@@ -38,7 +38,7 @@ import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayItem
 import dev.izumi.appopsnext.presentation.app_detail.appOpDisplayLabel
 import dev.izumi.appopsnext.presentation.components.rememberMiuiOpCodes
-import dev.izumi.appopsnext.presentation.components.FavoriteHintAnchor
+import dev.izumi.appopsnext.presentation.components.FavoriteIntroSheet
 import dev.izumi.appopsnext.presentation.components.FavoriteOperationRow
 import dev.izumi.appopsnext.presentation.components.FavoriteOperations
 import dev.izumi.appopsnext.presentation.components.FavoriteOperationsState
@@ -47,7 +47,6 @@ import dev.izumi.appopsnext.presentation.components.rememberFavoriteOperations
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.ui.Alignment
 import dev.izumi.appopsnext.appops.model.MiuiOps
@@ -129,24 +128,17 @@ fun PermissionListContent(
                         )
                     }
                 }
-                itemsIndexed(items = otherRows, key = { _, item -> item.operationName }) { index, permission ->
-                    val row = @Composable {
-                        PermissionRow(
-                            permission = permission,
-                            favorites = favorites,
-                            onPermissionSelected = onPermissionSelected,
-                        )
-                    }
-                    Box(modifier = Modifier.animateItem()) {
-                        if (index == 0 && favoriteRows.isEmpty() && searchQuery.isBlank()) {
-                            FavoriteHintAnchor(state = favorites, content = row)
-                        } else {
-                            row()
-                        }
-                    }
+                items(items = otherRows, key = AppOpDisplayItem::operationName) { permission ->
+                    PermissionRow(
+                        permission = permission,
+                        favorites = favorites,
+                        onPermissionSelected = onPermissionSelected,
+                        modifier = Modifier.animateItem(),
+                    )
                 }
             }
         }
+        FavoriteIntroSheet(favorites)
         SnackbarHost(
             hostState = favorites.snackbar,
             modifier = Modifier.align(Alignment.BottomCenter),

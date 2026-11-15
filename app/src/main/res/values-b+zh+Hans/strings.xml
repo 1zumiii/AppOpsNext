@@ -823,6 +823,9 @@
     <string name="favorite_removed">已取消常用</string>
     <string name="favorite_undo">撤销</string>
     <string name="favorite_hint_title">常用权限</string>
-    <string name="favorite_hint_text">长按权限可设为常用。常用权限会排在列表最前面。</string>
+    <string name="favorite_intro_how">长按任意权限，选择“设为常用”。</string>
+    <string name="favorite_intro_where">常用权限排在“按权限”列表和应用详情的最前面。在权限详情页点顶栏的星标，效果相同。</string>
+    <string name="favorite_intro_step_press">长按权限</string>
+    <string name="favorite_intro_step_top">排在最前</string>
     <string name="permission_info_favorites">常用：长按权限，或点顶栏的星标，可设为常用。常用权限在“按权限”列表和应用详情中排在最前面。</string>
 </resources>

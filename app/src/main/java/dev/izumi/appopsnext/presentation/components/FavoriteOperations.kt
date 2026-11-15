@@ -1,26 +1,47 @@
 package dev.izumi.appopsnext.presentation.components
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import dev.izumi.appopsnext.presentation.app_detail.appOpDisplayLabel
+import kotlinx.coroutines.delay
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.RichTooltip
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -246,41 +267,197 @@ fun FavoriteOperationRow(
     }
 }
 
-/** Shows the one-time hint about long-pressing, anchored to [content]. */
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Explains frequently used permissions once, in a bottom sheet, the first time
+ * a screen that lists them opens. It waits a moment so the screen settles first.
+ */
 @Composable
-fun FavoriteHintAnchor(
-    state: FavoriteOperationsState,
-    content: @Composable () -> Unit,
-) {
-    if (!state.showHint) {
-        content()
-        return
+fun FavoriteIntroSheet(state: FavoriteOperationsState) {
+    if (!state.showHint) return
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(INTRO_DELAY_MILLIS)
+        visible = true
     }
-    val tooltipState = rememberTooltipState(isPersistent = true)
-    val scope = rememberCoroutineScope()
-    LaunchedEffect(tooltipState) {
-        // Returns once the hint is dismissed, by its button or a tap elsewhere.
-        tooltipState.show()
-        state.dismissHint()
-    }
-    TooltipBox(
-        positionProvider = TooltipDefaults.rememberRichTooltipPositionProvider(),
-        tooltip = {
-            RichTooltip(
-                title = { Text(text = stringResource(R.string.favorite_hint_title)) },
-                action = {
-                    TextButton(onClick = { scope.launch { tooltipState.dismiss() } }) {
-                        Text(text = stringResource(R.string.action_got_it))
-                    }
-                },
-            ) {
-                Text(text = stringResource(R.string.favorite_hint_text))
+    if (!visible) return
+    AppBottomSheet(
+        onDismissRequest = state::dismissHint,
+        title = { Text(text = stringResource(R.string.favorite_hint_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                FavoriteIntroIllustration()
+                Text(text = stringResource(R.string.favorite_intro_how))
+                Text(
+                    text = stringResource(R.string.favorite_intro_where),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
-        state = tooltipState,
-        enableUserInput = false,
+        confirmButton = {
+            Button(onClick = state::dismissHint) {
+                Text(text = stringResource(R.string.action_got_it))
+            }
+        },
+    )
+}
+
+private const val INTRO_DELAY_MILLIS = 500L
+
+/** Two small panels drawn from the app's own rows: the long press, then the row at the top. */
+@Composable
+private fun FavoriteIntroIllustration() {
+    Row(
+        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        content()
+        IntroPanel(
+            caption = stringResource(R.string.favorite_intro_step_press),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+        ) {
+            IntroRow("CAMERA")
+            Box {
+                IntroRow("RECORD_AUDIO", pressed = true)
+                IntroTouch(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 18.dp))
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = 22.dp)
+                        .offset(y = 30.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    shadowElevation = 3.dp,
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_ph_star),
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                        )
+                        Text(
+                            text = stringResource(R.string.favorite_add),
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
+            IntroRow("READ_CLIPBOARD", faded = true)
+        }
+        IntroPanel(
+            caption = stringResource(R.string.favorite_intro_step_top),
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+        ) {
+            IntroHeader(stringResource(R.string.favorite_section_title))
+            IntroRow("RECORD_AUDIO", starred = true)
+            IntroHeader(stringResource(R.string.favorite_section_rest))
+            IntroRow("CAMERA", faded = true)
+        }
+    }
+}
+
+@Composable
+private fun IntroPanel(
+    caption: String,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Surface(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+        ) {
+            Column(
+                modifier = Modifier.padding(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                content = content,
+            )
+        }
+        Text(
+            text = caption,
+            modifier = Modifier.fillMaxWidth(),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun IntroHeader(text: String) {
+    Text(
+        text = text,
+        modifier = Modifier.padding(start = 4.dp, top = 2.dp),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+@Composable
+private fun IntroRow(
+    operationName: String,
+    pressed: Boolean = false,
+    starred: Boolean = false,
+    faded: Boolean = false,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().alpha(if (faded) 0.5f else 1f),
+        shape = RoundedCornerShape(10.dp),
+        color = if (pressed) {
+            MaterialTheme.colorScheme.surfaceContainerHighest
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        },
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Box(modifier = Modifier.size(22.dp), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.scale(22f / 28f)) { PermissionEntryIcon(operationName) }
+            }
+            Text(
+                text = appOpDisplayLabel(operationName),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (starred) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_ph_star_fill),
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+    }
+}
+
+/** A finger held down: a dot with a ring that keeps spreading out. */
+@Composable
+private fun IntroTouch(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "intro touch")
+    val progress by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(durationMillis = 1400)),
+        label = "intro ring",
+    )
+    val color = MaterialTheme.colorScheme.primary
+    Canvas(modifier = modifier.size(28.dp)) {
+        val center = this.center
+        drawCircle(
+            color = color.copy(alpha = 0.35f * (1f - progress)),
+            radius = size.minDimension / 2f * (0.45f + 0.55f * progress),
+            center = center,
+        )
+        drawCircle(color = color.copy(alpha = 0.55f), radius = size.minDimension * 0.2f, center = center)
     }
 }

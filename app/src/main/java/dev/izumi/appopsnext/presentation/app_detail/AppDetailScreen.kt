@@ -42,7 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.zIndex
 import androidx.compose.material3.SnackbarHost
-import dev.izumi.appopsnext.presentation.components.FavoriteHintAnchor
+import dev.izumi.appopsnext.presentation.components.FavoriteIntroSheet
 import dev.izumi.appopsnext.presentation.components.FavoriteOperationRow
 import dev.izumi.appopsnext.presentation.components.FavoriteOperations
 import dev.izumi.appopsnext.presentation.components.MainPageSectionTitle
@@ -455,6 +455,7 @@ private fun ReadyContent(
     val totalOperationCount = allDisplayItems.size
     Column(modifier = modifier.imePadding()) {
         Box(modifier = Modifier.weight(1f)) {
+            if (!batchSelectionMode) FavoriteIntroSheet(favorites)
             SnackbarHost(
                 hostState = favorites.snackbar,
                 modifier = Modifier.align(Alignment.BottomCenter).zIndex(1f),
@@ -537,12 +538,8 @@ private fun ReadyContent(
                         key = { index, item ->
                             "$index:${item.scope}:${item.operationName}"
                         },
-                    ) { index, item ->
-                        if (index == 0 && favoriteRows.isEmpty() && searchQuery.isBlank() && !batchSelectionMode) {
-                            FavoriteHintAnchor(state = favorites) { operationRow(item) }
-                        } else {
-                            operationRow(item)
-                        }
+                    ) { _, item ->
+                        operationRow(item)
                     }
                 }
             }
