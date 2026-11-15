@@ -33,7 +33,10 @@ object AppOpDisplayCatalog {
         query: String,
         labelResolver: (Int) -> String,
         alternateLabelResolver: (Int) -> String = labelResolver,
-        /** Shell names the device defines beyond this catalog, listed as default rows. */
+        /**
+         * Shell names the device defines beyond this catalog, listed as default
+         * rows. MIUI private operations among them keep their catalogued labels.
+         */
         extraOperations: List<String> = emptyList(),
     ): List<AppOpDisplayItem> {
         val normalizedQuery = query.trim()
@@ -79,13 +82,14 @@ object AppOpDisplayCatalog {
                     .filter { normalize(it) !in metadataByOperation && normalize(it) !in explicitItems }
                     .distinctBy(::normalize)
                     .map { operationName ->
+                        val metadata = metadataOf(operationName)
                         AppOpDisplayItem(
                             operationName = operationName,
-                            labelRes = null,
+                            labelRes = metadata?.labelRes,
                             mode = "default",
                             details = null,
                             scope = AppOpScope.PACKAGE,
-                            priority = PRIORITY_OTHER,
+                            priority = metadata?.priority ?: PRIORITY_OTHER,
                             isImplicitDefault = true,
                         )
                     },
@@ -156,7 +160,12 @@ object AppOpDisplayCatalog {
                 miuiLabels[code]?.let { Metadata(it, PRIORITY_MIUI) }
             }
 
-    fun knownOperations(): List<KnownAppOp> =
+    /**
+     * The catalogued operations, plus the MIUI private operations among
+     * [miuiCodes] that have a label. [miuiCodes] are the ones this device
+     * offers, see [MiuiOps], so other devices list none.
+     */
+    fun knownOperations(miuiCodes: Iterable<Int> = emptySet()): List<KnownAppOp> =
         metadataByOperation
             .map { (shellName, metadata) ->
                 KnownAppOp(
@@ -166,6 +175,18 @@ object AppOpDisplayCatalog {
                     priority = metadata.priority,
                 )
             }
+            .plus(
+                miuiCodes.distinct().mapNotNull { code ->
+                    val shellName = MiuiOps.nameOf(code) ?: return@mapNotNull null
+                    val labelRes = miuiLabels[code] ?: return@mapNotNull null
+                    KnownAppOp(
+                        stableName = AppOpNames.stableName(shellName),
+                        shellName = shellName,
+                        labelRes = labelRes,
+                        priority = PRIORITY_MIUI,
+                    )
+                },
+            )
             .sortedWith(
                 compareBy<KnownAppOp> { it.priority }
                     .thenBy(KnownAppOp::shellName),

@@ -3,6 +3,7 @@ package dev.izumi.appopsnext.appops.parser
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.appops.model.AppOpNames
 import dev.izumi.appopsnext.appops.model.AppOpScope
+import dev.izumi.appopsnext.appops.model.MiuiOps
 
 data class EffectiveOpState(
     val mode: AppOpMode?,
@@ -64,14 +65,14 @@ object OpStatesParser {
                     return@forEach
                 }
                 uidMode.matchEntire(line)?.let {
-                    if (packageName == null && it.groupValues[1] == operation) {
+                    if (packageName == null && shellNameOf(it.groupValues[1]) == operation) {
                         uidModes[currentUid] = it.groupValues[2]
                     }
                     return@forEach
                 }
                 packageMode.matchEntire(line)?.let {
                     val pkg = packageName ?: return@forEach
-                    if (it.groupValues[1] == operation) {
+                    if (shellNameOf(it.groupValues[1]) == operation) {
                         packageModes[currentUid to pkg] = it.groupValues[2]
                     }
                 }
@@ -79,6 +80,10 @@ object OpStatesParser {
         }
         return OpStates(uidModes, packageModes)
     }
+
+    /** MIUI prints its private operations as `MIUIOP(10008)`; this app names them by number. */
+    private fun shellNameOf(printedName: String): String =
+        MiuiOps.fromPrinted(printedName) ?: printedName
 
     private fun parseUid(value: String): Int? {
         value.toIntOrNull()?.let { return it.takeIf { uid -> uid >= 0 } }
@@ -92,6 +97,6 @@ object OpStatesParser {
     private val uidHeader = Regex("""  Uid (\S+):\s*""")
     private val appUid = Regex("""u(\d+)a(\d+)""")
     private val packageHeader = Regex("""    Package ([\w.]+):\s*""")
-    private val uidMode = Regex("""      ([A-Z0-9_]+): mode=(\S+)\s*""")
-    private val packageMode = Regex("""      ([A-Z0-9_]+) \(([^\s/)]+)(?:\s*/\s*switch\s+[^)]+)?\):.*""")
+    private val uidMode = Regex("""      ([A-Z0-9_]+|MIUIOP\(\d+\)): mode=(\S+)\s*""")
+    private val packageMode = Regex("""      ([A-Z0-9_]+|MIUIOP\(\d+\)) \(([^\s/)]+)(?:\s*/\s*switch\s+[^)]+)?\):.*""")
 }

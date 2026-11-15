@@ -33,6 +33,8 @@ import dev.izumi.appopsnext.presentation.components.AppIcon
 @Composable
 internal fun PermissionAppListItem(
     app: InstalledApp,
+    /** The operation every row shows, which decides the modes on offer. */
+    operation: String,
     state: EffectiveOpState,
     runtimeGranted: Boolean?,
     /** The time the list is sorted by, if it is sorted by one. */
@@ -128,6 +130,7 @@ internal fun PermissionAppListItem(
                     currentMode = state.mode,
                     enabled = editEnabled,
                     onModeSelected = { _, mode -> onModeSelected(mode) },
+                    modes = AppOpMode.choicesFor(operation, state.mode),
                 )
                 else -> Text(
                     text = state.mode?.let { modeLabel(it) } ?: state.rawMode,

@@ -150,6 +150,45 @@ class AppOpDisplayCatalogTest {
         assertEquals("allow", items.single { it.operationName == "VENDOR_PRIVATE_OP" }.mode)
     }
 
+    @Test fun `MIUI operations the device offers join the list with labels and can be searched`() {
+        val extras = listOf("10008", "10054", "NEW_IN_17")
+        val items = AppOpDisplayCatalog.build(
+            entries = emptyList(),
+            query = "",
+            labelResolver = ::label,
+            extraOperations = extras,
+        )
+        val autoStart = items.single { it.operationName == "10008" }
+        assertEquals(R.string.miui_op_label_auto_start, autoStart.labelRes)
+        assertEquals(true, autoStart.isImplicitDefault)
+        assertEquals(null, items.single { it.operationName == "10054" }.labelRes)
+        // Labelled MIUI rows follow the platform's own and precede unlabelled ones.
+        assertEquals(
+            true,
+            items.indexOf(autoStart) < items.indexOfFirst { it.operationName == "NEW_IN_17" },
+        )
+
+        val found = AppOpDisplayCatalog.build(
+            entries = emptyList(),
+            query = label(R.string.miui_op_label_auto_start),
+            labelResolver = ::label,
+            extraOperations = extras,
+        )
+        assertEquals(listOf("10008"), found.map(AppOpDisplayItem::operationName))
+    }
+
+    @Test fun `known operations add only the labelled MIUI codes a device offers`() {
+        val standard = AppOpDisplayCatalog.knownOperations()
+        assertEquals(0, standard.count { MiuiOps.isMiuiOp(it.shellName) })
+
+        val withMiui = AppOpDisplayCatalog.knownOperations(listOf(10008, 10054, 10008))
+        val added = withMiui.filter { MiuiOps.isMiuiOp(it.shellName) }
+        assertEquals(listOf("10008"), added.map(KnownAppOp::shellName))
+        assertEquals("android:10008", added.single().stableName)
+        assertEquals(R.string.miui_op_label_auto_start, added.single().labelRes)
+        assertEquals(standard.size + 1, withMiui.size)
+    }
+
     private fun entry(
         name: String,
         mode: String,

@@ -36,6 +36,9 @@ import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayItem
+import dev.izumi.appopsnext.presentation.app_detail.appOpDisplayLabel
+import dev.izumi.appopsnext.presentation.components.rememberMiuiOpCodes
+import dev.izumi.appopsnext.appops.model.MiuiOps
 import dev.izumi.appopsnext.presentation.components.CompactSearchField
 import dev.izumi.appopsnext.presentation.components.PermissionEntryIcon
 import java.util.Locale
@@ -82,7 +85,7 @@ fun PermissionListContent(
                         headlineContent = {
                             Text(
                                 text = permission.labelRes?.let { stringResource(it) }
-                                    ?: permission.operationName,
+                                    ?: appOpDisplayLabel(permission.operationName),
                             )
                         },
                         supportingContent = { Text(text = permission.operationName) },
@@ -98,12 +101,7 @@ fun PermissionListContent(
 }
 
 @Composable
-internal fun permissionLabel(operation: String): String {
-    val metadata = AppOpDisplayCatalog.knownOperations().firstOrNull {
-        it.shellName == operation
-    }
-    return metadata?.let { stringResource(it.labelRes) } ?: operation
-}
+internal fun permissionLabel(operation: String): String = appOpDisplayLabel(operation)
 
 @Composable
 private fun rememberPermissionItems(query: String): List<AppOpDisplayItem> {
@@ -125,13 +123,17 @@ private fun rememberPermissionItems(query: String): List<AppOpDisplayItem> {
     val structuredReads = (context.applicationContext as AppOpsNextApplication).structuredAppOpsReads
     // The probe can finish after this screen opens; the list then gains the device's extra operations.
     val readCapabilities by structuredReads.enabled.collectAsStateWithLifecycle()
-    return remember(query, context, alternateContext, readCapabilities) {
+    // MIUI private operations are absent from the platform's table, so they
+    // join the list once the device has shown that it has them.
+    val miuiCodes = rememberMiuiOpCodes()
+    return remember(query, context, alternateContext, readCapabilities, miuiCodes) {
         AppOpDisplayCatalog.build(
             entries = emptyList(),
             query = query,
             labelResolver = context::getString,
             alternateLabelResolver = alternateContext::getString,
-            extraOperations = structuredReads.deviceOps().orEmpty().map { it.shellName },
+            extraOperations = structuredReads.deviceOps().orEmpty().map { it.shellName } +
+                miuiCodes.sorted().mapNotNull(MiuiOps::nameOf),
         )
     }
 }

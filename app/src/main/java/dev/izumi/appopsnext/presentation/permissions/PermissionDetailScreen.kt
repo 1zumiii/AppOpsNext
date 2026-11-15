@@ -219,7 +219,11 @@ fun PermissionDetailScreen(
                 label = stringResource(R.string.app_list_search_label),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
             )
-            ModeFilters(selectedMode = filter, onModeSelected = { filter = it })
+            ModeFilters(
+                modes = AppOpMode.choicesFor(operation),
+                selectedMode = filter,
+                onModeSelected = { filter = it },
+            )
             PullToRefreshBox(
                 isRefreshing = uiState.loading || appListState.isLoading,
                 onRefresh = {
@@ -278,6 +282,7 @@ fun PermissionDetailScreen(
                         else -> items(items = visibleApps, key = InstalledApp::packageName) { app ->
                             PermissionAppListItem(
                                 app = app,
+                                operation = operation,
                                 state = uiState.states.effective(app.uid, app.packageName),
                                 runtimeGranted = uiState.runtimeGrants[app.packageName],
                                 sortTime = appSortTimeText(
@@ -336,6 +341,7 @@ fun PermissionDetailScreen(
 
 @Composable
 private fun ModeFilters(
+    modes: List<AppOpMode>,
     selectedMode: AppOpMode?,
     onModeSelected: (AppOpMode?) -> Unit,
 ) {
@@ -348,7 +354,7 @@ private fun ModeFilters(
             onClick = { onModeSelected(null) },
             label = { Text(text = stringResource(R.string.permission_all_modes)) },
         )
-        AppOpMode.standard.forEach { mode ->
+        modes.forEach { mode ->
             FilterChip(
                 selected = selectedMode == mode,
                 onClick = { onModeSelected(mode) },
