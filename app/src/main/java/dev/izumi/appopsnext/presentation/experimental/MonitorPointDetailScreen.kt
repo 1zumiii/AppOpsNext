@@ -1,5 +1,7 @@
 package dev.izumi.appopsnext.presentation.experimental
 
+import dev.izumi.appopsnext.presentation.components.AppDropdownMenuItem
+import dev.izumi.appopsnext.presentation.components.AppDropdownMenu
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -228,13 +230,14 @@ private fun <T> ChoiceRow(
                 TextButton(onClick = { open = true }, enabled = enabled) {
                     Text(text = selected)
                 }
-                DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                AppDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
                     choices.forEach { (label, value) ->
-                        DropdownMenuItem(
-                            text = { Text(text = label) },
+                        AppDropdownMenuItem(
+                            text = label,
+                            selected = label == selected,
                             onClick = {
                                 open = false
-                                onSelected(value)
+                                if (label != selected) onSelected(value)
                             },
                         )
                     }

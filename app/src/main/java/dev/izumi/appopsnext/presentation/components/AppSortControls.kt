@@ -40,25 +40,16 @@ fun AppSortMenu(
                 contentDescription = stringResource(R.string.app_list_sort),
             )
         }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        AppDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             AppSortOrder.entries.forEach { order ->
                 // The last entry filters rather than sorts, so a line sets it apart.
-                if (order == AppSortOrder.CHANGED_ONLY) HorizontalDivider()
-                DropdownMenuItem(
-                    text = { Text(text = stringResource(order.labelRes())) },
+                if (order == AppSortOrder.CHANGED_ONLY) AppDropdownMenuDivider()
+                AppDropdownMenuItem(
+                    text = stringResource(order.labelRes()),
+                    selected = order == selected,
                     onClick = {
                         open = false
-                        onSelected(order)
-                    },
-                    trailingIcon = if (order == selected) {
-                        {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_ph_check_circle),
-                                contentDescription = null,
-                            )
-                        }
-                    } else {
-                        null
+                        if (order != selected) onSelected(order)
                     },
                 )
             }

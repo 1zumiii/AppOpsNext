@@ -254,44 +254,21 @@ fun FavoriteOperationRow(
     ) {
         content()
         val offset = menuOffset
-        // A small menu by the finger, styled to sit lightly on the cards: one
-        // step lighter than them, rounded like them, quiet icon and text.
-        DropdownMenu(
+        AppDropdownMenu(
             expanded = offset != null,
             onDismissRequest = { menuOffset = null },
             offset = with(density) {
                 // The menu opens below the row's bottom edge; this moves it to the finger.
                 offset?.let { DpOffset(it.x.toDp(), (it.y - rowHeight).toDp()) } ?: DpOffset.Zero
             },
-            shape = RoundedCornerShape(18.dp),
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-            tonalElevation = 0.dp,
-            shadowElevation = 6.dp,
         ) {
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        text = actionLabel,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Normal,
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(if (favorite) R.drawable.ic_ph_star_fill else R.drawable.ic_ph_star),
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                    )
-                },
+            AppDropdownMenuItem(
+                text = actionLabel,
+                iconRes = if (favorite) R.drawable.ic_ph_star_fill else R.drawable.ic_ph_star,
                 onClick = {
                     menuOffset = null
                     toggle()
                 },
-                colors = MenuDefaults.itemColors(
-                    textColor = MaterialTheme.colorScheme.onSurface,
-                    leadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
-                contentPadding = PaddingValues(horizontal = 16.dp),
             )
         }
     }

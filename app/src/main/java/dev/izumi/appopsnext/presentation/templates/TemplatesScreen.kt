@@ -1,5 +1,7 @@
 package dev.izumi.appopsnext.presentation.templates
 
+import dev.izumi.appopsnext.presentation.components.AppDropdownMenuItem
+import dev.izumi.appopsnext.presentation.components.AppDropdownMenu
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -1001,17 +1003,17 @@ private fun ModeMenu(
                 fontWeight = FontWeight.SemiBold,
             )
         }
-        DropdownMenu(
+        AppDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {
             modes.forEach { candidate ->
-                DropdownMenuItem(
-                    text = { Text(text = modeLabel(candidate)) },
-                    enabled = candidate != mode,
+                AppDropdownMenuItem(
+                    text = modeLabel(candidate),
+                    selected = candidate == mode,
                     onClick = {
                         expanded = false
-                        onModeChange(candidate)
+                        if (candidate != mode) onModeChange(candidate)
                     },
                 )
             }
