@@ -45,6 +45,8 @@ import dev.izumi.appopsnext.presentation.components.FavoriteOperationsState
 import dev.izumi.appopsnext.presentation.components.MainPageSectionTitle
 import dev.izumi.appopsnext.presentation.components.rememberFavoriteOperations
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.ui.Alignment
@@ -83,9 +85,15 @@ fun PermissionListContent(
             LazyColumn(
                 modifier = Modifier.weight(1f).topFadingEdge(listState),
                 state = listState,
-                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
+                // The top padding is short by the anchor below and the gap after it.
+                contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 3.dp, bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                // The list keeps its place by the first visible item. With this
+                // anchor first, the frequently used group, which can appear above
+                // the rows after the settings load or a row is added, stays in view.
+                // It is 1 dp tall, since an empty item does not count as visible.
+                item(key = "anchor:top") { Spacer(modifier = Modifier.fillMaxWidth().height(1.dp)) }
                 if (permissions.isEmpty()) {
                     item {
                         EmptyStateContent(
@@ -158,9 +166,10 @@ private fun PermissionRow(
         state = favorites,
         enabled = true,
         modifier = modifier,
+        onClick = { onPermissionSelected(permission.operationName) },
+        shape = RoundedCornerShape(16.dp),
     ) {
         Surface(
-            onClick = { onPermissionSelected(permission.operationName) },
             shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.surfaceContainerLow,
         ) {

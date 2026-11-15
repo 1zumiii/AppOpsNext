@@ -1,6 +1,12 @@
 package dev.izumi.appopsnext.presentation.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -135,7 +141,11 @@ fun rememberFavoriteOperations(): FavoriteOperationsState {
 /**
  * Wraps one operation row: a long press opens a menu that adds the operation
  * to frequently used or removes it, and screen readers get the same action.
- * Taps still reach the row and the controls inside it.
+ *
+ * A row that opens something on a tap passes [onClick] and [shape]: its click
+ * handler would otherwise take the press before the long press is seen, so
+ * this one handler takes both. Without [onClick], taps still reach the
+ * controls inside the row.
  */
 @Composable
 fun FavoriteOperationRow(
@@ -143,6 +153,8 @@ fun FavoriteOperationRow(
     state: FavoriteOperationsState,
     enabled: Boolean,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    shape: Shape = RectangleShape,
     content: @Composable () -> Unit,
 ) {
     val haptics = LocalHapticFeedback.current
@@ -155,11 +167,36 @@ fun FavoriteOperationRow(
     val removed = stringResource(R.string.favorite_removed)
     val undo = stringResource(R.string.favorite_undo)
     val toggle = { state.toggleWithUndo(operationName, added, removed, undo) }
+    var lastPress by remember { mutableStateOf(Offset.Zero) }
     Box(
         modifier = modifier
             .onSizeChanged { rowHeight = it.height }
             .then(
-                if (enabled) {
+                if (onClick != null) {
+                    Modifier
+                        .clip(shape)
+                        .pointerInput(Unit) {
+                            // Notes where the finger is, without taking the event, to open the menu there.
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                                    event.changes.firstOrNull()?.let { lastPress = it.position }
+                                }
+                            }
+                        }
+                        .combinedClickable(
+                            onClick = onClick,
+                            onLongClickLabel = actionLabel,
+                            onLongClick = if (enabled) {
+                                {
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    menuOffset = lastPress
+                                }
+                            } else {
+                                null
+                            },
+                        )
+                } else if (enabled) {
                     Modifier
                         .pointerInput(operationName) {
                             detectTapGestures(
