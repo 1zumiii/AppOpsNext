@@ -264,9 +264,9 @@ fun FavoriteOperationRow(
                 offset?.let { DpOffset(it.x.toDp(), (it.y - rowHeight).toDp()) } ?: DpOffset.Zero
             },
             shape = RoundedCornerShape(18.dp),
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
             tonalElevation = 0.dp,
-            shadowElevation = 3.dp,
+            shadowElevation = 6.dp,
         ) {
             DropdownMenuItem(
                 text = {
