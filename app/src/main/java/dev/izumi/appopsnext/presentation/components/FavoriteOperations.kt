@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -314,38 +313,36 @@ private fun FavoriteIntroIllustration() {
             caption = stringResource(R.string.favorite_intro_step_press),
             modifier = Modifier.weight(1f).fillMaxHeight(),
         ) {
-            IntroRow("CAMERA")
+            IntroRow("CAMERA", faded = true)
             Box {
                 IntroRow("RECORD_AUDIO", pressed = true)
-                IntroTouch(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 18.dp))
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(start = 22.dp)
-                        .offset(y = 30.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    shadowElevation = 3.dp,
+                IntroTouch(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp))
+            }
+            // The menu sits in its own slot below the pressed row, so nothing is drawn over it.
+            Surface(
+                modifier = Modifier.padding(start = 16.dp),
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                shadowElevation = 4.dp,
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_ph_star),
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                        )
-                        Text(
-                            text = stringResource(R.string.favorite_add),
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                        )
-                    }
+                    Icon(
+                        painter = painterResource(R.drawable.ic_ph_star),
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.favorite_add),
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 2,
+                    )
                 }
             }
-            IntroRow("READ_CLIPBOARD", faded = true)
         }
         IntroPanel(
             caption = stringResource(R.string.favorite_intro_step_top),
