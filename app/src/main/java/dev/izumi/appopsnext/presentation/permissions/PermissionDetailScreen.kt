@@ -305,6 +305,7 @@ fun PermissionDetailScreen(
                                     appListState.sortOrder,
                                     modifiedMillis = modifiedTimeOf(app),
                                 ),
+                                sortTimeIsChange = appListState.sortOrder == AppSortOrder.CHANGED_ONLY,
                                 changeStatus = uiState.states.changeStatus(
                                     records = packageChangesOf(app),
                                     app = app,

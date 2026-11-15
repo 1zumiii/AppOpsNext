@@ -39,6 +39,8 @@ internal fun PermissionAppListItem(
     runtimeGranted: Boolean?,
     /** The time the list is sorted by, if it is sorted by one. */
     sortTime: String?,
+    /** Whether [sortTime] is when AppOpsNext changed this setting. */
+    sortTimeIsChange: Boolean,
     /** Set where AppOpsNext changed this setting. */
     changeStatus: AppOpChangeStatus?,
     editEnabled: Boolean,
@@ -101,15 +103,23 @@ internal fun PermissionAppListItem(
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
+                // Sorted by change time, the time line already says AppOpsNext
+                // changed this, so it takes the status colour in place of a second line.
+                val timeTellsStatus =
+                    sortTime != null && sortTimeIsChange && changeStatus is AppOpChangeStatus.Modified
                 sortTime?.let { time ->
                     Text(
                         text = time,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (timeTellsStatus) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                         maxLines = 1,
                     )
                 }
-                changeStatus?.let { AppOpChangeStatusText(it) }
+                if (!timeTellsStatus) changeStatus?.let { AppOpChangeStatusText(it) }
                 if (runtimeGranted != null && state.mode == AppOpMode.IGNORE) {
                     Text(
                         text = stringResource(
