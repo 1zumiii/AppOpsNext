@@ -28,6 +28,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -188,9 +193,17 @@ fun FavoriteOperationRow(
     val undo = stringResource(R.string.favorite_undo)
     val toggle = { state.toggleWithUndo(operationName, added, removed, undo) }
     var lastPress by remember { mutableStateOf(Offset.Zero) }
+    // While the menu is open, its row is lit a little so the menu reads as belonging to it.
+    val highlight = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
     Box(
         modifier = modifier
             .onSizeChanged { rowHeight = it.height }
+            .drawWithContent {
+                drawContent()
+                if (menuOffset != null) {
+                    drawOutline(shape.createOutline(size, layoutDirection, this), highlight)
+                }
+            }
             .then(
                 if (onClick != null) {
                     Modifier
@@ -241,6 +254,8 @@ fun FavoriteOperationRow(
     ) {
         content()
         val offset = menuOffset
+        // A small menu by the finger, styled to sit lightly on the cards: one
+        // step lighter than them, rounded like them, quiet icon and text.
         DropdownMenu(
             expanded = offset != null,
             onDismissRequest = { menuOffset = null },
@@ -248,19 +263,35 @@ fun FavoriteOperationRow(
                 // The menu opens below the row's bottom edge; this moves it to the finger.
                 offset?.let { DpOffset(it.x.toDp(), (it.y - rowHeight).toDp()) } ?: DpOffset.Zero
             },
+            shape = RoundedCornerShape(18.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 0.dp,
+            shadowElevation = 3.dp,
         ) {
             DropdownMenuItem(
-                text = { Text(text = actionLabel) },
+                text = {
+                    Text(
+                        text = actionLabel,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Normal,
+                    )
+                },
                 leadingIcon = {
                     Icon(
                         painter = painterResource(if (favorite) R.drawable.ic_ph_star_fill else R.drawable.ic_ph_star),
                         contentDescription = null,
+                        modifier = Modifier.size(20.dp),
                     )
                 },
                 onClick = {
                     menuOffset = null
                     toggle()
                 },
+                colors = MenuDefaults.itemColors(
+                    textColor = MaterialTheme.colorScheme.onSurface,
+                    leadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+                contentPadding = PaddingValues(horizontal = 16.dp),
             )
         }
     }
@@ -319,26 +350,28 @@ private fun FavoriteIntroIllustration() {
                 IntroTouch(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp))
             }
             // The menu sits in its own slot below the pressed row, so nothing is drawn over it.
+            // The same menu as the real one, at the panel's scale.
             Surface(
                 modifier = Modifier.padding(start = 16.dp),
-                shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                shadowElevation = 4.dp,
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                shadowElevation = 3.dp,
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_ph_star),
                         contentDescription = null,
                         modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
                         text = stringResource(R.string.favorite_add),
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Normal,
                         maxLines = 2,
                     )
                 }

@@ -404,6 +404,7 @@ private fun ReadyContent(
             operationName = item.operationName,
             state = favorites,
             enabled = applyingRequest == null && !batchSelectionMode,
+            shape = RoundedCornerShape(18.dp),
         ) {
             AppOpListItem(
                 item = item,
