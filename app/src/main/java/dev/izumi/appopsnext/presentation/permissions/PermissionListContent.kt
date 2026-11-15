@@ -38,6 +38,16 @@ import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayItem
 import dev.izumi.appopsnext.presentation.app_detail.appOpDisplayLabel
 import dev.izumi.appopsnext.presentation.components.rememberMiuiOpCodes
+import dev.izumi.appopsnext.presentation.components.FavoriteHintAnchor
+import dev.izumi.appopsnext.presentation.components.FavoriteOperationRow
+import dev.izumi.appopsnext.presentation.components.FavoriteOperations
+import dev.izumi.appopsnext.presentation.components.FavoriteOperationsState
+import dev.izumi.appopsnext.presentation.components.MainPageSectionTitle
+import dev.izumi.appopsnext.presentation.components.rememberFavoriteOperations
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.ui.Alignment
 import dev.izumi.appopsnext.appops.model.MiuiOps
 import dev.izumi.appopsnext.presentation.components.CompactSearchField
 import dev.izumi.appopsnext.presentation.components.PermissionEntryIcon
@@ -51,51 +61,122 @@ fun PermissionListContent(
     modifier: Modifier = Modifier,
 ) {
     val permissions = rememberPermissionItems(searchQuery)
-    Column(modifier = modifier.fillMaxSize()) {
-        CompactSearchField(
-            value = searchQuery,
-            onValueChange = onSearchQueryChange,
-            label = stringResource(R.string.app_detail_search_label),
-            modifier = Modifier.fillMaxWidth()
-                .padding(start = 18.dp, end = 18.dp, top = 12.dp),
+    val favorites = rememberFavoriteOperations()
+    // Searching shows plain matches. Otherwise frequently used permissions come first.
+    val (favoriteRows, otherRows) = remember(permissions, favorites.favorites, searchQuery) {
+        if (searchQuery.isNotBlank()) {
+            emptyList<AppOpDisplayItem>() to permissions
+        } else {
+            FavoriteOperations.split(permissions, favorites.favorites, AppOpDisplayItem::operationName)
+        }
+    }
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            CompactSearchField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                label = stringResource(R.string.app_detail_search_label),
+                modifier = Modifier.fillMaxWidth()
+                    .padding(start = 18.dp, end = 18.dp, top = 12.dp),
+            )
+            val listState = rememberLazyListState()
+            LazyColumn(
+                modifier = Modifier.weight(1f).topFadingEdge(listState),
+                state = listState,
+                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (permissions.isEmpty()) {
+                    item {
+                        EmptyStateContent(
+                            icon = EmptyStateIcons.NO_MATCHES,
+                            title = stringResource(R.string.app_detail_no_matching_operations),
+                            modifier = Modifier.fillParentMaxSize(),
+                        )
+                    }
+                }
+                if (favoriteRows.isNotEmpty()) {
+                    item(key = "header:favorites") {
+                        MainPageSectionTitle(
+                            text = stringResource(R.string.favorite_section_title),
+                            horizontalPadding = 4.dp,
+                            modifier = Modifier.animateItem(),
+                        )
+                    }
+                }
+                items(items = favoriteRows, key = AppOpDisplayItem::operationName) { permission ->
+                    PermissionRow(
+                        permission = permission,
+                        favorites = favorites,
+                        onPermissionSelected = onPermissionSelected,
+                        modifier = Modifier.animateItem(),
+                    )
+                }
+                if (favoriteRows.isNotEmpty() && otherRows.isNotEmpty()) {
+                    item(key = "header:rest") {
+                        MainPageSectionTitle(
+                            text = stringResource(R.string.favorite_section_rest),
+                            horizontalPadding = 4.dp,
+                            modifier = Modifier.animateItem(),
+                        )
+                    }
+                }
+                itemsIndexed(items = otherRows, key = { _, item -> item.operationName }) { index, permission ->
+                    val row = @Composable {
+                        PermissionRow(
+                            permission = permission,
+                            favorites = favorites,
+                            onPermissionSelected = onPermissionSelected,
+                        )
+                    }
+                    Box(modifier = Modifier.animateItem()) {
+                        if (index == 0 && favoriteRows.isEmpty() && searchQuery.isBlank()) {
+                            FavoriteHintAnchor(state = favorites, content = row)
+                        } else {
+                            row()
+                        }
+                    }
+                }
+            }
+        }
+        SnackbarHost(
+            hostState = favorites.snackbar,
+            modifier = Modifier.align(Alignment.BottomCenter),
         )
-        val listState = rememberLazyListState()
-        LazyColumn(
-            modifier = Modifier.weight(1f).topFadingEdge(listState),
-            state = listState,
-            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+    }
+}
+
+@Composable
+private fun PermissionRow(
+    permission: AppOpDisplayItem,
+    favorites: FavoriteOperationsState,
+    onPermissionSelected: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    FavoriteOperationRow(
+        operationName = permission.operationName,
+        state = favorites,
+        enabled = true,
+        modifier = modifier,
+    ) {
+        Surface(
+            onClick = { onPermissionSelected(permission.operationName) },
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
         ) {
-            if (permissions.isEmpty()) {
-                item {
-                    EmptyStateContent(
-                        icon = EmptyStateIcons.NO_MATCHES,
-                        title = stringResource(R.string.app_detail_no_matching_operations),
-                        modifier = Modifier.fillParentMaxSize(),
+            ListItem(
+                headlineContent = {
+                    Text(
+                        text = permission.labelRes?.let { stringResource(it) }
+                            ?: appOpDisplayLabel(permission.operationName),
                     )
-                }
-            }
-            items(items = permissions, key = AppOpDisplayItem::operationName) { permission ->
-                Surface(
-                    onClick = { onPermissionSelected(permission.operationName) },
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                ) {
-                    ListItem(
-                        headlineContent = {
-                            Text(
-                                text = permission.labelRes?.let { stringResource(it) }
-                                    ?: appOpDisplayLabel(permission.operationName),
-                            )
-                        },
-                        supportingContent = { Text(text = permission.operationName) },
-                        leadingContent = { PermissionEntryIcon(permission.operationName) },
-                        colors = ListItemDefaults.colors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                        ),
-                    )
-                }
-            }
+                },
+                supportingContent = { Text(text = permission.operationName) },
+                leadingContent = { PermissionEntryIcon(permission.operationName) },
+                colors = ListItemDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                ),
+            )
         }
     }
 }
@@ -154,6 +235,7 @@ fun PermissionInfoDialog(onDismiss: () -> Unit) {
                 Text(text = stringResource(R.string.permission_info_fallback))
                 Text(text = stringResource(R.string.permission_info_selection))
                 Text(text = stringResource(R.string.permission_info_unknown))
+                Text(text = stringResource(R.string.permission_info_favorites))
             }
         },
         confirmButton = {

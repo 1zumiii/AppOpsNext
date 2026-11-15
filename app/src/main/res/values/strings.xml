@@ -829,4 +829,14 @@
     <string name="backup_export_failed">Could not save the backup</string>
     <string name="backup_imported">Backup imported</string>
     <string name="backup_import_failed">Could not import the backup</string>
+    <string name="favorite_section_title">Frequently used</string>
+    <string name="favorite_section_rest">All</string>
+    <string name="favorite_add">Add to frequently used</string>
+    <string name="favorite_remove">Remove from frequently used</string>
+    <string name="favorite_added">Added to frequently used and moved to the top</string>
+    <string name="favorite_removed">Removed from frequently used</string>
+    <string name="favorite_undo">Undo</string>
+    <string name="favorite_hint_title">Frequently used permissions</string>
+    <string name="favorite_hint_text">Long-press a permission to add it to frequently used. Frequently used permissions stay at the top of the list.</string>
+    <string name="permission_info_favorites">Frequently used: long-press a permission or tap the star in the top bar. Frequently used permissions come first in By permission and in app details.</string>
 </resources>

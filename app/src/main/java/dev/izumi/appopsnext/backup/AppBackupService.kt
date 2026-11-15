@@ -57,6 +57,7 @@ class AppBackupService(
                     saveIndividualHistory = settings.saveIndividualHistory,
                     savedHistoryOperations = settings.savedHistoryOperations,
                     appSortOrder = settings.appSortOrder,
+                    favoriteOperations = settings.favoriteOperations,
                 ),
                 monitorTargets = monitorTargetsRepository.targets.first(),
                 monitorPoints = monitorTargetsRepository.pointSettings.first(),

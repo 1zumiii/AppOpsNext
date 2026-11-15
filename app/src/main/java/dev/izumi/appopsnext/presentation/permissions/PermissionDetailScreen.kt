@@ -36,6 +36,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.LocalContentColor
+import dev.izumi.appopsnext.presentation.components.rememberFavoriteOperations
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -84,6 +86,7 @@ fun PermissionDetailScreen(
 ) {
     val operation = uiState.operation ?: return
     val title = permissionLabel(operation)
+    val favorites = rememberFavoriteOperations()
     var search by rememberSaveable(operation) { mutableStateOf("") }
     var filter by rememberSaveable(operation) { mutableStateOf<AppOpMode?>(null) }
     var selecting by rememberSaveable(operation) { mutableStateOf(false) }
@@ -182,6 +185,18 @@ fun PermissionDetailScreen(
                     }
                 },
                 actions = {
+                    val favorite = favorites.isFavorite(operation)
+                    IconButton(onClick = { favorites.set(operation, !favorite) }) {
+                        Icon(
+                            painter = painterResource(
+                                if (favorite) R.drawable.ic_ph_star_fill else R.drawable.ic_ph_star,
+                            ),
+                            contentDescription = stringResource(
+                                if (favorite) R.string.favorite_remove else R.string.favorite_add,
+                            ),
+                            tint = if (favorite) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                        )
+                    }
                     AppSortMenu(selected = appListState.sortOrder, onSelected = onSortOrderChange)
                     IconButton(
                         onClick = {
