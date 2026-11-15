@@ -1,5 +1,7 @@
 package dev.izumi.appopsnext.presentation.templates
 
+import dev.izumi.appopsnext.presentation.components.AppDropdownMenuItem
+import dev.izumi.appopsnext.presentation.components.AppDropdownMenu
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -84,6 +86,8 @@ import dev.izumi.appopsnext.presentation.components.CompactTextField
 import dev.izumi.appopsnext.ui.theme.mainPageHeadingWeight
 import dev.izumi.appopsnext.appops.command.AppOpMode
 import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
+import dev.izumi.appopsnext.presentation.components.rememberMiuiOpCodes
+import dev.izumi.appopsnext.appops.model.MiuiOps
 import dev.izumi.appopsnext.presentation.app_detail.KnownAppOp
 import dev.izumi.appopsnext.presentation.components.MainPageSectionTitle
 import dev.izumi.appopsnext.presentation.components.PermissionEntryIcon
@@ -636,7 +640,7 @@ private fun TemplateRulePreview(
 ) {
     if (template.rules.isEmpty()) return
     val namesByOperation = remember {
-        AppOpDisplayCatalog.knownOperations().associateBy(KnownAppOp::stableName)
+        AppOpDisplayCatalog.knownOperations(MiuiOps.CATALOGUED_CODES).associateBy(KnownAppOp::stableName)
     }
     val names = template.rules.take(3).map { rule ->
         namesByOperation[rule.stableOperationName]?.let {
@@ -710,9 +714,10 @@ private fun TemplateEditor(
     }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
-    val knownOperations = remember { AppOpDisplayCatalog.knownOperations() }
-    val knownByStableName = remember(knownOperations) {
-        knownOperations.associateBy(KnownAppOp::stableName)
+    // Rules name MIUI private operations only where the device offers them,
+    // so their labels can come from the whole catalogue.
+    val knownByStableName = remember {
+        AppOpDisplayCatalog.knownOperations(MiuiOps.CATALOGUED_CODES).associateBy(KnownAppOp::stableName)
     }
     LaunchedEffect(template.rules, draggedOperationName) {
         if (draggedOperationName == null) {
@@ -866,6 +871,8 @@ private fun TemplateEditor(
     }
 
     if (showPermissionManager) {
+        val miuiCodes = rememberMiuiOpCodes()
+        val knownOperations = remember(miuiCodes) { AppOpDisplayCatalog.knownOperations(miuiCodes) }
         PermissionManagerDialog(
             operations = knownOperations,
             currentRules = displayedRules,
@@ -942,6 +949,7 @@ private fun TemplateRuleItem(
             ) {
                 ModeMenu(
                     mode = rule.mode,
+                    modes = AppOpMode.choicesFor(rule.stableOperationName, rule.mode),
                     onModeChange = {
                         onModeChange(rule.stableOperationName, it)
                     },
@@ -979,6 +987,7 @@ private fun TemplateSettingRow(
 @Composable
 private fun ModeMenu(
     mode: AppOpMode,
+    modes: List<AppOpMode>,
     onModeChange: (AppOpMode) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -994,17 +1003,17 @@ private fun ModeMenu(
                 fontWeight = FontWeight.SemiBold,
             )
         }
-        DropdownMenu(
+        AppDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {
-            AppOpMode.standard.forEach { candidate ->
-                DropdownMenuItem(
-                    text = { Text(text = modeLabel(candidate)) },
-                    enabled = candidate != mode,
+            modes.forEach { candidate ->
+                AppDropdownMenuItem(
+                    text = modeLabel(candidate),
+                    selected = candidate == mode,
                     onClick = {
                         expanded = false
-                        onModeChange(candidate)
+                        if (candidate != mode) onModeChange(candidate)
                     },
                 )
             }

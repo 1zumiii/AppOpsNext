@@ -17,6 +17,12 @@ object UserSettingsDefaults {
     const val RESTORE_ON_REINSTALL = false
 }
 
+/** The part of [UserSettings] the lists of operations group by. */
+data class FavoriteSettings(
+    val operations: Set<String>,
+    val hintSeen: Boolean,
+)
+
 data class UserSettings(
     val hideSystemApps: Boolean = UserSettingsDefaults.HIDE_SYSTEM_APPS,
     val suppressDenyFallbackNotice: Boolean =
@@ -50,6 +56,10 @@ data class UserSettings(
     val instantNewAppRules: Boolean = UserSettingsDefaults.INSTANT_NEW_APP_RULES,
     /** Gives an app installed again the settings it had, in place of the new-app template. */
     val restoreOnReinstall: Boolean = UserSettingsDefaults.RESTORE_ON_REINSTALL,
+    /** Stable names of the operations the user marked as frequently used, listed first. */
+    val favoriteOperations: Set<String> = emptySet(),
+    /** Whether the one-time hint about marking frequently used operations was dismissed. */
+    val favoriteHintSeen: Boolean = false,
 ) {
     /** Whether installs are looked for at all, which either way of handling them needs. */
     val watchesNewApps: Boolean get() = autoApplyNewAppTemplate || restoreOnReinstall

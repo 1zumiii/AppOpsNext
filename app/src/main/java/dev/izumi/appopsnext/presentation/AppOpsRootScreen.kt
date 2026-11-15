@@ -190,6 +190,9 @@ fun AppOpsRootScreen(
     var selectedApp by rememberSaveable(stateSaver = InstalledAppStateSaver) {
         mutableStateOf<InstalledApp?>(null)
     }
+    // Set while an app's details were opened from a permission's page, which
+    // stays underneath and comes back when they close.
+    var appOverPermission by rememberSaveable { mutableStateOf(false) }
     var permissionTab by rememberSaveable { mutableStateOf(false) }
     var permissionSearchQuery by rememberSaveable { mutableStateOf("") }
     var showPermissionInfo by rememberSaveable { mutableStateOf(false) }
@@ -251,6 +254,11 @@ fun AppOpsRootScreen(
         keyboardController?.hide()
         onAppOpModeChangeDismissed()
         selectedApp = null
+        if (appOverPermission) {
+            appOverPermission = false
+            // Modes may have changed in the app's details.
+            onRefreshPermission()
+        }
     }
     var openConnectionDetails by rememberSaveable { mutableStateOf(false) }
     // Leaves the app for the connection status the way the Settings tab is reached,
@@ -275,6 +283,7 @@ fun AppOpsRootScreen(
                 focusManager.clearFocus()
                 keyboardController?.hide()
                 selectedApp = null
+                appOverPermission = false
                 selectedHistoryPermissionName = null
                 showHistoryAppStatistics = false
                 // Every page outside the app list works on the current user only.
@@ -524,10 +533,12 @@ fun AppOpsRootScreen(
             onPermissionSelected(null)
         }
     }
-    BackHandler(enabled = permissionBrowserState.operation != null) {
+    val showPermissionDetail = permissionBrowserState.operation != null &&
+        !(appOverPermission && selectedApp != null)
+    BackHandler(enabled = showPermissionDetail) {
         closePermissionDetail()
     }
-    if (permissionBrowserState.operation != null) {
+    if (showPermissionDetail) {
         MainPageTypography {
             PermissionDetailScreen(
                 uiState = permissionBrowserState,
@@ -541,6 +552,13 @@ fun AppOpsRootScreen(
                 onModeChangeRequested = onPermissionModeChangeRequested,
                 onBatchRequested = onOperationBatchRequested,
                 onSortOrderChange = onAppSortOrderChange,
+                onAppSelected = { app ->
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                    appOverPermission = true
+                    selectedApp = app
+                    onAppSelected(app)
+                },
             )
         }
     } else if (selectedApp != null) {

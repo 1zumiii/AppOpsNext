@@ -10,7 +10,6 @@ import dev.izumi.appopsnext.appops.parser.OpStates
 import dev.izumi.appopsnext.apps.AppSortOrder
 import dev.izumi.appopsnext.presentation.components.AppSortMenu
 import dev.izumi.appopsnext.presentation.components.ScrollToTopOnSortChange
-import dev.izumi.appopsnext.presentation.components.appSortTimeText
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
@@ -36,6 +35,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.LocalContentColor
+import dev.izumi.appopsnext.presentation.components.rememberFavoriteOperations
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -81,9 +82,12 @@ fun PermissionDetailScreen(
     onModeChangeRequested: (InstalledApp, AppOpMode) -> Unit,
     onBatchRequested: (String, List<BatchOperationTarget>) -> Unit,
     onSortOrderChange: (AppSortOrder) -> Unit,
+    /** Opens an app's details over this page; going back returns here. */
+    onAppSelected: (InstalledApp) -> Unit,
 ) {
     val operation = uiState.operation ?: return
     val title = permissionLabel(operation)
+    val favorites = rememberFavoriteOperations()
     var search by rememberSaveable(operation) { mutableStateOf("") }
     var filter by rememberSaveable(operation) { mutableStateOf<AppOpMode?>(null) }
     var selecting by rememberSaveable(operation) { mutableStateOf(false) }
@@ -144,6 +148,10 @@ fun PermissionDetailScreen(
                 (filter == null || uiState.states?.effective(app.uid, app.packageName)?.mode == filter)
         }
     }
+    // Names alone tell most apps apart. Where two share one, their packages are shown.
+    val duplicateLabels = remember(apps) {
+        apps.groupingBy(InstalledApp::label).eachCount().filterValues { it > 1 }.keys
+    }
     val eligibleKeys = apps.map { it.packageName }.toSet()
     val visibleKeys = visibleApps.filter {
         uiState.states?.effective(it.uid, it.packageName)?.mode != null
@@ -182,6 +190,18 @@ fun PermissionDetailScreen(
                     }
                 },
                 actions = {
+                    val favorite = favorites.isFavorite(operation)
+                    IconButton(onClick = { favorites.set(operation, !favorite) }) {
+                        Icon(
+                            painter = painterResource(
+                                if (favorite) R.drawable.ic_ph_star_fill else R.drawable.ic_ph_star,
+                            ),
+                            contentDescription = stringResource(
+                                if (favorite) R.string.favorite_remove else R.string.favorite_add,
+                            ),
+                            tint = if (favorite) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                        )
+                    }
                     AppSortMenu(selected = appListState.sortOrder, onSelected = onSortOrderChange)
                     IconButton(
                         onClick = {
@@ -219,7 +239,11 @@ fun PermissionDetailScreen(
                 label = stringResource(R.string.app_list_search_label),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
             )
-            ModeFilters(selectedMode = filter, onModeSelected = { filter = it })
+            ModeFilters(
+                modes = AppOpMode.choicesFor(operation),
+                selectedMode = filter,
+                onModeSelected = { filter = it },
+            )
             PullToRefreshBox(
                 isRefreshing = uiState.loading || appListState.isLoading,
                 onRefresh = {
@@ -276,21 +300,25 @@ fun PermissionDetailScreen(
                             )
                         }
                         else -> items(items = visibleApps, key = InstalledApp::packageName) { app ->
+                            val effective = uiState.states.effective(app.uid, app.packageName)
                             PermissionAppListItem(
                                 app = app,
-                                state = uiState.states.effective(app.uid, app.packageName),
-                                runtimeGranted = uiState.runtimeGrants[app.packageName],
-                                sortTime = appSortTimeText(
-                                    app,
-                                    appListState.sortOrder,
-                                    modifiedMillis = modifiedTimeOf(app),
-                                ),
-                                changeStatus = uiState.states.changeStatus(
-                                    records = packageChangesOf(app),
+                                operation = operation,
+                                state = effective,
+                                status = PermissionRowStatus.pick(
                                     app = app,
-                                    userId = userIdOf(app),
-                                    operation = operation,
+                                    order = appListState.sortOrder,
+                                    changedMillis = modifiedTimeOf(app),
+                                    changeStatus = uiState.states.changeStatus(
+                                        records = packageChangesOf(app),
+                                        app = app,
+                                        userId = userIdOf(app),
+                                        operation = operation,
+                                    ),
+                                    mode = effective.mode,
+                                    runtimeGranted = uiState.runtimeGrants[app.packageName],
                                 ),
+                                showPackageName = app.label in duplicateLabels,
                                 editEnabled = canEdit,
                                 isApplying = (modeChangeState as? AppOpModeChangeUiState.Applying)
                                     ?.request?.packageName == app.packageName,
@@ -300,6 +328,7 @@ fun PermissionDetailScreen(
                                     else selected - app.packageName
                                 },
                                 onModeSelected = { mode -> onModeChangeRequested(app, mode) },
+                                onOpen = { onAppSelected(app) },
                             )
                         }
                     }
@@ -336,6 +365,7 @@ fun PermissionDetailScreen(
 
 @Composable
 private fun ModeFilters(
+    modes: List<AppOpMode>,
     selectedMode: AppOpMode?,
     onModeSelected: (AppOpMode?) -> Unit,
 ) {
@@ -348,7 +378,7 @@ private fun ModeFilters(
             onClick = { onModeSelected(null) },
             label = { Text(text = stringResource(R.string.permission_all_modes)) },
         )
-        AppOpMode.standard.forEach { mode ->
+        modes.forEach { mode ->
             FilterChip(
                 selected = selectedMode == mode,
                 onClick = { onModeSelected(mode) },

@@ -1,5 +1,7 @@
 package dev.izumi.appopsnext.presentation.app_list
 
+import dev.izumi.appopsnext.presentation.components.AppDropdownMenuItem
+import dev.izumi.appopsnext.presentation.components.AppDropdownMenu
 import dev.izumi.appopsnext.presentation.components.EmptyStateIcons
 import dev.izumi.appopsnext.presentation.components.EmptyStateContent
 import dev.izumi.appopsnext.presentation.components.topFadingEdge
@@ -521,39 +523,18 @@ private fun UserPicker(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        DropdownMenu(
+        AppDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
-            shape = RoundedCornerShape(16.dp),
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
             users.forEach { user ->
-                DropdownMenuItem(
-                    onClick = { expanded = false; onUserSelected(user.id) },
-                    text = {
-                        Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                            Text(
-                                text = userDisplayName(user),
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
-                            Text(
-                                text = stringResource(R.string.user_id, user.id),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    },
-                    // On the trailing side, like the sort menu, so every name starts at one edge.
-                    trailingIcon = if (user.id == selectedUserId) {
-                        {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_ph_check_circle),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                    } else {
-                        null
+                AppDropdownMenuItem(
+                    text = userDisplayName(user),
+                    supportingText = stringResource(R.string.user_id, user.id),
+                    selected = user.id == selectedUserId,
+                    onClick = {
+                        expanded = false
+                        if (user.id != selectedUserId) onUserSelected(user.id)
                     },
                 )
             }

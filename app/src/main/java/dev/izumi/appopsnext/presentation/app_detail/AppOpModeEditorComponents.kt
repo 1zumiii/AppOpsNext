@@ -1,5 +1,7 @@
 package dev.izumi.appopsnext.presentation.app_detail
 
+import dev.izumi.appopsnext.presentation.components.AppDropdownMenuItem
+import dev.izumi.appopsnext.presentation.components.AppDropdownMenu
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -217,17 +219,17 @@ internal fun EditableModeMenu(
                 fontWeight = FontWeight.SemiBold,
             )
         }
-        DropdownMenu(
+        AppDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {
             modes.forEach { mode ->
-                DropdownMenuItem(
-                    text = { Text(text = modeLabel(mode)) },
-                    enabled = mode != currentMode,
+                AppDropdownMenuItem(
+                    text = modeLabel(mode),
+                    selected = mode == currentMode,
                     onClick = {
                         expanded = false
-                        onModeSelected(currentMode, mode)
+                        if (mode != currentMode) onModeSelected(currentMode, mode)
                     },
                 )
             }

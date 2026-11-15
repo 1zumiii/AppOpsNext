@@ -3,7 +3,9 @@ package dev.izumi.appopsnext
 import androidx.compose.runtime.mutableIntStateOf
 import dev.izumi.appopsnext.guard.GuardNotifier
 import dev.izumi.appopsnext.presentation.experimental.GuardViewModel
+import android.content.res.Configuration
 import android.os.Bundle
+import android.os.LocaleList
 import android.content.Intent
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
@@ -33,6 +35,7 @@ import dev.izumi.appopsnext.ui.theme.AppOpsNextTheme
 class MainActivity : ComponentActivity() {
     private val diagnosticsViewModel: DiagnosticsViewModel by viewModels()
     private val appListViewModel: AppListViewModel by viewModels()
+    private var shownLocales: LocaleList? = null
     private val historyViewModel: HistoryViewModel by viewModels()
     private val appDetailViewModel: AppDetailViewModel by viewModels()
     private val settingsViewModel: SettingsViewModel by viewModels()
@@ -48,6 +51,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        shownLocales = resources.configuration.locales
         DevelopmentWindowPolicy.apply(window)
         restoreBackgroundMonitor()
         showNewAppResult(intent)
@@ -312,5 +316,16 @@ class MainActivity : ComponentActivity() {
         appListViewModel.refreshAfterResume()
         appDetailViewModel.refreshIfReady()
         historyViewModel.setForeground(true)
+    }
+
+    // The manifest keeps this activity through a language change, so nothing
+    // would read the app names again until a restart. Names are labelled in the
+    // language they were read in, so the list is read again when it changes.
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (newConfig.locales != shownLocales) {
+            shownLocales = newConfig.locales
+            appListViewModel.reloadForLanguage()
+        }
     }
 }

@@ -1,5 +1,7 @@
 package dev.izumi.appopsnext.presentation.history
 
+import dev.izumi.appopsnext.presentation.components.AppDropdownMenuItem
+import dev.izumi.appopsnext.presentation.components.AppDropdownMenu
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -133,13 +135,14 @@ fun HistoryAppStatisticsScreen(
                                 modifier = Modifier.size(16.dp).rotate(90f),
                             )
                         }
-                        DropdownMenu(
+                        AppDropdownMenu(
                             expanded = sortMenuExpanded,
                             onDismissRequest = { sortMenuExpanded = false },
                         ) {
                             HistoryAppSort.entries.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(text = stringResource(option.labelRes())) },
+                                AppDropdownMenuItem(
+                                    text = stringResource(option.labelRes()),
+                                    selected = option == sortOrder,
                                     onClick = {
                                         sortOrder = option
                                         sortMenuExpanded = false

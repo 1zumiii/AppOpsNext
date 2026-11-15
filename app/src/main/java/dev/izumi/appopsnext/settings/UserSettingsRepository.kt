@@ -68,6 +68,8 @@ class UserSettingsRepository(
                     preferences[Keys.SAVE_INDIVIDUAL_HISTORY]
                         ?: UserSettingsDefaults.SAVE_INDIVIDUAL_HISTORY,
                 savedHistoryOperations = preferences[Keys.SAVED_HISTORY_OPERATIONS],
+                favoriteOperations = preferences[Keys.FAVORITE_OPERATIONS].orEmpty(),
+                favoriteHintSeen = preferences[Keys.FAVORITE_HINT_SEEN] ?: false,
                 appSortOrder = AppSortOrder.fromName(preferences[Keys.APP_SORT_ORDER])
                     ?: AppSortOrder.NAME,
                 appTheme = AppTheme.fromName(preferences[Keys.APP_THEME]) ?: AppTheme.SYSTEM,
@@ -175,6 +177,21 @@ class UserSettingsRepository(
         }
     }
 
+    /** [operation] is a stable name, such as `android:camera`. */
+    suspend fun setOperationFavorite(operation: String, favorite: Boolean) {
+        dataStore.edit { preferences ->
+            val current = preferences[Keys.FAVORITE_OPERATIONS].orEmpty()
+            preferences[Keys.FAVORITE_OPERATIONS] =
+                if (favorite) current + operation else current - operation
+        }
+    }
+
+    suspend fun setFavoriteHintSeen() {
+        dataStore.edit { preferences ->
+            preferences[Keys.FAVORITE_HINT_SEEN] = true
+        }
+    }
+
     suspend fun setBatteryNoticeSuppressed(suppressed: Boolean) {
         dataStore.edit { preferences ->
             preferences[Keys.SUPPRESS_BATTERY_NOTICE] = suppressed
@@ -202,12 +219,15 @@ class UserSettingsRepository(
                 preferences[Keys.SAVED_HISTORY_OPERATIONS] = it
             }
             backup.appSortOrder?.let { preferences[Keys.APP_SORT_ORDER] = it.name }
+            backup.favoriteOperations?.let { preferences[Keys.FAVORITE_OPERATIONS] = it }
         }
     }
 
     private object Keys {
         val SAVE_INDIVIDUAL_HISTORY = booleanPreferencesKey("save_individual_history")
         val SAVED_HISTORY_OPERATIONS = stringSetPreferencesKey("saved_history_operations")
+        val FAVORITE_OPERATIONS = stringSetPreferencesKey("favorite_operations")
+        val FAVORITE_HINT_SEEN = booleanPreferencesKey("favorite_hint_seen")
         val HIDE_SYSTEM_APPS = booleanPreferencesKey("hide_system_apps")
         val APP_SORT_ORDER = stringPreferencesKey("app_sort_order")
         val APP_THEME = stringPreferencesKey("app_theme")

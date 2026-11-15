@@ -157,5 +157,28 @@ class OpStatesParserTest {
         assertEquals(AppOpScope.PACKAGE, unknown.scope)
     }
 
+    @Test
+    fun `MIUI private operations printed as MIUIOP match their number`() {
+        val output = """
+              Uid u0a214:
+                  MIUIOP(10008): mode=ignore
+                Package test.one:
+                  MIUIOP(10022) (ask):
+                  MIUIOP(10008) (allow):
+              Uid u0a215:
+                Package test.two:
+                  MIUIOP(10022) (ignore):
+        """.trimIndent().prependIndent("  ")
+        val autoStart = OpStatesParser.parse(output, "10008", 0)
+        assertEquals(mapOf(10214 to "ignore"), autoStart.uidModes)
+        assertEquals(mapOf((10214 to "test.one") to "allow"), autoStart.packageModes)
+        val appList = OpStatesParser.parse(output, "10022", 0)
+        assertEquals(
+            mapOf((10214 to "test.one") to "ask", (10215 to "test.two") to "ignore"),
+            appList.packageModes,
+        )
+        assertTrue(appList.uidModes.isEmpty())
+    }
+
     private fun parse(output: String) = OpStatesParser.parse(output.trimIndent().prependIndent("  "), "CAMERA", 0)
 }

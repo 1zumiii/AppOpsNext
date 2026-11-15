@@ -39,6 +39,7 @@ class AppBackupCodecTest {
             autoApplyNewAppTemplate = true,
             restoreOnReinstall = true,
             savedHistoryOperations = setOf("android:camera", "android:coarse_location"),
+            favoriteOperations = setOf("android:camera", "android:10008"),
             appSortOrder = AppSortOrder.INSTALL_TIME,
         ),
         monitorTargets = listOf(MonitorTarget("dev.izumi.one", setOf("android:camera"))),

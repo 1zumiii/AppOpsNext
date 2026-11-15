@@ -34,6 +34,7 @@ data class UserSettingsBackup(
     val saveIndividualHistory: Boolean? = null,
     val savedHistoryOperations: Set<String>? = null,
     val appSortOrder: AppSortOrder? = null,
+    val favoriteOperations: Set<String>? = null,
 )
 
 /**
@@ -203,6 +204,7 @@ private object SettingsLines {
     private const val SAVE_INDIVIDUAL_HISTORY = "save_individual_history"
     private const val SAVED_HISTORY_OPERATIONS = "saved_history_operations"
     private const val APP_SORT_ORDER = "app_sort_order"
+    private const val FAVORITE_OPERATIONS = "favorite_operations"
 
     fun encode(settings: UserSettingsBackup): List<String> =
         buildList {
@@ -224,6 +226,9 @@ private object SettingsLines {
                 add("$SAVED_HISTORY_OPERATIONS=${it.sorted().joinToString(",")}")
             }
             settings.appSortOrder?.let { add("$APP_SORT_ORDER=${it.name}") }
+            settings.favoriteOperations?.let {
+                add("$FAVORITE_OPERATIONS=${it.sorted().joinToString(",")}")
+            }
         }
 
     fun decode(lines: List<String>): UserSettingsBackup {
@@ -241,12 +246,12 @@ private object SettingsLines {
             showAllMonitorOperations = flag(SHOW_ALL_MONITOR_OPERATIONS),
             suppressAllOperationsWarning = flag(SUPPRESS_ALL_OPERATIONS_WARNING),
             saveIndividualHistory = flag(SAVE_INDIVIDUAL_HISTORY),
-            savedHistoryOperations = fields[SAVED_HISTORY_OPERATIONS]
-                ?.split(',')
-                ?.map(String::trim)
-                ?.filter(String::isNotEmpty)
-                ?.toSet(),
+            savedHistoryOperations = fields[SAVED_HISTORY_OPERATIONS]?.let(::nameSet),
             appSortOrder = AppSortOrder.fromName(fields[APP_SORT_ORDER]),
+            favoriteOperations = fields[FAVORITE_OPERATIONS]?.let(::nameSet),
         )
     }
+
+    private fun nameSet(value: String): Set<String> =
+        value.split(',').map(String::trim).filter(String::isNotEmpty).toSet()
 }

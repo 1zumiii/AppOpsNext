@@ -40,6 +40,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import dev.izumi.appopsnext.presentation.components.FavoriteIntroSheet
+import dev.izumi.appopsnext.presentation.components.FavoriteOperationRow
+import dev.izumi.appopsnext.presentation.components.FavoriteOperations
+import dev.izumi.appopsnext.presentation.components.MainPageSectionTitle
+import dev.izumi.appopsnext.presentation.components.rememberFavoriteOperations
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -383,108 +388,159 @@ private fun ReadyContent(
         val eligibleKeys = allDisplayItems.map { it.batchSelectionKey() }.toSet()
         (selectedBatchKeys - eligibleKeys).forEach { onBatchSelectionChange(it, false) }
     }
+    val favorites = rememberFavoriteOperations()
+    // Searching shows plain matches. Otherwise frequently used operations come first.
+    val (favoriteRows, otherRows) = remember(displayItems, favorites.favorites, searchQuery) {
+        if (searchQuery.isNotBlank()) {
+            emptyList<AppOpDisplayItem>() to displayItems
+        } else {
+            FavoriteOperations.split(displayItems, favorites.favorites, AppOpDisplayItem::operationName)
+        }
+    }
+    val operationRow: @Composable (AppOpDisplayItem) -> Unit = { item ->
+        FavoriteOperationRow(
+            operationName = item.operationName,
+            state = favorites,
+            enabled = applyingRequest == null && !batchSelectionMode,
+            shape = RoundedCornerShape(18.dp),
+        ) {
+            AppOpListItem(
+                item = item,
+                isApplying =
+                    applyingRequest?.matches(item) == true,
+                editEnabled =
+                    applyingRequest == null && !batchSelectionMode,
+                selectedForBatch = if (batchSelectionMode) {
+                    item.batchSelectionKey() in selectedBatchKeys
+                } else {
+                    null
+                },
+                onBatchSelectionChange = { selected ->
+                    onBatchSelectionChange(
+                        item.batchSelectionKey(),
+                        selected,
+                    )
+                },
+                onModeSelected = { originalMode, requestedMode ->
+                    onModeChangeRequested(
+                        item.operationName,
+                        item.scope,
+                        originalMode,
+                        requestedMode,
+                    )
+                },
+                changeStatus = AppOpChangeRecords.status(
+                    packageRecords = packageChanges,
+                    operationName = item.operationName,
+                ) { scope -> entries.modeAt(item.operationName, scope) },
+                onRestoreChange = { status ->
+                    status.currentMode?.let { current ->
+                        onModeChangeRequested(
+                            item.operationName,
+                            status.record.scope,
+                            current,
+                            status.record.recordedMode,
+                        )
+                    }
+                },
+                onKeepCurrent = {
+                    changeScope.launch {
+                        changeLog.forget(appUserId, state.app.packageName, item.operationName)
+                    }
+                },
+            )
+        }
+    }
+    // Rows keyed by their operation move to the other group when one is added to
+    // or removed from frequently used, and that move is the feedback. Should two
+    // rows ever share an operation, the index keeps their keys apart, without motion.
+    val rowsHaveOwnKeys = remember(displayItems) {
+        displayItems.distinctBy { "${it.scope}:${it.operationName}" }.size == displayItems.size
+    }
+    val rowKey = { index: Int, item: AppOpDisplayItem ->
+        if (rowsHaveOwnKeys) "${item.scope}:${item.operationName}" else "$index:${item.scope}:${item.operationName}"
+    }
     val totalOperationCount = allDisplayItems.size
     Column(modifier = modifier.imePadding()) {
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            contentPadding = DetailContentPadding,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item {
-                AppSummaryCard(
-                    app = state.app,
-                    operationCount = totalOperationCount,
-                )
-            }
-            item {
-                CompactSearchField(
-                    value = searchQuery,
-                    onValueChange = onSearchQueryChange,
-                    label = stringResource(R.string.app_detail_search_label),
-                )
-            }
-            if (searchQuery.isNotBlank() || displayItems.size != totalOperationCount) {
+        Box(modifier = Modifier.weight(1f)) {
+            if (!batchSelectionMode) FavoriteIntroSheet(favorites)
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = DetailContentPadding,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 item {
-                    Text(
-                        text = stringResource(
-                            R.string.app_detail_filtered_count,
-                            displayItems.size,
-                            totalOperationCount,
-                        ),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    AppSummaryCard(
+                        app = state.app,
+                        operationCount = totalOperationCount,
                     )
                 }
-            }
-            if (displayItems.isEmpty()) {
                 item {
-                    val noRecords = state.snapshot.entries.isEmpty()
-                    EmptyStateContent(
-                        icon = if (noRecords) R.drawable.ic_ph_shield else EmptyStateIcons.NO_MATCHES,
-                        title = stringResource(
-                            if (noRecords) {
-                                R.string.app_detail_no_operations
-                            } else {
-                                R.string.app_detail_no_matching_operations
-                            },
-                        ),
-                        modifier = Modifier
-                            .fillParentMaxWidth()
-                            .padding(vertical = 48.dp),
+                    CompactSearchField(
+                        value = searchQuery,
+                        onValueChange = onSearchQueryChange,
+                        label = stringResource(R.string.app_detail_search_label),
                     )
                 }
-            } else {
-                itemsIndexed(
-                    items = displayItems,
-                    key = { index, item ->
-                        "$index:${item.scope}:${item.operationName}"
-                    },
-                ) { _, item ->
-                    AppOpListItem(
-                        item = item,
-                        isApplying =
-                            applyingRequest?.matches(item) == true,
-                        editEnabled =
-                            applyingRequest == null && !batchSelectionMode,
-                        selectedForBatch = if (batchSelectionMode) {
-                            item.batchSelectionKey() in selectedBatchKeys
-                        } else {
-                            null
-                        },
-                        onBatchSelectionChange = { selected ->
-                            onBatchSelectionChange(
-                                item.batchSelectionKey(),
-                                selected,
+                if (searchQuery.isNotBlank() || displayItems.size != totalOperationCount) {
+                    item {
+                        Text(
+                            text = stringResource(
+                                R.string.app_detail_filtered_count,
+                                displayItems.size,
+                                totalOperationCount,
+                            ),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                if (displayItems.isEmpty()) {
+                    item {
+                        val noRecords = state.snapshot.entries.isEmpty()
+                        EmptyStateContent(
+                            icon = if (noRecords) R.drawable.ic_ph_shield else EmptyStateIcons.NO_MATCHES,
+                            title = stringResource(
+                                if (noRecords) {
+                                    R.string.app_detail_no_operations
+                                } else {
+                                    R.string.app_detail_no_matching_operations
+                                },
+                            ),
+                            modifier = Modifier
+                                .fillParentMaxWidth()
+                                .padding(vertical = 48.dp),
+                        )
+                    }
+                } else {
+                    if (favoriteRows.isNotEmpty()) {
+                        item(key = "header:favorites") {
+                            MainPageSectionTitle(
+                                text = stringResource(R.string.favorite_section_title),
+                                horizontalPadding = 4.dp,
                             )
-                        },
-                        onModeSelected = { originalMode, requestedMode ->
-                            onModeChangeRequested(
-                                item.operationName,
-                                item.scope,
-                                originalMode,
-                                requestedMode,
+                        }
+                    }
+                    itemsIndexed(
+                        items = favoriteRows,
+                        key = { index, item -> rowKey(index, item) },
+                    ) { _, item ->
+                        Box(modifier = if (rowsHaveOwnKeys) Modifier.animateItem() else Modifier) { operationRow(item) }
+                    }
+                    if (favoriteRows.isNotEmpty() && otherRows.isNotEmpty()) {
+                        item(key = "header:rest") {
+                            MainPageSectionTitle(
+                                text = stringResource(R.string.favorite_section_rest),
+                                horizontalPadding = 4.dp,
                             )
-                        },
-                        changeStatus = AppOpChangeRecords.status(
-                            packageRecords = packageChanges,
-                            operationName = item.operationName,
-                        ) { scope -> entries.modeAt(item.operationName, scope) },
-                        onRestoreChange = { status ->
-                            status.currentMode?.let { current ->
-                                onModeChangeRequested(
-                                    item.operationName,
-                                    status.record.scope,
-                                    current,
-                                    status.record.recordedMode,
-                                )
-                            }
-                        },
-                        onKeepCurrent = {
-                            changeScope.launch {
-                                changeLog.forget(appUserId, state.app.packageName, item.operationName)
-                            }
-                        },
-                    )
+                        }
+                    }
+                    itemsIndexed(
+                        items = otherRows,
+                        key = { index, item -> rowKey(index, item) },
+                    ) { _, item ->
+                        Box(modifier = if (rowsHaveOwnKeys) Modifier.animateItem() else Modifier) { operationRow(item) }
+                    }
                 }
             }
         }
