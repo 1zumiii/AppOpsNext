@@ -831,9 +831,6 @@
     <string name="favorite_section_rest">All</string>
     <string name="favorite_add">Add to frequently used</string>
     <string name="favorite_remove">Remove from frequently used</string>
-    <string name="favorite_added">Added to frequently used and moved to the top</string>
-    <string name="favorite_removed">Removed from frequently used</string>
-    <string name="favorite_undo">Undo</string>
     <string name="favorite_hint_title">Frequently used permissions</string>
     <string name="favorite_intro_how">Long-press any permission and choose Add to frequently used.</string>
     <string name="favorite_intro_where">Frequently used permissions come first in By permission and in app details. The star in a permission\'s top bar does the same.</string>

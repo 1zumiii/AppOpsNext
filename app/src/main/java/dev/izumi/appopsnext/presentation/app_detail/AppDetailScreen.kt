@@ -40,8 +40,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.zIndex
-import androidx.compose.material3.SnackbarHost
 import dev.izumi.appopsnext.presentation.components.FavoriteIntroSheet
 import dev.izumi.appopsnext.presentation.components.FavoriteOperationRow
 import dev.izumi.appopsnext.presentation.components.FavoriteOperations
@@ -453,14 +451,19 @@ private fun ReadyContent(
             )
         }
     }
+    // Rows keyed by their operation move to the other group when one is added to
+    // or removed from frequently used, and that move is the feedback. Should two
+    // rows ever share an operation, the index keeps their keys apart, without motion.
+    val rowsHaveOwnKeys = remember(displayItems) {
+        displayItems.distinctBy { "${it.scope}:${it.operationName}" }.size == displayItems.size
+    }
+    val rowKey = { index: Int, item: AppOpDisplayItem ->
+        if (rowsHaveOwnKeys) "${item.scope}:${item.operationName}" else "$index:${item.scope}:${item.operationName}"
+    }
     val totalOperationCount = allDisplayItems.size
     Column(modifier = modifier.imePadding()) {
         Box(modifier = Modifier.weight(1f)) {
             if (!batchSelectionMode) FavoriteIntroSheet(favorites)
-            SnackbarHost(
-                hostState = favorites.snackbar,
-                modifier = Modifier.align(Alignment.BottomCenter).zIndex(1f),
-            )
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = DetailContentPadding,
@@ -520,11 +523,9 @@ private fun ReadyContent(
                     }
                     itemsIndexed(
                         items = favoriteRows,
-                        key = { index, item ->
-                            "favorite:$index:${item.scope}:${item.operationName}"
-                        },
+                        key = { index, item -> rowKey(index, item) },
                     ) { _, item ->
-                        operationRow(item)
+                        Box(modifier = if (rowsHaveOwnKeys) Modifier.animateItem() else Modifier) { operationRow(item) }
                     }
                     if (favoriteRows.isNotEmpty() && otherRows.isNotEmpty()) {
                         item(key = "header:rest") {
@@ -536,11 +537,9 @@ private fun ReadyContent(
                     }
                     itemsIndexed(
                         items = otherRows,
-                        key = { index, item ->
-                            "$index:${item.scope}:${item.operationName}"
-                        },
+                        key = { index, item -> rowKey(index, item) },
                     ) { _, item ->
-                        operationRow(item)
+                        Box(modifier = if (rowsHaveOwnKeys) Modifier.animateItem() else Modifier) { operationRow(item) }
                     }
                 }
             }

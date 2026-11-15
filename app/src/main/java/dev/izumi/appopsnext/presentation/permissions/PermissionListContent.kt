@@ -47,7 +47,6 @@ import dev.izumi.appopsnext.presentation.components.rememberFavoriteOperations
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.ui.Alignment
 import dev.izumi.appopsnext.appops.model.MiuiOps
 import dev.izumi.appopsnext.presentation.components.CompactSearchField
@@ -139,10 +138,6 @@ fun PermissionListContent(
             }
         }
         FavoriteIntroSheet(favorites)
-        SnackbarHost(
-            hostState = favorites.snackbar,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
     }
 }
 

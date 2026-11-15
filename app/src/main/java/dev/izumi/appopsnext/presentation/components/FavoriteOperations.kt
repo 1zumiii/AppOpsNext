@@ -42,9 +42,6 @@ import kotlinx.coroutines.delay
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -103,7 +100,6 @@ class FavoriteOperationsState internal constructor(
     val loaded: Boolean,
     private val repository: UserSettingsRepository,
     private val scope: CoroutineScope,
-    val snackbar: SnackbarHostState,
 ) {
     val showHint: Boolean get() = loaded && !hintSeen && favorites.isEmpty()
 
@@ -118,20 +114,8 @@ class FavoriteOperationsState internal constructor(
         }
     }
 
-    /** Toggles [operationName] and offers to undo, since the row moves to the other group. */
-    fun toggleWithUndo(operationName: String, addedMessage: String, removedMessage: String, undoLabel: String) {
-        val favorite = !isFavorite(operationName)
-        set(operationName, favorite)
-        scope.launch {
-            snackbar.currentSnackbarData?.dismiss()
-            val result = snackbar.showSnackbar(
-                message = if (favorite) addedMessage else removedMessage,
-                actionLabel = undoLabel,
-                duration = SnackbarDuration.Short,
-            )
-            if (result == SnackbarResult.ActionPerformed) set(operationName, !favorite)
-        }
-    }
+    /** The row moving to the other group is the feedback, so nothing else is shown. */
+    fun toggle(operationName: String) = set(operationName, !isFavorite(operationName))
 
     fun dismissHint() {
         scope.launch { repository.setFavoriteHintSeen() }
@@ -146,15 +130,13 @@ fun rememberFavoriteOperations(): FavoriteOperationsState {
     // starts from the current value rather than from nothing.
     val values by app.favoriteOperationsState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
-    val snackbar = remember { SnackbarHostState() }
-    return remember(values, app, scope, snackbar) {
+    return remember(values, app, scope) {
         FavoriteOperationsState(
             favorites = values?.operations.orEmpty(),
             hintSeen = values?.hintSeen ?: true,
             loaded = values != null,
             repository = app.userSettingsRepository,
             scope = scope,
-            snackbar = snackbar,
         )
     }
 }
@@ -187,10 +169,7 @@ fun FavoriteOperationRow(
     var rowHeight by remember { mutableStateOf(0) }
     val favorite = state.isFavorite(operationName)
     val actionLabel = stringResource(if (favorite) R.string.favorite_remove else R.string.favorite_add)
-    val added = stringResource(R.string.favorite_added)
-    val removed = stringResource(R.string.favorite_removed)
-    val undo = stringResource(R.string.favorite_undo)
-    val toggle = { state.toggleWithUndo(operationName, added, removed, undo) }
+    val toggle = { state.toggle(operationName) }
     var lastPress by remember { mutableStateOf(Offset.Zero) }
     // While the menu is open, its row is lit a little so the menu reads as belonging to it.
     val highlight = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
