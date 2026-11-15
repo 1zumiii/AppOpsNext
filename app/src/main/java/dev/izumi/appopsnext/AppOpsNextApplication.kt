@@ -43,6 +43,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import dev.izumi.appopsnext.settings.FavoriteSettings
 import kotlinx.coroutines.launch
 
 class AppOpsNextApplication : Application() {
@@ -183,6 +187,18 @@ class AppOpsNextApplication : Application() {
         UserSettingsRepository(this)
     }
 
+    /**
+     * The frequently used operations, read once for the whole process. A screen
+     * that opens again gets the current value at once, so its list is grouped
+     * from the first frame instead of moving rows into place each time.
+     */
+    val favoriteOperationsState: StateFlow<FavoriteSettings?> by lazy {
+        userSettingsRepository.settings
+            .map { FavoriteSettings(it.favoriteOperations, it.favoriteHintSeen) }
+            .distinctUntilChanged()
+            .stateIn(applicationScope, SharingStarted.Eagerly, null)
+    }
+
     val permissionTemplateRepository: PermissionTemplateRepository by lazy {
         PermissionTemplateRepository(this)
     }
@@ -296,6 +312,8 @@ class AppOpsNextApplication : Application() {
             tier = DiagnosticLogTier.IMPORTANT,
         )
         newAppPolicyCoordinator.start()
+        // Read early, so the first list that groups by it is already grouped.
+        favoriteOperationsState
         historyArchiveRecorder.start()
         guardController.start()
         applicationScope.launch {

@@ -73,7 +73,6 @@ import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.appops.model.AppOpNames
 import dev.izumi.appopsnext.settings.UserSettingsRepository
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /** Splits a list into the operations marked as frequently used and the rest, keeping their order. */
@@ -142,21 +141,18 @@ class FavoriteOperationsState internal constructor(
 @Composable
 fun rememberFavoriteOperations(): FavoriteOperationsState {
     val context = LocalContext.current
-    val repository = remember(context) {
-        (context.applicationContext as AppOpsNextApplication).userSettingsRepository
-    }
-    val flow = remember(repository) {
-        repository.settings.map { it.favoriteOperations to it.favoriteHintSeen }
-    }
-    val values by flow.collectAsStateWithLifecycle(initialValue = null)
+    val app = remember(context) { context.applicationContext as AppOpsNextApplication }
+    // A state flow held by the application, so a screen that opens again
+    // starts from the current value rather than from nothing.
+    val values by app.favoriteOperationsState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
-    return remember(values, repository, scope, snackbar) {
+    return remember(values, app, scope, snackbar) {
         FavoriteOperationsState(
-            favorites = values?.first.orEmpty(),
-            hintSeen = values?.second ?: true,
+            favorites = values?.operations.orEmpty(),
+            hintSeen = values?.hintSeen ?: true,
             loaded = values != null,
-            repository = repository,
+            repository = app.userSettingsRepository,
             scope = scope,
             snackbar = snackbar,
         )
@@ -184,7 +180,10 @@ fun FavoriteOperationRow(
 ) {
     val haptics = LocalHapticFeedback.current
     val density = LocalDensity.current
-    var menuOffset by remember { mutableStateOf<Offset?>(null) }
+    // Open and position are kept apart: on closing, the menu fades out where it
+    // was, so its position has to outlive the open flag.
+    var menuOpen by remember { mutableStateOf(false) }
+    var menuPosition by remember { mutableStateOf(Offset.Zero) }
     var rowHeight by remember { mutableStateOf(0) }
     val favorite = state.isFavorite(operationName)
     val actionLabel = stringResource(if (favorite) R.string.favorite_remove else R.string.favorite_add)
@@ -200,7 +199,7 @@ fun FavoriteOperationRow(
             .onSizeChanged { rowHeight = it.height }
             .drawWithContent {
                 drawContent()
-                if (menuOffset != null) {
+                if (menuOpen) {
                     drawOutline(shape.createOutline(size, layoutDirection, this), highlight)
                 }
             }
@@ -223,7 +222,8 @@ fun FavoriteOperationRow(
                             onLongClick = if (enabled) {
                                 {
                                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    menuOffset = lastPress
+                                    menuPosition = lastPress
+                                    menuOpen = true
                                 }
                             } else {
                                 null
@@ -235,7 +235,8 @@ fun FavoriteOperationRow(
                             detectTapGestures(
                                 onLongPress = { position ->
                                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    menuOffset = position
+                                    menuPosition = position
+                                    menuOpen = true
                                 },
                             )
                         }
@@ -253,20 +254,19 @@ fun FavoriteOperationRow(
             ),
     ) {
         content()
-        val offset = menuOffset
         AppDropdownMenu(
-            expanded = offset != null,
-            onDismissRequest = { menuOffset = null },
+            expanded = menuOpen,
+            onDismissRequest = { menuOpen = false },
             offset = with(density) {
                 // The menu opens below the row's bottom edge; this moves it to the finger.
-                offset?.let { DpOffset(it.x.toDp(), (it.y - rowHeight).toDp()) } ?: DpOffset.Zero
+                DpOffset(menuPosition.x.toDp(), (menuPosition.y - rowHeight).toDp())
             },
         ) {
             AppDropdownMenuItem(
                 text = actionLabel,
                 iconRes = if (favorite) R.drawable.ic_ph_star_fill else R.drawable.ic_ph_star,
                 onClick = {
-                    menuOffset = null
+                    menuOpen = false
                     toggle()
                 },
             )

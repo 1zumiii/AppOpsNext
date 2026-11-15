@@ -17,6 +17,12 @@ object UserSettingsDefaults {
     const val RESTORE_ON_REINSTALL = false
 }
 
+/** The part of [UserSettings] the lists of operations group by. */
+data class FavoriteSettings(
+    val operations: Set<String>,
+    val hintSeen: Boolean,
+)
+
 data class UserSettings(
     val hideSystemApps: Boolean = UserSettingsDefaults.HIDE_SYSTEM_APPS,
     val suppressDenyFallbackNotice: Boolean =
