@@ -8,7 +8,6 @@
     <string name="permission_info_title">权限模式说明</string>
     <string name="permission_info_modes">UID 级模式优先于包级模式。两者都没有记录时，列表显示“系统默认”。Android 运行时权限仍可能限制实际访问。</string>
     <string name="permission_info_scope">修改 UID 级模式会影响共享该 UID 的所有应用，包括已隐藏的应用。确认时会列出受影响的应用。</string>
-    <string name="permission_info_fallback">包级写入遭到拒绝时，若没有其他应用共享该 UID，会尝试改写 UID 级模式。运行时权限写入还可能通过兼容性权限标志重试。</string>
     <string name="permission_info_selection">搜索或按模式筛选后，已选应用仍会保留。全选只加入当前显示的应用，取消全选只移除当前显示的应用。开启“隐藏系统应用”会取消选中的系统应用。</string>
     <string name="permission_info_unknown">无法识别的模式会按 Android 返回的原值显示。这些应用不能修改模式，也不能加入批量选择。</string>
     <string name="permission_all_modes">全部模式</string>
@@ -318,7 +317,7 @@
     <string name="templates_custom_empty">新建模板后，就能把同一组规则复用到多个应用。</string>
     <string name="template_create">新建</string>
     <string name="template_new_app_policy_title">新装应用默认模板</string>
-    <string name="template_new_app_policy_description">自动套用常见的隐私限制。模板不可删除。开启“安装后立即套用”后，Shizuku 中常驻的进程会监听安装并唤醒 AppOpsNext，AppOpsNext 未运行时也能立即套用规则。Shizuku 重新启动后（例如重启手机后），该进程会随之恢复。其余情况由约每 15 分钟一次的后台检查兜底，前提是 Shizuku 正在运行。获得通知权限后，每次处理完会发送结果通知。</string>
+    <string name="template_new_app_policy_description">自动套用常见的隐私限制。模板不可删除。规则须在 Shizuku 运行时生效。开启“安装后立即套用”后，无须打开 AppOpsNext 即可套用。未及时处理的应用由后台定期检查补处理。获得通知权限后，每次处理完会发送结果通知。</string>
     <string name="template_new_app_auto_apply">自动套用到新装应用</string>
     <string name="template_preview_more">%1$s +%2$d</string>
     <string name="template_preview_count_only">+%1$d</string>
@@ -496,14 +495,14 @@
     <string name="history_not_loaded">历史记录尚未读取</string>
     <string name="history_snapshot_updated">更新于 %1$s</string>
     <string name="monitor_title">访问监测</string>
-    <string name="monitor_summary">选定的应用使用指定权限时发出通知，每次访问都会记录下来。</string>
+    <string name="monitor_summary">记录系统上报的权限访问，并按设置发出通知。</string>
     <string name="monitor_notification_required">此功能的访问提醒需要开启通知权限才能生效。请同时保持监测相关通知类别开启。</string>
     <string name="monitor_notification_summary">访问提醒需要通知权限，并保持监测通知类别开启。</string>
     <string name="monitor_about_title">关于访问监测</string>
     <string name="experimental_monitor_section">监测</string>
     <string name="experimental_diagnostics_section">诊断</string>
     <string name="monitor_open_notification_settings">打开通知设置</string>
-    <string name="monitor_explainer">启用时会检查系统监听是否注册。即使找到注册，也无法保证事件送达。若回调解析失败，这里会提示。监测依赖设备支持，运行时会保留常驻通知。</string>
+    <string name="monitor_explainer">监测记录来自系统上报的权限访问事件，支持范围因设备而异。运行期间会显示常驻通知。</string>
     <string name="monitor_checking">正在自检…</string>
     <string name="monitor_check_passed">已找到匹配的系统注册，监测已启动。</string>
     <string name="monitor_check_unconfirmed">无法确认系统监听注册，可能是格式不受支持，也可能是监听缺失。仍可启用，但可能收不到事件。</string>
@@ -534,7 +533,7 @@
     <string name="background_stop_summary_none">当前没有后台任务</string>
     <string name="background_stop_confirm">将关闭访问监测和“安装后立即套用”，并停止 Shizuku 中的安装监听进程。已有监测记录会保留。</string>
     <string name="background_stop_action">停止</string>
-    <string name="watchers_explainer">快照显示权限模式变更的监听注册。监听注册不表示权限访问，也不能证明进程收到了回调。\n\n按操作和按包名注册的范围分别生效。UID 不受限不代表监听所有权限，Android 仍可能过滤回调。\n\n点击进程可查看注册详情。</string>
+    <string name="watchers_explainer">此页列出监听权限模式变更的进程，不是权限访问记录。实际收到哪些变更由系统决定。\n\n点击进程可查看监听范围。</string>
     <string name="watchers_unavailable">无法读取监听表。请检查特权连接，此设备也可能使用了不支持的格式。</string>
     <string name="watchers_incomplete">部分注册无法解析，列表可能不完整。</string>
     <string name="watchers_snapshot_time">快照采集于：%1$s</string>
@@ -724,7 +723,7 @@
     <string name="filter_permission_title">按权限筛选</string>
     <string name="permission_runtime_granted">运行时权限已授权</string>
     <string name="permission_runtime_denied">运行时权限未授权</string>
-    <string name="permission_info_grants">模式为“忽略”时，附加文字显示 Android 当前的授权状态。仅凭模式无法判断是否经过手动修改，或是否设置了兼容撤销标记。</string>
+    <string name="permission_info_grants">模式为“忽略”时，附加文字显示 Android 当前的运行时权限授权状态。</string>
 
     <!-- Setting guard -->
     <string name="guard_section">设置守护</string>

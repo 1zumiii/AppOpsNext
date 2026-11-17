@@ -10,7 +10,6 @@
     <string name="permission_info_title">About permission modes</string>
     <string name="permission_info_modes">A UID mode overrides the package mode. If neither is recorded, the list shows System default. Android runtime permissions can further restrict access.</string>
     <string name="permission_info_scope">UID changes affect every app sharing that UID, including hidden apps. The confirmation lists affected packages.</string>
-    <string name="permission_info_fallback">A rejected package write may retry at UID level if no other app shares that UID. Runtime permission writes may also retry through the compatibility permission flag.</string>
     <string name="permission_info_selection">Selections remain when you search or filter by mode. Select all adds the visible apps. Deselect all removes only the visible apps. Hiding system apps removes them from the selection.</string>
     <string name="permission_info_unknown">Unrecognized modes are shown as reported by Android. These rows cannot be edited or selected for batch changes.</string>
     <string name="permission_all_modes">All modes</string>
@@ -323,7 +322,7 @@
     <string name="templates_custom_empty">Create a template to reuse the same rules across apps.</string>
     <string name="template_create">New</string>
     <string name="template_new_app_policy_title">New app defaults</string>
-    <string name="template_new_app_policy_description">Automatically applies common privacy controls. This template cannot be deleted. With “Apply right after install” on, a process kept in Shizuku watches installs and wakes AppOpsNext, so rules apply even while AppOpsNext is not running. Shizuku brings the process back when it starts again, for example after a reboot. A background check about every 15 minutes covers the rest while Shizuku is running. A brief result notification is sent when notification permission is available.</string>
+    <string name="template_new_app_policy_description">Automatically applies common privacy controls. This template cannot be deleted. Automatic application needs Shizuku to be running. With “Apply right after install” on, rules apply without opening AppOpsNext. A periodic background check handles apps that were missed. A brief result notification is sent when notification permission is available.</string>
     <string name="template_new_app_auto_apply">Automatically apply to new apps</string>
     <string name="template_preview_more">%1$s +%2$d</string>
     <string name="template_preview_count_only">+%1$d</string>
@@ -501,14 +500,14 @@
     <string name="history_not_loaded">History not loaded yet</string>
     <string name="history_snapshot_updated">Updated %1$s</string>
     <string name="monitor_title">Access monitor</string>
-    <string name="monitor_summary">Notifies you when the chosen apps use the chosen permissions, and records every access.</string>
+    <string name="monitor_summary">Records the permission accesses that the system reports, and notifies you as configured.</string>
     <string name="monitor_notification_required">Notification permission must be enabled to receive monitoring alerts. Keep the monitoring notification channels enabled too.</string>
     <string name="monitor_notification_summary">Allow notifications and keep the monitoring channel enabled to receive alerts.</string>
     <string name="monitor_about_title">About access monitoring</string>
     <string name="experimental_monitor_section">Monitoring</string>
     <string name="experimental_diagnostics_section">Diagnostics</string>
     <string name="monitor_open_notification_settings">Open notification settings</string>
-    <string name="monitor_explainer">Enabling this checks the system watch registrations. A matching registration does not prove events can be delivered, and callback errors are shown here when detected. Monitoring relies on device support and keeps an ongoing notification.</string>
+    <string name="monitor_explainer">The log comes from permission access events that the system reports. Support varies by device. An ongoing notification is shown while monitoring runs.</string>
     <string name="monitor_checking">Running the self-check…</string>
     <string name="monitor_check_passed">Matching system registrations found. Monitoring is active.</string>
     <string name="monitor_check_unconfirmed">Unable to confirm system registrations. The format may be unsupported or the watches may be missing. You can enable monitoring anyway, but events may not arrive.</string>
@@ -541,7 +540,7 @@
     <string name="background_stop_summary_none">Nothing is running in the background</string>
     <string name="background_stop_confirm">Access monitoring is turned off and the install watcher process in Shizuku is ended. “Apply right after install” is turned off with it. Monitor records are kept.</string>
     <string name="background_stop_action">Stop</string>
-    <string name="watchers_explainer">This snapshot shows registrations for permission mode changes. It does not show access history or confirm that a process received a callback.\n\nOperation and package registrations apply independently. An unrestricted UID does not mean that every permission is watched. Android may further filter callbacks.\n\nTap a process to view its registrations.</string>
+    <string name="watchers_explainer">This page lists the processes that watch for permission mode changes. It is not an access history. The system decides which changes each process receives.\n\nTap a process to view what it watches.</string>
     <string name="watchers_unavailable">Unable to read the registry. Check the privileged connection. This device may also use an unsupported format.</string>
     <string name="watchers_incomplete">Some registrations could not be parsed. This list may be incomplete.</string>
     <string name="watchers_snapshot_time">Snapshot taken: %1$s</string>
@@ -734,7 +733,7 @@
     <string name="filter_permission_title">Filter by permission</string>
     <string name="permission_runtime_granted">Runtime permission granted</string>
     <string name="permission_runtime_denied">Runtime permission not granted</string>
-    <string name="permission_info_grants">For ignored permissions, the extra label shows the current Android grant status. The mode alone cannot identify a manual change or a compatibility revocation.</string>
+    <string name="permission_info_grants">For ignored permissions, the extra label shows the current Android runtime permission grant status.</string>
 
     <!-- Setting guard -->
     <string name="guard_section">Setting guard</string>

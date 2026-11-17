@@ -40,9 +40,6 @@ Official APKs are published **ONLY** on GitHub Releases. No guarantee is made fo
   registered to watch for permission-setting changes.
 - **Setting guard (experimental).** Get a notification when the system, a vendor
   policy, or another app changes a guarded setting, and optionally restore it.
-- **Limited privileged access.** Use a fixed set of AppOps and permission-flag commands,
-  with no arbitrary shell execution. Records stay on the device; only the update
-  check uses the network.
 
 ## What you can do
 
@@ -54,7 +51,7 @@ Official APKs are published **ONLY** on GitHub Releases. No guarantee is made fo
 | Templates and batches | Create reusable rules, reorder them, apply a template to multiple apps, or change several operations in one app. Multi-select lists offer Select all for the items shown. Batch confirmations list the target mode and the items to change. After a batch finishes, run its failed changes again. When Setting guard is on, a template batch can also guard the settings it applied. |
 | Newly installed apps | Opt in to automatic template application and inspect saved per-rule results. With Apply right after install, a process kept in Shizuku watches for installs, so the template applies without opening AppOpsNext. A periodic background check handles anything missed. With Restore settings after reinstall, AppOpsNext keeps the change records of a removed app for 30 days and restores its settings when the app is installed again. |
 | History | Explore permission distribution, app statistics, and timelines by day range and app; choose and reorder the operations you follow. Optionally keep individual records past the seven days Android retains. |
-| Settings and diagnostics | Switch between English, Simplified Chinese, or the system language. Choose a theme: follow system, light, or dark. Inspect connection status and diagnostic reports, and see quietly whether a newer release exists. |
+| Settings and diagnostics | Switch between English, Simplified Chinese, or the system language. Choose a theme: follow system, light, or dark. Inspect connection status and diagnostic reports, and see in Settings when a newer release is available. |
 | Backup and migration | Export templates, preferences, the access monitor selection, your own monitor templates, and Setting guard rules to a file. An import shows a preview of the changes and applies them only after you confirm. |
 | Experimental | Watch chosen operations for chosen apps, with per-point reporting intervals, outcome filters and off-screen-only reporting. Notification permission is required for alerts. A registry check reports confirmed or unconfirmed coverage. A monitor log keeps every reported access, allowed or refused, whatever the notification settings. A monitor template holds a set of permissions with their monitor settings, and you can apply it to several apps at one time. On MIUI and HyperOS, the monitor can try to watch the private permissions of the system, which is not verified. Setting guard checks guarded settings hourly or in real time, and each rule can restore its target mode automatically, at most 3 attempts in 24 hours. Stop background work turns off the access monitor and stops the install watcher in one step. Also inspect a snapshot of processes registered for permission mode changes. |
 
@@ -95,8 +92,7 @@ remains viewable without that connection.
 | Xiaomi 24117RN76G | HyperOS 3 / Android 16 / API 36 | Independent user verification of the native backend, reads/writes, history, and camera enforcement. |
 | realme RMX3370 | Android 16 / API 36 | Independent user verification that Ignore takes effect through the compatibility revocation flag. |
 
-These results describe the tested environments, not compatibility with every
-OEM ROM. See [backend compatibility notes](docs/PRIVILEGED_BACKENDS.md) for the
+See [backend compatibility notes](docs/PRIVILEGED_BACKENDS.md) for the
 evidence and known limitations.
 
 ## How history works
@@ -174,9 +170,9 @@ Read and check the original state
 ```
 
 Manual, batch, and automatic-template writes share a serialized transaction
-queue. A command completing is not sufficient to report success; verification
-and restoration outcomes are surfaced separately. Restoration is attempted,
-not guaranteed.
+queue, so only one change runs at a time. Each change is verified after it is
+written. If it fails, AppOpsNext tries to restore the original setting and
+shows the result.
 
 UID-scoped changes can affect multiple apps sharing that UID. The confirmation
 screen identifies those packages. Automatic scope fallback is constrained to
@@ -192,10 +188,9 @@ target separately.
 | `POST_NOTIFICATIONS` | Results of automatic template application, access reports from the experimental monitor, and Setting guard alerts. |
 | `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE` | Keeps the callbacks of the experimental access monitor and of realtime Setting guard reachable while they are switched on. |
 
-The update check reads public GitHub release information and nothing else. It never
-forces an update, never downloads or installs anything, and never shows a popup
-or a notification about it: an available version appears next to the app version
-in Settings and nowhere else. **No user data of any kind is uploaded.**
+Records stay on the device. Only the update check uses the network: it reads
+public release information from GitHub and shows an available version next to
+the app version in Settings. **The app does not upload any user data.**
 
 The diagnostic report is never sent anywhere on its own. It is assembled on the
 device and copied to the clipboard only when you ask for it, and sharing it is
@@ -238,8 +233,7 @@ entirely your decision.
   back while the switch is still on.
 - **The monitor stops after the screen has been off for a while:** some vendors'
   battery optimisation or background management ends the app's process, and a
-  foreground service does not survive it either. This is outside the app's
-  control. To run the monitor for long periods, exclude AppOpsNext from battery
+  foreground service does not survive it either. To run the monitor for long periods, exclude AppOpsNext from battery
   optimisation in system settings and lock it in the recents list. Opening the
   app again restores the monitor.
 - **Reporting a problem:** include the device, Android/ROM version, reproduction
@@ -331,13 +325,9 @@ compatible with GPL-3.0. The Phosphor notice is included in the app at
 
 ## Project background
 
-AppOpsNext is an independent clean-room implementation inspired by the general
-product idea and workflows of the historical App Ops application (`rikka.appops`).
-It is not a fork, port, modified build, or official successor.
+AppOpsNext is an independent project. Its product idea and workflows follow the
+historical App Ops application (`rikka.appops`), but its code is written
+independently, and it has no affiliation with RikkaApps or the original App Ops
+author. “AppOps” refers to Android's built-in system service.
 
-It includes no legacy application source, decompiled code, assets, branding,
-or configuration data, and does not require or provide migration from that app.
-
-AppOpsNext is not developed, endorsed, or supported by RikkaApps or the original
-App Ops author. Its use of Shizuku does not imply affiliation with its maintainers.
-“AppOps” refers to Android's built-in system service.
+AppOpsNext cannot import configuration from the original App Ops.
