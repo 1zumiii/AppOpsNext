@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- 中文（简体）翻译 by @592xiaofan -->
+
     <string name="browse_by_app">按应用</string>
     <string name="browse_by_permission">按权限</string>
     <string name="selection_select_all">全选</string>
@@ -190,11 +192,14 @@
     <string name="settings_theme">主题</string>
     <string name="settings_theme_light">浅色</string>
     <string name="settings_theme_dark">深色</string>
+    <string name="settings_language_chinese" translatable="false">中文</string>
+    <string name="settings_language_english" translatable="false">English</string>
     <string name="settings_connection_summary_title">连接状态</string>
     <string name="settings_connection_connected">已连接 · %1$s</string>
     <string name="diagnostic_log_title">诊断报告</string>
     <string name="diagnostic_log_summary">包含设备环境、连接状态和最近 %1$d 条应用事件</string>
     <plurals name="diagnostic_log_compact_summary">
+        <item quantity="one">最近 %1$d 条应用事件</item>
         <item quantity="other">最近 %1$d 条应用事件</item>
     </plurals>
     <string name="diagnostic_report_title">可分享诊断报告</string>
@@ -480,7 +485,7 @@
     <string name="miui_op_label_read_note">读取笔记</string>
     <string name="miui_op_label_auto_start_switch">自启动开关</string>
     <string name="miui_op_label_fallback">MIUI 私有权限 %1$d</string>
-    <string name="app_op_usage_separator">" · "</string>
+    <string name="app_op_usage_separator">&quot; · &quot;</string>
     <string name="app_op_usage_less_than_minute">少于 1 分钟</string>
     <string name="app_op_usage_ago">%1$s前</string>
     <string name="app_op_usage_duration">持续 %1$s</string>
@@ -511,6 +516,7 @@
     <string name="monitor_callback_failed">部分事件无法解析，监测可能不完整：%1$s</string>
     <string name="monitor_log_title">监测记录</string>
     <plurals name="monitor_log_summary">
+        <item quantity="one">%1$d 条记录</item>
         <item quantity="other">%1$d 条记录</item>
     </plurals>
     <string name="monitor_log_summary_empty">监测点收到的每一次访问</string>
@@ -522,6 +528,7 @@
     <string name="monitor_log_empty_filtered">没有符合筛选条件的记录</string>
     <string name="monitor_log_clear">清空监测记录</string>
     <plurals name="monitor_log_clear_confirm">
+        <item quantity="one">将删除全部 %1$d 条记录，删除后无法恢复。</item>
         <item quantity="other">将删除全部 %1$d 条记录，删除后无法恢复。</item>
     </plurals>
     <string name="watchers_title">权限变更监听者</string>
@@ -567,6 +574,7 @@
     <string name="experimental_caption">兼容性尚未验证的功能，在部分设备上可能无法正常工作。</string>
     <string name="monitor_targets_title">监测的应用</string>
     <plurals name="monitor_targets_summary">
+        <item quantity="one">已选 %1$d 个应用</item>
         <item quantity="other">已选 %1$d 个应用</item>
     </plurals>
     <string name="monitor_targets_empty">尚未选择应用</string>
@@ -581,6 +589,7 @@
     <string name="monitor_watch_noted">单次访问</string>
     <string name="monitor_watch_started">访问开始</string>
     <plurals name="monitor_selected_count">
+        <item quantity="one">%1$d 项权限</item>
         <item quantity="other">%1$d 项权限</item>
     </plurals>
     <string name="monitor_more_accesses">还有 %1$d 条</string>
@@ -658,6 +667,7 @@
     <string name="monitor_template_not_applied_title">模板未套用</string>
     <string name="monitor_points_title">监测点设置</string>
     <plurals name="monitor_points_summary">
+        <item quantity="one">共 %1$d 个监测点</item>
         <item quantity="other">共 %1$d 个监测点</item>
     </plurals>
     <string name="monitor_points_hint">为每个监测点设置通报内容、提醒方式和通报间隔。</string>
@@ -724,8 +734,6 @@
     <string name="permission_runtime_granted">运行时权限已授权</string>
     <string name="permission_runtime_denied">运行时权限未授权</string>
     <string name="permission_info_grants">模式为“忽略”时，附加文字显示 Android 当前的运行时权限授权状态。</string>
-
-    <!-- Setting guard -->
     <string name="guard_section">设置守护</string>
     <string name="guard_title">设置守护</string>
     <string name="guard_entry_summary">所选设置发生改动时发出提醒</string>
@@ -765,13 +773,13 @@
     <string name="guard_service_title">实时守护已开启</string>
     <string name="guard_confirm_option">守护此设置</string>
     <plurals name="guard_service_text">
+        <item quantity="one">正在守护 %d 项设置</item>
         <item quantity="other">正在守护 %d 项设置</item>
     </plurals>
     <plurals name="guard_notification_title">
+        <item quantity="one">%d 项受守护的设置被改动</item>
         <item quantity="other">%d 项受守护的设置被改动</item>
     </plurals>
-
-    <!-- Backup -->
     <string name="settings_backup_section">备份与迁移</string>
     <string name="settings_backup_summary">导出或导入应用配置</string>
     <string name="settings_backup_export">导出备份</string>
@@ -786,9 +794,11 @@
     <string name="backup_preview_settings">偏好设置：将替换为备份中的设置</string>
     <string name="backup_preview_monitor">访问监测：%1$s、%2$s，将替换当前配置</string>
     <plurals name="backup_preview_monitor_apps">
+        <item quantity="one">%1$d 个应用</item>
         <item quantity="other">%1$d 个应用</item>
     </plurals>
     <plurals name="backup_preview_monitor_points">
+        <item quantity="one">%1$d 项监测点设置</item>
         <item quantity="other">%1$d 项监测点设置</item>
     </plurals>
     <string name="backup_preview_monitor_templates">监测模板：新增 %1$d 个，已有 %2$d 个</string>
