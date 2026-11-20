@@ -129,6 +129,10 @@ class MainActivity : ComponentActivity() {
                         experimentalViewModel::setHeadsUp,
                     onCheckForUpdate =
                         settingsViewModel::checkForUpdate,
+                    onIgnoreUpdate =
+                        settingsViewModel::ignoreUpdate,
+                    onUpdateSeen =
+                        settingsViewModel::markUpdateSeen,
                     onOpenBatterySettings = ::openBatterySettings,
                     onDismissBatteryNotice =
                         experimentalViewModel::dismissBatteryNotice,

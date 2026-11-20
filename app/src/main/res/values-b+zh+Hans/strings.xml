@@ -157,7 +157,10 @@
     <string name="app_op_change_keep">保留当前设置</string>
     <string name="notifications_title">通知</string>
     <string name="notifications_empty">暂无通知</string>
-    <string name="notifications_empty_detail">权限设置被其他途径改动、守护记录到改动或新装应用套用规则后，会在这里提示。</string>
+    <string name="notifications_empty_detail">权限设置被其他途径改动、守护记录到改动、新装应用套用规则或有新版本时，会在这里提示。</string>
+    <string name="notifications_update_section">新版本</string>
+    <string name="notifications_update_detail">点击打开 GitHub 发布页下载。</string>
+    <string name="notifications_update_ignore">忽略</string>
     <string name="notifications_changed_section">权限设置变更</string>
     <string name="notifications_changed_summary">以下权限与 AppOpsNext 上次的设置不一致。可恢复此前设置，或保留当前设置。</string>
     <string name="notifications_restore_all">全部恢复</string>

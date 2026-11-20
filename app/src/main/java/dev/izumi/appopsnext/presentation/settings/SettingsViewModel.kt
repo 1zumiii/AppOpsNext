@@ -58,6 +58,8 @@ class SettingsViewModel(
                 appLanguage = language,
                 appTheme = settings.appTheme,
                 updateState = update,
+                ignoredUpdateVersion = settings.ignoredUpdateVersion,
+                seenUpdateVersion = settings.seenUpdateVersion,
                 saveIndividualHistory = settings.saveIndividualHistory,
                 savedHistoryOperations = settings.savedHistoryOperations.orEmpty(),
                 savedHistory = saved,
@@ -76,13 +78,27 @@ class SettingsViewModel(
 
     /**
      * Runs once when the activity is created and on demand from the version row.
-     * The result is never surfaced as a notification or a dialog.
+     * An available version is listed in the in-app notifications, never in a
+     * system notification or a dialog.
      */
     fun checkForUpdate() {
         if (updateState.value == UpdateState.Checking) return
         viewModelScope.launch {
             updateState.value = UpdateState.Checking
             updateState.value = updateChecker.check()
+        }
+    }
+
+    fun markUpdateSeen(version: String) {
+        if (uiState.value.seenUpdateVersion == version) return
+        viewModelScope.launch {
+            repository.setSeenUpdateVersion(version)
+        }
+    }
+
+    fun ignoreUpdate(version: String) {
+        viewModelScope.launch {
+            repository.setIgnoredUpdateVersion(version)
         }
     }
 

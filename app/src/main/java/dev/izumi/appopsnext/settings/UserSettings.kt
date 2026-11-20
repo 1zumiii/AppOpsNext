@@ -60,6 +60,13 @@ data class UserSettings(
     val favoriteOperations: Set<String> = emptySet(),
     /** Whether the one-time hint about marking frequently used operations was dismissed. */
     val favoriteHintSeen: Boolean = false,
+    /**
+     * The release the user chose to ignore. Only that version is hidden from the
+     * notifications, so a later release is announced again. Not part of backups.
+     */
+    val ignoredUpdateVersion: String? = null,
+    /** The release last shown on the notifications page. The bell badge only counts a version not seen yet. */
+    val seenUpdateVersion: String? = null,
 ) {
     /** Whether installs are looked for at all, which either way of handling them needs. */
     val watchesNewApps: Boolean get() = autoApplyNewAppTemplate || restoreOnReinstall

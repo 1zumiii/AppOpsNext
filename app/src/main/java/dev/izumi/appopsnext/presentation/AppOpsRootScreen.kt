@@ -150,6 +150,8 @@ fun AppOpsRootScreen(
     onEnableUnconfirmedMonitor: () -> Unit,
     onMonitorHeadsUpChange: (Boolean) -> Unit,
     onCheckForUpdate: () -> Unit,
+    onIgnoreUpdate: (String) -> Unit,
+    onUpdateSeen: (String) -> Unit,
     onOpenBatterySettings: () -> Unit,
     onDismissBatteryNotice: () -> Unit,
     onRefreshBatteryExemption: () -> Unit,
@@ -592,6 +594,9 @@ fun AppOpsRootScreen(
         MainPageTypography {
             NotificationsScreen(
                 busy = batchOperationUiState !is BatchOperationUiState.Idle,
+                updateNotice = settingsUiState.updateNotice,
+                onIgnoreUpdate = onIgnoreUpdate,
+                onUpdateSeen = onUpdateSeen,
                 onBack = { showNotifications = false },
                 onAppSelected = { app ->
                     selectedApp = app
@@ -633,7 +638,8 @@ fun AppOpsRootScreen(
                     },
                     templates = templatesUiState.templates,
                     onTemplateApplyRequested = onTemplateApplyRequested,
-                    notificationCount = changeDrifts.size,
+                    notificationCount = changeDrifts.size +
+                        if (settingsUiState.updateUnseen) 1 else 0,
                     onOpenNotifications = {
                         focusManager.clearFocus()
                         keyboardController?.hide()

@@ -79,8 +79,22 @@ class UserSettingsRepository(
                 restoreOnReinstall =
                     preferences[Keys.RESTORE_ON_REINSTALL]
                         ?: UserSettingsDefaults.RESTORE_ON_REINSTALL,
+                ignoredUpdateVersion = preferences[Keys.IGNORED_UPDATE_VERSION],
+                seenUpdateVersion = preferences[Keys.SEEN_UPDATE_VERSION],
             )
         }
+
+    suspend fun setIgnoredUpdateVersion(version: String) {
+        dataStore.edit { preferences ->
+            preferences[Keys.IGNORED_UPDATE_VERSION] = version
+        }
+    }
+
+    suspend fun setSeenUpdateVersion(version: String) {
+        dataStore.edit { preferences ->
+            preferences[Keys.SEEN_UPDATE_VERSION] = version
+        }
+    }
 
     suspend fun setHideSystemApps(hidden: Boolean) {
         dataStore.edit { preferences ->
@@ -231,6 +245,8 @@ class UserSettingsRepository(
         val HIDE_SYSTEM_APPS = booleanPreferencesKey("hide_system_apps")
         val APP_SORT_ORDER = stringPreferencesKey("app_sort_order")
         val APP_THEME = stringPreferencesKey("app_theme")
+        val IGNORED_UPDATE_VERSION = stringPreferencesKey("ignored_update_version")
+        val SEEN_UPDATE_VERSION = stringPreferencesKey("seen_update_version")
         val SUPPRESS_DENY_FALLBACK_NOTICE =
             booleanPreferencesKey("suppress_deny_fallback_notice")
         val SUPPRESS_PERMISSION_FLAG_NOTICE =

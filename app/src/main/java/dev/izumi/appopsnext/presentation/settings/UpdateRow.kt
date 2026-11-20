@@ -31,12 +31,15 @@ import dev.izumi.appopsnext.update.UpdateState
 /**
  * The app version, with the update result alongside it.
  *
- * A new version is shown here and nowhere else. Interrupting someone on launch
- * to tell them about an update is the behaviour this deliberately avoids.
+ * A new version is also listed in the in-app notifications and marked with a
+ * dot on the About entry. It never interrupts with a dialog or a system
+ * notification.
  */
 @Composable
 fun AppVersionRow(
     updateState: UpdateState,
+    /** Whether the version is marked with a dot: an update the user has not ignored. */
+    showDot: Boolean,
     onOpenRelease: (String) -> Unit,
     onCheckForUpdate: () -> Unit,
 ) {
@@ -54,7 +57,13 @@ fun AppVersionRow(
             MainPageEntryIcon(R.drawable.ic_ph_info)
         },
         headlineContent = {
-            Text(text = stringResource(R.string.settings_app_version))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(text = stringResource(R.string.settings_app_version))
+                if (showDot) {
+                    Box(modifier = Modifier.width(6.dp))
+                    UpdateDot(Modifier.size(8.dp))
+                }
+            }
         },
         supportingContent = {
             Text(
@@ -75,22 +84,11 @@ fun AppVersionRow(
 private fun UpdateStatus(state: UpdateState) {
     when (state) {
         is UpdateState.Available -> {
-            val description = stringResource(R.string.update_available_description)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .clip(CircleShape)
-                        .background(UpdateDotColor)
-                        .semantics { contentDescription = description },
-                )
-                Box(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.update_available, state.versionName),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
+            Text(
+                text = stringResource(R.string.update_available, state.versionName),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
         }
 
         UpdateState.Checking -> StatusLabel(stringResource(R.string.update_checking))
@@ -129,6 +127,19 @@ private fun StatusLabel(text: String, action: String? = null) {
             )
         }
     }
+}
+
+/** The amber dot that marks an available update, read out as "A new version is available". */
+@Composable
+fun UpdateDot(modifier: Modifier = Modifier) {
+    val description = stringResource(R.string.update_available_description)
+    Box(
+        modifier = modifier
+            .size(10.dp)
+            .clip(CircleShape)
+            .background(UpdateDotColor)
+            .semantics { contentDescription = description },
+    )
 }
 
 /** Amber reads as "worth a look" without the alarm of the error colour. */

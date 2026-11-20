@@ -1,5 +1,7 @@
 package dev.izumi.appopsnext.presentation.notifications
 
+import android.content.Intent
+import android.net.Uri
 import android.text.format.DateUtils
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +28,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -53,6 +56,7 @@ import dev.izumi.appopsnext.presentation.experimental.ExperimentalGroup
 import dev.izumi.appopsnext.presentation.experimental.ExperimentalGroupRow
 import dev.izumi.appopsnext.presentation.experimental.ExperimentalSectionTitle
 import dev.izumi.appopsnext.presentation.experimental.GuardEventRow
+import dev.izumi.appopsnext.update.UpdateState
 import kotlinx.coroutines.launch
 
 /**
@@ -63,6 +67,10 @@ import kotlinx.coroutines.launch
 @Composable
 fun NotificationsScreen(
     busy: Boolean,
+    /** The available version unless the user ignored it. */
+    updateNotice: UpdateState.Available?,
+    onIgnoreUpdate: (String) -> Unit,
+    onUpdateSeen: (String) -> Unit,
     onBack: () -> Unit,
     onAppSelected: (InstalledApp) -> Unit,
     onRestoreRequested: (title: String, targets: List<BatchOperationTarget>) -> Unit,
@@ -78,6 +86,10 @@ fun NotificationsScreen(
     val scope = rememberCoroutineScope()
     val restoreTitle = stringResource(R.string.notifications_restore_title)
     val restorable = drifts.filter { it.status.currentMode != null }
+
+    LaunchedEffect(updateNotice?.versionName) {
+        updateNotice?.let { onUpdateSeen(it.versionName) }
+    }
 
     Scaffold(
         modifier = modifier,
@@ -104,7 +116,8 @@ fun NotificationsScreen(
             modifier = Modifier.fillMaxSize().padding(contentPadding),
             contentPadding = PaddingValues(bottom = 24.dp),
         ) {
-            if (drifts.isEmpty() && guardEvents.isEmpty() && newAppResults.isEmpty()) {
+            val update = updateNotice
+            if (update == null && drifts.isEmpty() && guardEvents.isEmpty() && newAppResults.isEmpty()) {
                 item {
                     EmptyStateContent(
                         icon = R.drawable.ic_ph_bell,
@@ -112,6 +125,14 @@ fun NotificationsScreen(
                         detail = stringResource(R.string.notifications_empty_detail),
                         modifier = Modifier.fillParentMaxSize(),
                     )
+                }
+            }
+            if (update != null) {
+                item {
+                    ExperimentalSectionTitle(stringResource(R.string.notifications_update_section))
+                    ExperimentalGroup {
+                        UpdateRow(update, onIgnore = { onIgnoreUpdate(update.versionName) })
+                    }
                 }
             }
             if (drifts.isNotEmpty()) {
@@ -124,9 +145,12 @@ fun NotificationsScreen(
                             ExperimentalSectionTitle(stringResource(R.string.notifications_changed_section))
                         }
                         if (restorable.size > 1) {
+                            // The title has more space above than below, so the button
+                            // moves down by the difference to line up with its text.
                             TextButton(
                                 onClick = { onRestoreRequested(restoreTitle, restorable.map { it.restoreTarget() }) },
                                 enabled = !busy,
+                                modifier = Modifier.padding(top = 12.dp),
                             ) {
                                 Text(stringResource(R.string.notifications_restore_all))
                             }
@@ -177,6 +201,7 @@ fun NotificationsScreen(
                         // settings they applied stay.
                         TextButton(
                             onClick = { scope.launch { application.newAppPolicyCoordinator.clearResults() } },
+                            modifier = Modifier.padding(top = 12.dp),
                         ) {
                             Text(stringResource(R.string.notifications_new_app_clear))
                         }
@@ -282,6 +307,38 @@ private fun ChangedSettingCard(
             }
         }
     }
+}
+
+/** Opens the release page in the browser. Nothing is downloaded by the app itself. */
+@Composable
+private fun UpdateRow(update: UpdateState.Available, onIgnore: () -> Unit) {
+    val context = LocalContext.current
+    ExperimentalGroupRow(
+        modifier = Modifier.clickable {
+            runCatching {
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.releaseUrl)))
+            }
+        },
+        leadingContent = {
+            AppIcon(
+                packageName = context.packageName,
+                appLabel = stringResource(R.string.app_name),
+                size = 32.dp,
+            )
+        },
+        headlineContent = { Text(stringResource(R.string.update_available, update.versionName)) },
+        supportingContent = {
+            Text(
+                text = stringResource(R.string.notifications_update_detail),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        trailingContent = {
+            TextButton(onClick = onIgnore) {
+                Text(stringResource(R.string.notifications_update_ignore))
+            }
+        },
+    )
 }
 
 @Composable

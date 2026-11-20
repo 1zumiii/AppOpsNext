@@ -159,7 +159,10 @@
     <string name="app_op_change_keep">Keep current</string>
     <string name="notifications_title">Notifications</string>
     <string name="notifications_empty">No notifications</string>
-    <string name="notifications_empty_detail">Permission settings changed outside AppOpsNext, guard events and new app policy results appear here.</string>
+    <string name="notifications_empty_detail">Permission settings changed outside AppOpsNext, guard events, new app policy results and new versions appear here.</string>
+    <string name="notifications_update_section">New version</string>
+    <string name="notifications_update_detail">Tap to open the release page on GitHub.</string>
+    <string name="notifications_update_ignore">Ignore</string>
     <string name="notifications_changed_section">Changed permission settings</string>
     <string name="notifications_changed_summary">These permissions differ from the last settings applied by AppOpsNext. Restore those settings or keep the current ones.</string>
     <string name="notifications_restore_all">Restore all</string>

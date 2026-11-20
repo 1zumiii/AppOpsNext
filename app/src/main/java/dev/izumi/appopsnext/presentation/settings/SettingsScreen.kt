@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
@@ -296,13 +297,14 @@ fun SettingsScreen(
                         leadingContent = { MainPageEntryIcon(R.drawable.ic_ph_info) },
                         headlineContent = { Text(stringResource(R.string.settings_about_app)) },
                         supportingContent = {
-                            if (uiState.updateState is UpdateState.Available) {
-                                Text(
-                                    stringResource(R.string.update_available_description),
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
-                            } else {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(BuildConfig.VERSION_NAME, style = MaterialTheme.typography.bodySmall)
+                                // Seeing the notification does not clear it. Ignoring that
+                                // version does, and a later version brings it back.
+                                if (uiState.updateNotice != null) {
+                                    Spacer(Modifier.width(6.dp))
+                                    UpdateDot(Modifier.size(8.dp))
+                                }
                             }
                         },
                         trailingContent = { MainPageChevron() },
@@ -324,6 +326,7 @@ fun SettingsScreen(
                 Column(Modifier.verticalScroll(rememberScrollState())) {
                     AppVersionRow(
                         updateState = uiState.updateState,
+                        showDot = uiState.updateNotice != null,
                         onOpenRelease = { url ->
                             runCatching {
                                 context.startActivity(
