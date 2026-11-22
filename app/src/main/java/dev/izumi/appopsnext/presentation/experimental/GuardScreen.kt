@@ -8,7 +8,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -34,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -49,6 +55,7 @@ import dev.izumi.appopsnext.guard.GuardEvent
 import dev.izumi.appopsnext.guard.GuardEventKind
 import dev.izumi.appopsnext.guard.GuardMode
 import dev.izumi.appopsnext.guard.GuardNotifier
+import dev.izumi.appopsnext.guard.GuardRestorePolicy
 import dev.izumi.appopsnext.guard.GuardRule
 import dev.izumi.appopsnext.appops.model.AppOpNames
 import dev.izumi.appopsnext.appops.model.AppOpScope
@@ -65,6 +72,8 @@ class GuardViewModel(application: Application) : AndroidViewModel(application) {
     val mode = repository.mode.stateIn(viewModelScope, SharingStarted.Eagerly, GuardMode.OFF)
     val rules = repository.rules.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     val events = repository.events.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val restoreLimit = repository.restoreLimit
+        .stateIn(viewModelScope, SharingStarted.Eagerly, GuardRestorePolicy.DEFAULT_LIMIT)
     private val mutableChecking = MutableStateFlow(false)
     val checking = mutableChecking.asStateFlow()
 
@@ -74,6 +83,22 @@ class GuardViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setAutoRestore(rule: GuardRule, enabled: Boolean) {
         viewModelScope.launch { repository.upsert(rule.copy(autoRestore = enabled)) }
+    }
+
+    /** Checks at once, so a restore already waiting follows the new delay rather than the old one. */
+    fun setRestoreDelay(rule: GuardRule, minutes: Int) {
+        viewModelScope.launch {
+            repository.upsert(rule.copy(restoreDelayMinutes = minutes))
+            app.guardController.runCheckIfEnabled("delay_changed")
+        }
+    }
+
+    /** Checks at once, so a rule held at the old limit is restored when the new one allows it. */
+    fun setRestoreLimit(limit: Int) {
+        viewModelScope.launch {
+            repository.setRestoreLimit(limit)
+            app.guardController.runCheckIfEnabled("limit_changed")
+        }
     }
 
     fun remove(rule: GuardRule) {
@@ -110,8 +135,10 @@ fun GuardScreen(
     val rules by viewModel.rules.collectAsStateWithLifecycle()
     val events by viewModel.events.collectAsStateWithLifecycle()
     val checking by viewModel.checking.collectAsStateWithLifecycle()
+    val restoreLimit by viewModel.restoreLimit.collectAsStateWithLifecycle()
     var showDetails by rememberSaveable { mutableStateOf(false) }
-    var removeCandidate by remember { mutableStateOf<Pair<GuardRule, String>?>(null) }
+    var showLimit by rememberSaveable { mutableStateOf(false) }
+    var openRule by remember { mutableStateOf<Pair<GuardRule, String>?>(null) }
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -164,6 +191,18 @@ fun GuardScreen(
                 }
             }
             item {
+                ExperimentalSectionTitle(stringResource(R.string.guard_restore_section))
+                ExperimentalGroup {
+                    ExperimentalGroupRow(
+                        modifier = Modifier.clickable { showLimit = true },
+                        headlineContent = { Text(stringResource(R.string.guard_restore_limit_title)) },
+                        supportingContent = {
+                            Text(pluralStringResource(R.plurals.guard_restore_limit_summary, restoreLimit, restoreLimit))
+                        },
+                    )
+                }
+            }
+            item {
                 Row(
                     modifier = Modifier.padding(start = 24.dp, top = 20.dp, end = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -200,7 +239,7 @@ fun GuardScreen(
                             GuardRuleRow(
                                 rule = rule,
                                 onAutoRestoreChange = { viewModel.setAutoRestore(rule, it) },
-                                onOpen = { title -> removeCandidate = rule to title },
+                                onOpen = { title -> openRule = rule to title },
                             )
                         }
                     }
@@ -255,26 +294,121 @@ fun GuardScreen(
             },
         )
     }
-    removeCandidate?.let { (rule, title) ->
-        AlertDialog(
-            onDismissRequest = { removeCandidate = null },
-            title = { Text(title) },
-            text = { Text(stringResource(R.string.guard_rule_remove_message)) },
-            confirmButton = {
+    if (showLimit) {
+        NumberDialog(
+            title = stringResource(R.string.guard_restore_limit_title),
+            message = stringResource(R.string.guard_restore_limit_message),
+            initial = restoreLimit,
+            default = GuardRestorePolicy.DEFAULT_LIMIT,
+            range = GuardRestorePolicy.LIMIT_RANGE,
+            label = stringResource(R.string.guard_restore_limit_label),
+            placeholder = stringResource(
+                R.string.guard_restore_limit_placeholder,
+                GuardRestorePolicy.DEFAULT_LIMIT,
+                GuardRestorePolicy.LIMIT_RANGE.last,
+            ),
+            onDismiss = { showLimit = false },
+            onSave = { limit ->
+                showLimit = false
+                viewModel.setRestoreLimit(limit)
+            },
+        )
+    }
+    openRule?.let { (opened, title) ->
+        // The rule as stored now, so a switch flipped meanwhile is not undone by a save.
+        val rule = rules.firstOrNull { it.id == opened.id } ?: opened
+        NumberDialog(
+            title = title,
+            message = stringResource(R.string.guard_rule_delay_message),
+            initial = rule.restoreDelayMinutes,
+            default = 0,
+            range = GuardRestorePolicy.DELAY_RANGE,
+            label = stringResource(R.string.guard_rule_delay_label),
+            placeholder = stringResource(R.string.guard_rule_delay_placeholder, GuardRestorePolicy.DELAY_RANGE.last),
+            onDismiss = { openRule = null },
+            onSave = { minutes ->
+                openRule = null
+                if (minutes != rule.restoreDelayMinutes) viewModel.setRestoreDelay(rule, minutes)
+            },
+            extraAction = {
                 TextButton(
                     onClick = {
-                        removeCandidate = null
+                        openRule = null
                         viewModel.remove(rule)
                     },
                 ) {
                     Text(stringResource(R.string.guard_rule_remove), color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = {
-                TextButton(onClick = { removeCandidate = null }) { Text(stringResource(R.string.action_cancel)) }
-            },
+            footnote = stringResource(R.string.guard_rule_remove_message),
         )
     }
+}
+
+/**
+ * A whole number in [range]. An empty field takes the default, which the
+ * placeholder names. A value outside the range disables saving and says why.
+ */
+@Composable
+private fun NumberDialog(
+    title: String,
+    message: String,
+    initial: Int,
+    default: Int,
+    range: IntRange,
+    label: String,
+    placeholder: String,
+    onDismiss: () -> Unit,
+    onSave: (Int) -> Unit,
+    extraAction: (@Composable () -> Unit)? = null,
+    footnote: String? = null,
+) {
+    var text by rememberSaveable { mutableStateOf(initial.toString()) }
+    val value = text.toIntOrNull()
+    val valid = text.isEmpty() || (value != null && value in range)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(message)
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = intervalFieldDigits(it) },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(label) },
+                    placeholder = { Text(placeholder) },
+                    singleLine = true,
+                    isError = !valid,
+                    supportingText = if (valid) {
+                        null
+                    } else {
+                        { Text(stringResource(R.string.guard_number_out_of_range, range.first, range.last)) }
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+                if (extraAction != null) {
+                    footnote?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    extraAction()
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onSave(value ?: default) },
+                enabled = valid,
+            ) { Text(stringResource(R.string.guard_save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    )
 }
 
 @Composable
@@ -287,6 +421,7 @@ internal fun GuardEventRow(event: GuardEvent, notifier: GuardNotifier) {
         GuardEventKind.DRIFT -> R.drawable.ic_ph_warning_circle to MaterialTheme.colorScheme.tertiary
         GuardEventKind.RESTORE_FAILED -> R.drawable.ic_ph_x to MaterialTheme.colorScheme.error
         GuardEventKind.RESTORE_LIMIT -> R.drawable.ic_ph_clock_counter_clockwise to MaterialTheme.colorScheme.error
+        GuardEventKind.RESTORE_PENDING -> R.drawable.ic_ph_clock_counter_clockwise to MaterialTheme.colorScheme.onSurfaceVariant
     }
     val outcome = stringResource(
         when (event.kind) {
@@ -294,6 +429,7 @@ internal fun GuardEventRow(event: GuardEvent, notifier: GuardNotifier) {
             GuardEventKind.DRIFT -> R.string.guard_event_outcome_drift
             GuardEventKind.RESTORE_FAILED -> R.string.guard_event_outcome_failed
             GuardEventKind.RESTORE_LIMIT -> R.string.guard_event_outcome_limit
+            GuardEventKind.RESTORE_PENDING -> R.string.guard_event_outcome_pending
         },
     )
     val change = stringResource(
@@ -338,16 +474,21 @@ private fun GuardRuleRow(
     val shellName = AppOpNames.shellName(rule.stableOperationName)
     val operationLabel = AppOpDisplayCatalog.labelResOf(shellName)?.let { stringResource(it) } ?: shellName
     val title = "$appLabel · $operationLabel"
-    // Removing sits behind a tap on the row, away from the switch beside it.
+    // The delay and removing sit behind a tap on the row, away from the switch beside it.
     ExperimentalGroupRow(
         modifier = Modifier.clickable { onOpen(title) },
         headlineContent = { Text(title) },
         supportingContent = {
+            val expected = stringResource(
+                if (rule.scope == AppOpScope.UID) R.string.guard_rule_expected_uid else R.string.guard_rule_expected,
+                stringResource(GuardNotifier.modeLabelRes(rule.expectedMode)),
+            )
             Text(
-                stringResource(
-                    if (rule.scope == AppOpScope.UID) R.string.guard_rule_expected_uid else R.string.guard_rule_expected,
-                    stringResource(GuardNotifier.modeLabelRes(rule.expectedMode)),
-                ),
+                if (rule.autoRestore && rule.restoreDelayMinutes > 0) {
+                    "$expected · " + stringResource(R.string.guard_rule_delay_summary, rule.restoreDelayMinutes)
+                } else {
+                    expected
+                },
             )
         },
         trailingContent = {

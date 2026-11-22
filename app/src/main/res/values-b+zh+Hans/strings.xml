@@ -734,7 +734,11 @@
     <string name="guard_entry_summary">所选设置发生改动时发出提醒</string>
     <string name="guard_caption">所选设置被改动时发出提醒，并可自动恢复。</string>
     <string name="guard_details_title">守护说明</string>
-    <string name="guard_details">AppOpsNext 会比对受守护设置的目标模式和实际模式，发现改动时发出提醒。开启“自动恢复”后，会尝试恢复目标模式。每条规则在 24 小时内最多尝试恢复 3 次。</string>
+    <string name="guard_details">AppOpsNext 会比对受守护设置的目标模式和实际模式，发现改动时发出提醒。开启“自动恢复”后，会尝试恢复目标模式。
+
+每条规则在 24 小时内的恢复次数有上限，默认 3 次，可在“恢复次数上限”中修改。
+
+点按规则可以设置恢复延迟，适合启动时检查权限的应用。延迟从发现改动时算起，每小时检查模式下可能晚于设置的时间。</string>
     <string name="guard_rule_remove_message">取消守护后，这项设置被改动时不再提醒，也不会自动恢复。</string>
     <string name="guard_mode_section">检查方式</string>
     <string name="guard_mode_off">关闭</string>
@@ -751,6 +755,17 @@
     <string name="guard_rule_expected_uid">目标模式：%1$s（整个 UID）</string>
     <string name="guard_rule_auto_restore">自动恢复</string>
     <string name="guard_rule_remove">取消守护</string>
+    <string name="guard_restore_section">自动恢复</string>
+    <string name="guard_restore_limit_title">恢复次数上限</string>
+    <string name="guard_restore_limit_message">每条规则在 24 小时内最多尝试恢复这么多次。达到上限后只发出提醒，直到最早的一次恢复超过 24 小时。</string>
+    <string name="guard_restore_limit_label">次数</string>
+    <string name="guard_restore_limit_placeholder">默认 %1$d，最多 %2$d</string>
+    <string name="guard_rule_delay_label">恢复延迟（分钟）</string>
+    <string name="guard_rule_delay_placeholder">默认 0，最长 %1$d</string>
+    <string name="guard_rule_delay_message">发现改动后先等待这段时间再恢复，0 表示立即恢复。开启“自动恢复”后生效。</string>
+    <string name="guard_rule_delay_summary">延迟 %1$d 分钟恢复</string>
+    <string name="guard_number_out_of_range">范围为 %1$d 到 %2$d</string>
+    <string name="guard_save">保存</string>
     <string name="guard_events_section">最近的改动</string>
     <string name="guard_events_clear">清空</string>
     <string name="guard_events_empty">未发现改动。</string>
@@ -758,11 +773,13 @@
     <string name="guard_event_restored">%1$s · %2$s 被改为“%3$s”，已恢复为“%4$s”</string>
     <string name="guard_event_restore_failed">%1$s · %2$s 被改为“%3$s”，恢复为“%4$s”失败</string>
     <string name="guard_event_restore_limit">%1$s · %2$s 被改为“%3$s”，已达到自动恢复次数上限，暂不恢复。</string>
+    <string name="guard_event_restore_pending">%1$s · %2$s 被改为“%3$s”，延迟结束后恢复为“%4$s”</string>
     <string name="guard_event_change">被改为“%1$s”</string>
     <string name="guard_event_outcome_restored">已恢复</string>
     <string name="guard_event_outcome_drift">仅提醒</string>
     <string name="guard_event_outcome_failed">恢复失败</string>
     <string name="guard_event_outcome_limit">已达恢复次数上限</string>
+    <string name="guard_event_outcome_pending">等待恢复</string>
     <string name="guard_channel_events">守护提醒</string>
     <string name="guard_channel_status">实时守护</string>
     <string name="guard_service_title">实时守护已开启</string>
@@ -772,6 +789,9 @@
     </plurals>
     <plurals name="guard_notification_title">
         <item quantity="other">%d 项受守护的设置被改动</item>
+    </plurals>
+    <plurals name="guard_restore_limit_summary">
+        <item quantity="other">每条规则 24 小时内最多恢复 %d 次</item>
     </plurals>
 
     <!-- Backup -->

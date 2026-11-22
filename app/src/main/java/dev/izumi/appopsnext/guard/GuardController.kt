@@ -3,8 +3,11 @@ package dev.izumi.appopsnext.guard
 import android.content.Context
 import android.os.SystemClock
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.work.workDataOf
 import dev.izumi.appopsnext.appops.AdaptiveScopeModeChangeExecutor
 import dev.izumi.appopsnext.appops.AppOpsRepository
 import dev.izumi.appopsnext.appops.RevokedCompatRetry
@@ -21,6 +24,9 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -97,15 +103,24 @@ class GuardController(
         runCheck(trigger, operations)
     }
 
+    /**
+     * A check for [GuardWorker]. Its check may replace the worker's own one-time
+     * work, which cancels the worker, so the check runs in the controller's scope.
+     */
+    suspend fun runWorkerCheck(trigger: String) {
+        scope.async { runCheckIfEnabled(trigger) }.await()
+    }
+
     /** [operations] limits the check to rules of these `android:` names, as a mode callback does. */
     suspend fun runCheck(trigger: String, operations: Set<String>? = null): GuardChecker.Result? =
         checkMutex.withLock {
-            val rules = repository.rules.first()
-                .filter { operations == null || it.stableOperationName in operations }
+            val allRules = repository.rules.first()
+            val rules = allRules.filter { operations == null || it.stableOperationName in operations }
             if (rules.isEmpty()) return@withLock null
+            val restoreLimit = repository.restoreLimit.first()
             val started = SystemClock.elapsedRealtime()
             val result = try {
-                checker.check(rules, repository.states())
+                checker.check(rules, repository.states(), restoreLimit)
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -113,6 +128,9 @@ class GuardController(
                 return@withLock null
             }
             repository.saveCheck(result.states, result.events)
+            scheduleDelayedRestore(
+                GuardRestorePolicy.nextDue(allRules, result.states, System.currentTimeMillis(), restoreLimit),
+            )
             notifier.notifyEvents(result.events)
             if (result.events.any { it.kind == GuardEventKind.RESTORED }) mutableRestores.tryEmit(Unit)
             val millis = SystemClock.elapsedRealtime() - started
@@ -131,7 +149,7 @@ class GuardController(
      * Records a mode the user set in the app, so the guard does not take it for a drift.
      *
      * With [guard] the rules of this setting become one rule for [mode] in [scope],
-     * keeping their automatic restore. Without it they are removed.
+     * keeping their automatic restore and its delay. Without it they are removed.
      */
     suspend fun onUserChange(
         packageName: String,
@@ -152,10 +170,42 @@ class GuardController(
                     stableOperationName = stableName,
                     scope = scope,
                     expectedMode = mode,
-                    autoRestore = existing.any { it.autoRestore },
-                )
+                    autoRestore = false,
+                ).keepingRestoreOf(existing)
             }
         }
+    }
+
+    /** The in-process timer of the next delayed restore; guarded by [checkMutex]. */
+    private var delayedRestoreJob: Job? = null
+
+    /**
+     * Checks again when a delayed restore falls due. The timer covers a running
+     * process, which the realtime service keeps. The one-time work covers a process
+     * that was stopped meanwhile and may run later than due. Each check replaces both.
+     */
+    private fun scheduleDelayedRestore(dueMillis: Long?) {
+        delayedRestoreJob?.cancel()
+        delayedRestoreJob = null
+        val workManager = WorkManager.getInstance(context)
+        if (dueMillis == null) {
+            workManager.cancelUniqueWork(DELAYED_WORK_NAME)
+            return
+        }
+        val waitMillis = (dueMillis - System.currentTimeMillis()).coerceAtLeast(0)
+        delayedRestoreJob = scope.launch {
+            delay(waitMillis)
+            // The check reschedules, which cancels this timer, so it runs apart from it.
+            scope.launch { runCheckIfEnabled(TRIGGER_DELAYED) }
+        }
+        workManager.enqueueUniqueWork(
+            DELAYED_WORK_NAME,
+            ExistingWorkPolicy.REPLACE,
+            OneTimeWorkRequestBuilder<GuardWorker>()
+                .setInitialDelay(waitMillis + DELAYED_WORK_SLACK_MILLIS, TimeUnit.MILLISECONDS)
+                .setInputData(workDataOf(GuardWorker.KEY_TRIGGER to TRIGGER_DELAYED))
+                .build(),
+        )
     }
 
     /** Touched only by the collector in [start], one value at a time. */
@@ -184,6 +234,7 @@ class GuardController(
         } else {
             GuardWatchService.stop(context)
         }
+        if (mode == GuardMode.OFF) workManager.cancelUniqueWork(DELAYED_WORK_NAME)
         // Applied at every process start, where off, the default, says nothing.
         // Turning a running guard off is still written.
         val previous = appliedMode
@@ -242,5 +293,10 @@ class GuardController(
     private companion object {
         const val LOG_SOURCE = "Guard"
         const val WORK_NAME = "guard_periodic_check"
+        const val DELAYED_WORK_NAME = "guard_delayed_restore"
+        const val TRIGGER_DELAYED = "delayed_restore"
+
+        /** Lets the in-process timer go first, so a running process does not check twice. */
+        const val DELAYED_WORK_SLACK_MILLIS = 30_000L
     }
 }

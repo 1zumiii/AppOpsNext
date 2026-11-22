@@ -23,6 +23,8 @@ data class GuardRule(
     val scope: AppOpScope,
     val expectedMode: AppOpMode,
     val autoRestore: Boolean,
+    /** With [autoRestore], how long a change is left before it is restored; 0 restores at once. */
+    val restoreDelayMinutes: Int = 0,
 ) {
     val id: String get() = ruleId(packageName, stableOperationName, scope)
 
@@ -44,8 +46,11 @@ enum class GuardEventKind {
     RESTORED,
     RESTORE_FAILED,
 
-    /** Changed again after three restores in a day; restoring stops until the window passes. */
+    /** Changed again after the daily number of restores; restoring stops until the window passes. */
     RESTORE_LIMIT,
+
+    /** Changed, and restored once the rule's delay has passed. Shown in the app, not posted. */
+    RESTORE_PENDING,
 }
 
 data class GuardEvent(
@@ -64,4 +69,6 @@ data class GuardRuleState(
     val lastObserved: AppOpMode? = null,
     /** Restore attempts, successful or not, within the policy window. */
     val restoreTimes: List<Long> = emptyList(),
+    /** When a check first saw the current change, for a delayed restore; null while the mode is expected. */
+    val driftSince: Long? = null,
 )

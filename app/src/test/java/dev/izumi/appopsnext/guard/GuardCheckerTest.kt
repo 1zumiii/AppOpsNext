@@ -86,6 +86,87 @@ class GuardCheckerTest {
         assertEquals(states, result.states)
     }
 
+    @Test fun `the restore limit follows the setting`() = runBlocking {
+        val rule = camera.copy(autoRestore = true)
+        var states = emptyMap<String, GuardRuleState>()
+        val kinds = mutableListOf<GuardEventKind>()
+        repeat(3) {
+            device[rule.id] = AppOpMode.ALLOW
+            val result = checker.check(listOf(rule), states, restoreLimit = 1)
+            kinds += result.events.map { it.kind }
+            states = result.states
+            now += 60_000
+        }
+        assertEquals(listOf(GuardEventKind.RESTORED, GuardEventKind.RESTORE_LIMIT), kinds)
+        // A limit outside the range is clamped rather than turning restores off.
+        assertEquals(
+            listOf(GuardEventKind.RESTORED),
+            checker.check(listOf(rule), emptyMap(), restoreLimit = 0).events.map { it.kind },
+        )
+    }
+
+    @Test fun `a delayed restore waits for the delay, reported once, then restores`() = runBlocking {
+        val rule = camera.copy(autoRestore = true, restoreDelayMinutes = 10)
+        device[rule.id] = AppOpMode.ALLOW
+        val started = now
+        val first = checker.check(listOf(rule), emptyMap())
+        assertEquals(listOf(GuardEventKind.RESTORE_PENDING), first.events.map { it.kind })
+        assertEquals(started, first.states.getValue(rule.id).driftSince)
+        assertEquals(started + 600_000, GuardRestorePolicy.nextDue(listOf(rule), first.states, now, 3))
+
+        now += 300_000
+        device[rule.id] = AppOpMode.FOREGROUND
+        val second = checker.check(listOf(rule), first.states)
+        // Another mode during the wait is a new report, and the wait still counts from the first.
+        assertEquals(listOf(GuardEventKind.RESTORE_PENDING), second.events.map { it.kind })
+        assertEquals(started, second.states.getValue(rule.id).driftSince)
+        assertTrue(restores.isEmpty())
+
+        now = started + 600_000
+        val third = checker.check(listOf(rule), second.states)
+        assertEquals(listOf(GuardEventKind.RESTORED), third.events.map { it.kind })
+        assertEquals(null, third.states.getValue(rule.id).driftSince)
+        assertEquals(null, GuardRestorePolicy.nextDue(listOf(rule), third.states, now, 3))
+
+        // The next change waits again from when it is seen.
+        now += 60_000
+        device[rule.id] = AppOpMode.ALLOW
+        val fourth = checker.check(listOf(rule), third.states)
+        assertEquals(listOf(GuardEventKind.RESTORE_PENDING), fourth.events.map { it.kind })
+        assertEquals(now, fourth.states.getValue(rule.id).driftSince)
+    }
+
+    @Test fun `a change undone during the delay is not restored`() = runBlocking {
+        val rule = camera.copy(autoRestore = true, restoreDelayMinutes = 5)
+        device[rule.id] = AppOpMode.ALLOW
+        val first = checker.check(listOf(rule), emptyMap())
+        device[rule.id] = AppOpMode.IGNORE
+        now += 60_000
+        val second = checker.check(listOf(rule), first.states)
+        assertTrue(second.events.isEmpty())
+        assertEquals(null, second.states.getValue(rule.id).driftSince)
+        assertEquals(null, GuardRestorePolicy.nextDue(listOf(rule), second.states, now, 3))
+        assertTrue(restores.isEmpty())
+    }
+
+    @Test fun `no delayed check is due for a rule past its delay, at its limit or without restore`() {
+        val delayed = camera.copy(autoRestore = true, restoreDelayMinutes = 1)
+        val waiting = GuardRuleState(lastObserved = AppOpMode.ALLOW, driftSince = now)
+        assertEquals(now + 60_000, GuardRestorePolicy.nextDue(listOf(delayed), mapOf(delayed.id to waiting), now, 3))
+        // A failed restore past its delay is left to the next regular check.
+        assertEquals(null, GuardRestorePolicy.nextDue(listOf(delayed), mapOf(delayed.id to waiting), now + 60_000, 3))
+        val limited = waiting.copy(restoreTimes = listOf(now - 1))
+        assertEquals(null, GuardRestorePolicy.nextDue(listOf(delayed), mapOf(delayed.id to limited), now, 1))
+        val notifying = delayed.copy(autoRestore = false)
+        assertEquals(null, GuardRestorePolicy.nextDue(listOf(notifying), mapOf(delayed.id to waiting), now, 3))
+    }
+
+    @Test fun `a delay of zero restores at once`() = runBlocking {
+        val rule = camera.copy(autoRestore = true, restoreDelayMinutes = 0)
+        device[rule.id] = AppOpMode.ALLOW
+        assertEquals(listOf(GuardEventKind.RESTORED), checker.check(listOf(rule), emptyMap()).events.map { it.kind })
+    }
+
     @Test fun `a setting counts as guarded in either scope and either spelling`() {
         val rules = listOf(camera.copy(scope = AppOpScope.UID))
         assertTrue(rules.guards("com.example", "CAMERA"))

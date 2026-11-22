@@ -17,8 +17,12 @@ import dev.izumi.appopsnext.presentation.app_detail.AppOpDisplayCatalog
 class GuardNotifier(private val context: Context) {
     private val notificationManager = context.getSystemService(NotificationManager::class.java)
 
-    /** One notification per check, replaced by the next one, so a busy day does not stack up. */
-    fun notifyEvents(events: List<GuardEvent>) {
+    /**
+     * One notification per check, replaced by the next one, so a busy day does not stack up.
+     * A pending restore is not posted. The restore that follows it is.
+     */
+    fun notifyEvents(checkEvents: List<GuardEvent>) {
+        val events = checkEvents.filter { it.kind != GuardEventKind.RESTORE_PENDING }
         if (events.isEmpty() || !canPost()) return
         createChannels()
         val lines = events.map(::describe)
@@ -58,6 +62,7 @@ class GuardNotifier(private val context: Context) {
             GuardEventKind.RESTORED -> R.string.guard_event_restored
             GuardEventKind.RESTORE_FAILED -> R.string.guard_event_restore_failed
             GuardEventKind.RESTORE_LIMIT -> R.string.guard_event_restore_limit
+            GuardEventKind.RESTORE_PENDING -> R.string.guard_event_restore_pending
         }
         return context.getString(
             resource,

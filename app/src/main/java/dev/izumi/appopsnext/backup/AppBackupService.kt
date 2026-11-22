@@ -65,6 +65,7 @@ class AppBackupService(
                 guard = GuardBackup(
                     mode = guardRepository.mode.first(),
                     rules = guardRepository.rules.first(),
+                    restoreLimit = guardRepository.restoreLimit.first(),
                 ),
             ),
         )
@@ -109,6 +110,6 @@ class AppBackupService(
             monitorTargetsRepository.replace(backup.monitorTargets, backup.monitorPoints)
         }
         backup.monitorTemplates?.let { monitorTargetsRepository.importTemplates(it) }
-        guard?.let { guardRepository.import(it.backup.mode, it.backup.rules) }
+        guard?.let { guardRepository.import(it.backup.mode, it.backup.rules, it.backup.restoreLimit) }
     }
 }

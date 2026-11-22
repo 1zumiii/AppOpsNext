@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -27,6 +28,11 @@ class GuardRepository(context: Context) {
         GuardMode.entries.firstOrNull { it.name == preferences[MODE] } ?: GuardMode.OFF
     }
 
+    /** Restore attempts allowed per rule in 24 hours. */
+    val restoreLimit: Flow<Int> = rulesStore.data.map { preferences ->
+        preferences[RESTORE_LIMIT]?.takeIf { it in GuardRestorePolicy.LIMIT_RANGE } ?: GuardRestorePolicy.DEFAULT_LIMIT
+    }
+
     val rules: Flow<List<GuardRule>> = rulesStore.data.map { preferences ->
         preferences[RULES].orEmpty().mapNotNull(GuardCodec::decodeRule).sortedBy { it.id }
     }
@@ -38,6 +44,10 @@ class GuardRepository(context: Context) {
 
     suspend fun setMode(mode: GuardMode) {
         rulesStore.edit { it[MODE] = mode.name }
+    }
+
+    suspend fun setRestoreLimit(limit: Int) {
+        rulesStore.edit { it[RESTORE_LIMIT] = limit.coerceIn(GuardRestorePolicy.LIMIT_RANGE) }
     }
 
     /** Replaces a rule with the same package, operation and scope. */
@@ -67,7 +77,8 @@ class GuardRepository(context: Context) {
 
     /**
      * Records the settings a batch wrote, each as a rule for its new mode. A setting
-     * that was guarded keeps its rule at the new mode and its automatic restore. One
+     * that was guarded keeps its rule at the new mode and its automatic restore with
+     * its delay. One
      * that was not is guarded only with [guardNew].
      */
     suspend fun applyBatch(changed: List<GuardRule>, guardNew: Boolean) {
@@ -77,7 +88,7 @@ class GuardRepository(context: Context) {
             val updates = changed.mapNotNull { rule ->
                 val existing = bySetting[rule.packageName to rule.stableOperationName]
                 when {
-                    existing != null -> rule.copy(autoRestore = existing.any { it.autoRestore })
+                    existing != null -> rule.keepingRestoreOf(existing)
                     guardNew -> rule
                     else -> null
                 }
@@ -90,9 +101,10 @@ class GuardRepository(context: Context) {
 
     /**
      * Adds imported rules. An imported rule takes the place of the local rules of
-     * the same setting, and the others stay. A null [mode] leaves the mode alone.
+     * the same setting, and the others stay. A null [mode] or [restoreLimit] leaves
+     * that setting alone.
      */
-    suspend fun import(mode: GuardMode?, imported: List<GuardRule>) {
+    suspend fun import(mode: GuardMode?, imported: List<GuardRule>, restoreLimit: Int? = null) {
         val settings = imported.mapTo(mutableSetOf()) { it.packageName to it.stableOperationName }
         rulesStore.edit { preferences ->
             val kept = preferences[RULES].orEmpty().filter { encoded ->
@@ -100,6 +112,7 @@ class GuardRepository(context: Context) {
             }
             preferences[RULES] = (kept + imported.map(GuardCodec::encodeRule)).toSet()
             mode?.let { preferences[MODE] = it.name }
+            restoreLimit?.let { preferences[RESTORE_LIMIT] = it.coerceIn(GuardRestorePolicy.LIMIT_RANGE) }
         }
     }
 
@@ -136,9 +149,22 @@ class GuardRepository(context: Context) {
 
     private companion object {
         val MODE = stringPreferencesKey("mode")
+        val RESTORE_LIMIT = intPreferencesKey("restore_limit")
         val RULES = stringSetPreferencesKey("rules_v1")
         val STATES = stringSetPreferencesKey("states_v1")
         val EVENTS = stringSetPreferencesKey("events_v1")
         const val MAX_EVENTS = 200
     }
+}
+
+/**
+ * This rule with the automatic restore of the rules it replaces: on when any of
+ * them had it, with the longest delay among those.
+ */
+internal fun GuardRule.keepingRestoreOf(existing: List<GuardRule>): GuardRule {
+    val restoring = existing.filter { it.autoRestore }
+    return copy(
+        autoRestore = restoring.isNotEmpty(),
+        restoreDelayMinutes = restoring.maxOfOrNull { it.restoreDelayMinutes } ?: 0,
+    )
 }

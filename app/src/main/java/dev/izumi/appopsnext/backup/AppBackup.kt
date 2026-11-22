@@ -2,6 +2,7 @@ package dev.izumi.appopsnext.backup
 
 import dev.izumi.appopsnext.apps.AppSortOrder
 import dev.izumi.appopsnext.guard.GuardCodec
+import dev.izumi.appopsnext.guard.GuardRestorePolicy
 import dev.izumi.appopsnext.guard.GuardMode
 import dev.izumi.appopsnext.guard.GuardRule
 import dev.izumi.appopsnext.monitor.MonitorPointSettings
@@ -69,6 +70,8 @@ data class AppBackup(
 data class GuardBackup(
     val mode: GuardMode?,
     val rules: List<GuardRule>,
+    /** Restore attempts per rule in 24 hours; null in a backup from before it could be set. */
+    val restoreLimit: Int? = null,
 )
 
 object AppBackupCodec {
@@ -84,6 +87,7 @@ object AppBackupCodec {
     private const val APP = "app"
     private const val CREATED = "created"
     private const val GUARD_MODE = "mode"
+    private const val GUARD_RESTORE_LIMIT = "restore_limit"
 
     fun encode(backup: AppBackup): String =
         BackupContainer.encode(
@@ -115,7 +119,10 @@ object AppBackupCodec {
                     )
                 }
                 backup.guard?.let { guard ->
-                    val lines = listOfNotNull(guard.mode?.let { "$GUARD_MODE=${it.name}" }) +
+                    val lines = listOfNotNull(
+                        guard.mode?.let { "$GUARD_MODE=${it.name}" },
+                        guard.restoreLimit?.let { "$GUARD_RESTORE_LIMIT=$it" },
+                    ) +
                         guard.rules.map(GuardCodec::encodeRule)
                     add(BackupSection(GUARD, VERSION, lines))
                 }
@@ -172,9 +179,11 @@ object AppBackupCodec {
 
     /** A rule record never holds `=`, so the mode line cannot be taken for one. */
     private fun decodeGuard(lines: List<String>): GuardBackup {
-        val modeName = lines.keyValues()[GUARD_MODE]
+        val fields = lines.keyValues()
+        val modeName = fields[GUARD_MODE]
         return GuardBackup(
             mode = GuardMode.entries.firstOrNull { it.name == modeName },
+            restoreLimit = fields[GUARD_RESTORE_LIMIT]?.toIntOrNull()?.takeIf { it in GuardRestorePolicy.LIMIT_RANGE },
             rules = lines.filterNot { '=' in it }.mapNotNull(GuardCodec::decodeRule),
         )
     }
