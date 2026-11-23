@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -38,6 +39,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /**
  * Runs guard checks and keeps the chosen trigger running.
@@ -58,6 +60,7 @@ class GuardController(
     private val notifier: GuardNotifier = GuardNotifier(context),
 ) {
     private val checkMutex = Mutex()
+    private val userWrites = GuardUserWrites(checkMutex)
     private val adaptiveScopeExecutor = AdaptiveScopeModeChangeExecutor(writeMemory) { uid ->
         context.packageManager.getPackagesForUid(uid)?.toList().orEmpty()
     }
@@ -117,7 +120,9 @@ class GuardController(
     suspend fun runCheck(trigger: String, operations: Set<String>? = null): GuardChecker.Result? =
         checkMutex.withLock {
             val allRules = repository.rules.first()
-            val rules = allRules.filter { operations == null || it.stableOperationName in operations }
+            val rules = allRules.filter {
+                (operations == null || it.stableOperationName in operations) && !userWrites.shouldSkip(it)
+            }
             if (rules.isEmpty()) return@withLock null
             val restoreLimit = repository.restoreLimit.first()
             val started = SystemClock.elapsedRealtime()
@@ -147,20 +152,27 @@ class GuardController(
             result
         }
 
+    internal suspend fun <T> withUserWrites(
+        targets: Collection<GuardWriteTarget>,
+        action: suspend () -> T,
+    ): T = userWrites.run(targets, recheck = { operations ->
+        scope.launch { runCheckIfEnabled("user_write_finished", operations) }
+    }, action)
+
     /**
      * Records a mode the user set in the app, so the guard does not take it for a drift.
      *
      * With [guard] the rules of this setting become one rule for [mode] in [scope],
      * keeping their automatic restore and its delay. Without it they are removed.
      */
-    suspend fun onUserChange(
+    internal suspend fun onUserChange(
         packageName: String,
         uid: Int,
         operationName: String,
         scope: AppOpScope,
         mode: AppOpMode,
         guard: Boolean,
-    ) {
+    ) = withContext(NonCancellable) {
         val stableName = AppOpNames.stableName(operationName)
         repository.replaceSetting(packageName, stableName) { existing ->
             if (!guard) {

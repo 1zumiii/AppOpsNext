@@ -14,6 +14,7 @@ import dev.izumi.appopsnext.appops.model.AppOpIdentifier
 import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
 import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.apps.model.InstalledApp
+import dev.izumi.appopsnext.guard.GuardWriteTarget
 import dev.izumi.appopsnext.presentation.app_detail.AppOpModeChangeRequest
 import dev.izumi.appopsnext.presentation.app_detail.AppOpModeChangeUiState
 import dev.izumi.appopsnext.presentation.app_detail.DenyFallbackModeChangeExecutor
@@ -131,75 +132,82 @@ class PermissionBrowserViewModel(
             var appliedScope = request.scope
             var permissionFlagApplied = false
             var restrictionBlocked = false
-            val outcome = repository.withWriteTransaction { transaction ->
-                DenyFallbackModeChangeExecutor { mode ->
-                    val scopeOutcome = executor.execute(
-                        packageName = target.packageName,
-                        uid = target.uid,
-                        preferredScope = request.scope,
-                        requestedMode = mode,
-                        readMode = { scope ->
-                            repository.readMode(
-                                packageName = target.packageName,
-                                operation = operation,
-                                scope = scope,
-                                userId = target.userId,
-                                uid = target.uid,
-                            )
-                        },
-                        revokedCompatRetry = RevokedCompatRetry(
-                            operationName = request.operationName,
-                        ) { permission ->
-                            transaction.applyRevokedCompat(
-                                packageName = target.packageName,
-                                uid = target.uid,
-                                operation = operation,
-                                permissionName = permission,
-                                requestedMode = mode,
-                                userId = target.userId,
-                            )
-                        },
-                    ) { scope ->
-                        if (scope == request.scope) {
-                            transaction.changeMode(
-                                packageName = target.packageName,
-                                operation = operation,
-                                scope = scope,
-                                expectedOriginalMode = request.originalMode,
-                                requestedMode = mode,
-                                userId = target.userId,
-                            )
-                        } else {
-                            transaction.applyMode(
-                                packageName = target.packageName,
-                                operation = operation,
-                                scope = scope,
-                                requestedMode = mode,
-                                userId = target.userId,
-                            )
+            val guardController = app.guardController
+            val guardTarget = GuardWriteTarget(request.packageName, target.uid, request.operationName)
+                .takeIf { target.userId == null }
+            val outcome = guardController.withUserWrites(listOfNotNull(guardTarget)) {
+                repository.withWriteTransaction { transaction ->
+                    DenyFallbackModeChangeExecutor { mode ->
+                        val scopeOutcome = executor.execute(
+                            packageName = target.packageName,
+                            uid = target.uid,
+                            preferredScope = request.scope,
+                            requestedMode = mode,
+                            readMode = { scope ->
+                                repository.readMode(
+                                    packageName = target.packageName,
+                                    operation = operation,
+                                    scope = scope,
+                                    userId = target.userId,
+                                    uid = target.uid,
+                                )
+                            },
+                            revokedCompatRetry = RevokedCompatRetry(
+                                operationName = request.operationName,
+                            ) { permission ->
+                                transaction.applyRevokedCompat(
+                                    packageName = target.packageName,
+                                    uid = target.uid,
+                                    operation = operation,
+                                    permissionName = permission,
+                                    requestedMode = mode,
+                                    userId = target.userId,
+                                )
+                            },
+                        ) { scope ->
+                            if (scope == request.scope) {
+                                transaction.changeMode(
+                                    packageName = target.packageName,
+                                    operation = operation,
+                                    scope = scope,
+                                    expectedOriginalMode = request.originalMode,
+                                    requestedMode = mode,
+                                    userId = target.userId,
+                                )
+                            } else {
+                                transaction.applyMode(
+                                    packageName = target.packageName,
+                                    operation = operation,
+                                    scope = scope,
+                                    requestedMode = mode,
+                                    userId = target.userId,
+                                )
+                            }
                         }
+                        appliedScope = scopeOutcome.appliedScope
+                        permissionFlagApplied = scopeOutcome.permissionFlagApplied
+                        restrictionBlocked = scopeOutcome.restrictionBlocked
+                        scopeOutcome.result
+                    }.execute(request.requestedMode)
+                }.also { outcome ->
+                    val success = outcome.result as? AppOpModeChangeResult.Success
+                    if (guardTarget != null && success != null) {
+                        guardController.onUserChange(
+                            packageName = request.packageName,
+                            uid = target.uid,
+                            operationName = request.operationName,
+                            scope = appliedScope,
+                            mode = success.appliedMode,
+                            guard = guard,
+                        )
                     }
-                    appliedScope = scopeOutcome.appliedScope
-                    permissionFlagApplied = scopeOutcome.permissionFlagApplied
-                    restrictionBlocked = scopeOutcome.restrictionBlocked
-                    scopeOutcome.result
-                }.execute(request.requestedMode)
+                }
             }
             val resolvedRequest = request.copy(
                 scope = appliedScope,
                 affectedPackages = affectedPackages(target, appliedScope),
             )
             val settings = app.userSettingsRepository.settings.first()
-            (outcome.result as? AppOpModeChangeResult.Success)?.takeIf { target.userId == null }?.let { success ->
-                app.guardController.onUserChange(
-                    packageName = request.packageName,
-                    uid = target.uid,
-                    operationName = request.operationName,
-                    scope = appliedScope,
-                    mode = success.appliedMode,
-                    guard = guard,
-                )
-            }
             mutableChange.value = when (val result = outcome.result) {
                 is AppOpModeChangeResult.Success -> when {
                     permissionFlagApplied &&

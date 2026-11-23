@@ -19,13 +19,16 @@ import dev.izumi.appopsnext.batch.model.BatchOperationReport
 import dev.izumi.appopsnext.batch.model.BatchOperationTarget
 import dev.izumi.appopsnext.guard.GuardMode
 import dev.izumi.appopsnext.guard.GuardRule
+import dev.izumi.appopsnext.guard.GuardWriteTarget
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
 import dev.izumi.appopsnext.templates.NewAppPolicyTemplate
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class BatchOperationsViewModel(
     application: Application,
@@ -34,22 +37,25 @@ class BatchOperationsViewModel(
         getApplication<AppOpsNextApplication>().appOpsRepository
     private val guardRepository =
         getApplication<AppOpsNextApplication>().guardRepository
+    private val guardController =
+        getApplication<AppOpsNextApplication>().guardController
 
-    /** The scope each target was written in, which can fall back from the preferred one. */
-    private val appliedScopes = mutableMapOf<BatchOperationTarget, AppOpScope>()
     private val adaptiveScopeExecutor = AdaptiveScopeModeChangeExecutor(
         writeMemory = getApplication<AppOpsNextApplication>().revokedCompatWriteMemory,
     ) { uid ->
         // Resolves UIDs of other users too, which the app's package manager cannot.
         getApplication<AppOpsNextApplication>().userAppsRepository.packagesForUid(uid)
     }
-    private val executor = BatchAppOpsExecutor { target ->
+    private suspend fun applyTarget(
+        target: BatchOperationTarget,
+        changed: MutableList<GuardRule>,
+    ): AppOpModeChangeResult {
         val operation = AppOpIdentifier(
             stableName = target.stableOperationName,
             shellName = AppOpNames.shellName(target.stableOperationName),
         )
-        repository.withWriteTransaction { transaction ->
-            adaptiveScopeExecutor.execute(
+        return repository.withWriteTransaction { transaction ->
+            val outcome = adaptiveScopeExecutor.execute(
                 packageName = target.packageName,
                 uid = target.uid,
                 preferredScope = target.preferredScope,
@@ -83,7 +89,19 @@ class BatchOperationsViewModel(
                     requestedMode = target.requestedMode,
                     userId = target.userId,
                 )
-            }.also { appliedScopes[target] = it.appliedScope }.result
+            }
+            val result = outcome.result
+            if (target.userId == null && result is AppOpModeChangeResult.Success) {
+                changed += GuardRule(
+                    packageName = target.packageName,
+                    uid = target.uid,
+                    stableOperationName = operation.stableName,
+                    scope = outcome.appliedScope,
+                    expectedMode = result.appliedMode,
+                    autoRestore = false,
+                )
+            }
+            result
         }
     }
     private val mutableUiState =
@@ -211,17 +229,7 @@ class BatchOperationsViewModel(
             completed = 0,
         )
         viewModelScope.launch {
-            val report = executor.execute(
-                title = request.title,
-                targets = request.targets,
-                onProgress = { completed, _ ->
-                    mutableUiState.value = BatchOperationUiState.Running(
-                        request = request,
-                        completed = completed,
-                    )
-                },
-            )
-            recordGuardChanges(report, guard)
+            val report = executeBatch(request, guard)
             guardRetried = guard
             mutableUiState.value = BatchOperationUiState.Finished(report, retryable = true)
         }
@@ -244,17 +252,7 @@ class BatchOperationsViewModel(
         )
         mutableUiState.value = BatchOperationUiState.Running(request = request, completed = 0)
         viewModelScope.launch {
-            val retried = executor.execute(
-                title = request.title,
-                targets = failed,
-                onProgress = { completed, _ ->
-                    mutableUiState.value = BatchOperationUiState.Running(
-                        request = request,
-                        completed = completed,
-                    )
-                },
-            )
-            recordGuardChanges(retried, guardRetried)
+            val retried = executeBatch(request, guardRetried)
             mutableUiState.value = BatchOperationUiState.Finished(
                 report = BatchRetry.merge(finished.report, retried),
                 retryable = true,
@@ -262,22 +260,25 @@ class BatchOperationsViewModel(
         }
     }
 
-    /** Keeps guarded settings at the mode the user just chose, so the guard does not take it for a drift. */
-    private suspend fun recordGuardChanges(report: BatchOperationReport, guard: Boolean) {
+    private suspend fun executeBatch(request: BatchOperationRequest, guard: Boolean): BatchOperationReport {
         // The guard watches the user this app runs in only.
-        val changed = report.results.filter { it.target.userId == null }.mapNotNull { item ->
-            val success = item.result as? AppOpModeChangeResult.Success ?: return@mapNotNull null
-            GuardRule(
-                packageName = item.target.packageName,
-                uid = item.target.uid,
-                stableOperationName = item.target.stableOperationName,
-                scope = appliedScopes[item.target] ?: item.target.preferredScope,
-                expectedMode = success.appliedMode,
-                autoRestore = false,
-            )
+        val targets = request.targets.filter { it.userId == null }.map {
+            GuardWriteTarget(it.packageName, it.uid, it.stableOperationName)
         }
-        appliedScopes.clear()
-        if (changed.isNotEmpty()) guardRepository.applyBatch(changed, guardNew = guard)
+        return guardController.withUserWrites(targets) {
+            val changed = mutableListOf<GuardRule>()
+            val executor = BatchAppOpsExecutor { applyTarget(it, changed) }
+            try {
+                executor.execute(request.title, request.targets) { completed, _ ->
+                    mutableUiState.value = BatchOperationUiState.Running(request, completed)
+                }
+            } finally {
+                // Save completed writes even if the batch was cancelled partway through.
+                if (changed.isNotEmpty()) {
+                    withContext(NonCancellable) { guardRepository.applyBatch(changed, guardNew = guard) }
+                }
+            }
+        }
     }
 
     private var deferredReport: BatchOperationReport? = null
