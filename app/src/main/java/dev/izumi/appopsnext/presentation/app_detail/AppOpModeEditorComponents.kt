@@ -20,6 +20,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -35,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -47,6 +50,8 @@ import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.R
 import dev.izumi.appopsnext.guard.GuardMode
 import dev.izumi.appopsnext.guard.guards
+import dev.izumi.appopsnext.temporary.TemporaryAllow
+import dev.izumi.appopsnext.temporary.TemporaryAllowResult
 import dev.izumi.appopsnext.presentation.components.AppBottomSheet
 import dev.izumi.appopsnext.presentation.components.PermissionEntryIcon
 import dev.izumi.appopsnext.appops.AppOpRuntimePermissionCatalog
@@ -68,8 +73,16 @@ internal fun AppOpListItem(
     changeStatus: AppOpChangeStatus? = null,
     onRestoreChange: (AppOpChangeStatus.ChangedElsewhere) -> Unit = {},
     onKeepCurrent: () -> Unit = {},
+    temporaryAllow: TemporaryAllow? = null,
+    onRevokeTemporaryAllow: () -> Unit = {},
 ) {
     val currentMode = AppOpMode.fromShellValue(item.mode)
+    val temporaryModeLabel = if (
+        currentMode == AppOpMode.ALLOW && temporaryAllow != null &&
+        (temporaryAllow.scope == item.scope || temporaryAllow.appliedMode == AppOpMode.DEFAULT)
+    ) {
+        stringResource(R.string.temporary_allow_option)
+    } else null
     val context = LocalContext.current
     val usageDetails = AppOpUsageDetailsFormatter.format(
         rawDetails = item.details,
@@ -137,10 +150,11 @@ internal fun AppOpListItem(
                         enabled = editEnabled,
                         onModeSelected = onModeSelected,
                         modes = AppOpMode.choicesFor(item.operationName, currentMode),
+                        displayLabel = temporaryModeLabel,
                     )
                 } else {
                     Text(
-                        text = currentMode?.let { modeLabel(it) } ?: item.mode,
+                        text = temporaryModeLabel ?: currentMode?.let { modeLabel(it) } ?: item.mode,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -153,7 +167,56 @@ internal fun AppOpListItem(
                     style = MaterialTheme.typography.labelSmall,
                 )
             }
-            changeStatus?.let { status ->
+            if (temporaryAllow != null) {
+                val restoring = temporaryAllow.phase == TemporaryAllow.Phase.RESTORING
+                val canRevoke = !restoring && selectedForBatch == null
+                val restoreLabel = modeLabel(temporaryAllow.displayedOriginalMode)
+                val condition = when (temporaryAllow.phase) {
+                    TemporaryAllow.Phase.WAITING_TO_OPEN -> stringResource(R.string.temporary_allow_status_waiting, restoreLabel)
+                    TemporaryAllow.Phase.IN_USE -> stringResource(R.string.temporary_allow_status_leaving, restoreLabel)
+                    TemporaryAllow.Phase.RESTORING -> stringResource(R.string.temporary_allow_status_restoring, restoreLabel)
+                }
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = if (canRevoke) 0.dp else 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_ph_clock_counter_clockwise),
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Text(
+                                text = condition,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                        if (canRevoke) {
+                            TextButton(
+                                onClick = onRevokeTemporaryAllow,
+                                enabled = editEnabled && !isApplying,
+                                contentPadding = PaddingValues(horizontal = 0.dp),
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.temporary_allow_revoke),
+                                    fontWeight = FontWeight.Normal,
+                                )
+                            }
+                        }
+                    }
+                }
+            } else changeStatus?.let { status ->
                 AppOpChangeStatusText(status)
                 if (
                     status is AppOpChangeStatus.ChangedElsewhere &&
@@ -198,6 +261,7 @@ internal fun EditableModeMenu(
     /** Replaces the spoken mode where the button picks a target, not a current value. */
     contentDescription: String? = null,
     modes: List<AppOpMode> = AppOpMode.standard,
+    displayLabel: String? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box {
@@ -214,7 +278,7 @@ internal fun EditableModeMenu(
             Text(
                 text = stringResource(
                     R.string.app_detail_mode_button,
-                    modeLabel(currentMode),
+                    displayLabel ?: modeLabel(currentMode),
                 ),
                 fontWeight = FontWeight.SemiBold,
             )
@@ -240,7 +304,7 @@ internal fun EditableModeMenu(
 @Composable
 internal fun ModeChangeDialog(
     state: AppOpModeChangeUiState,
-    onConfirm: (guard: Boolean) -> Unit,
+    onConfirm: (guard: Boolean, temporary: Boolean) -> Unit,
     onDismiss: () -> Unit,
     onDenyFallbackNoticeDismiss: (Boolean) -> Unit,
     onPermissionFlagNoticeDismiss: (Boolean) -> Unit,
@@ -255,7 +319,8 @@ internal fun ModeChangeDialog(
     val alreadyGuarded = (state as? AppOpModeChangeUiState.Confirming)?.request
         ?.let { guardRules.guards(it.packageName, it.operationName) } == true
     var guardChoice by remember(state) { mutableStateOf<Boolean?>(null) }
-    val guardRequested = guardChoice ?: alreadyGuarded
+    var temporary by remember(state) { mutableStateOf(false) }
+    val guardRequested = !temporary && (guardChoice ?: alreadyGuarded)
     when (state) {
         is AppOpModeChangeUiState.Confirming -> AppBottomSheet(
             onDismissRequest = onDismiss,
@@ -317,7 +382,33 @@ internal fun ModeChangeDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    if ((guardMode != GuardMode.OFF || alreadyGuarded) && state.request.userId == null) {
+                    if (state.request.canAllowTemporarily) {
+                        HorizontalDivider()
+                        Row(
+                            modifier = Modifier.fillMaxWidth().toggleable(
+                                value = temporary,
+                                role = Role.Checkbox,
+                                onValueChange = { temporary = it },
+                            ),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Checkbox(checked = temporary, onCheckedChange = null)
+                            Column(Modifier.padding(start = 8.dp)) {
+                                Text(stringResource(R.string.temporary_allow_option))
+                                Text(
+                                    text = stringResource(
+                                        R.string.temporary_allow_summary,
+                                        state.request.appLabel.ifBlank { state.request.packageName },
+                                        modeLabel(state.request.originalMode),
+                                        stringResource(R.string.app_op_usage_seconds, TemporaryAllow.LEAVE_GRACE_MILLIS / 1_000),
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                    if (!temporary && (guardMode != GuardMode.OFF || alreadyGuarded) && state.request.userId == null) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -338,7 +429,7 @@ internal fun ModeChangeDialog(
                 }
             },
             confirmButton = {
-                Button(onClick = { onConfirm(guardRequested) }) {
+                Button(onClick = { onConfirm(guardRequested, temporary) }) {
                     Text(text = stringResource(R.string.action_apply))
                 }
             },
@@ -346,6 +437,22 @@ internal fun ModeChangeDialog(
                 OutlinedButton(onClick = onDismiss) {
                     Text(text = stringResource(R.string.action_cancel))
                 }
+            },
+        )
+
+        is AppOpModeChangeUiState.TemporaryAllowUnavailable -> AppBottomSheet(
+            onDismissRequest = onDismiss,
+            title = { Text(stringResource(R.string.temporary_allow_unavailable)) },
+            text = {
+                Text(stringResource(when (state.reason) {
+                    TemporaryAllowResult.Unavailable.ALREADY_ACTIVE -> R.string.temporary_allow_already_active
+                    TemporaryAllowResult.Unavailable.DISCONNECTED -> R.string.temporary_allow_disconnected
+                    TemporaryAllowResult.Unavailable.SCOPE_CHANGED -> R.string.temporary_allow_scope_changed
+                    TemporaryAllowResult.Unavailable.MONITOR_UNAVAILABLE -> R.string.temporary_allow_monitor_unavailable
+                }))
+            },
+            confirmButton = {
+                Button(onClick = onDismiss) { Text(stringResource(R.string.action_dismiss)) }
             },
         )
 
@@ -510,17 +617,19 @@ private fun ModeChangeFailureDialog(
         )
         return
     }
-    val canTryForeground =
+    val canTryForeground = !state.temporary &&
         ModeChangeAlternativePolicy.canTryForeground(
             request = state.request,
             result = state.result,
         )
+    val temporaryMismatch = state.temporary && state.result.phase == AppOpModeChangePhase.VERIFY_REQUESTED &&
+        state.result.observedMode != null
     AppBottomSheet(
         onDismissRequest = onDismiss,
         title = {
             Text(
                 text = stringResource(
-                    R.string.app_detail_mode_change_failure,
+                    if (state.temporary) R.string.temporary_allow_unavailable else R.string.app_detail_mode_change_failure,
                 ),
                 color = MaterialTheme.colorScheme.error,
                 fontWeight = FontWeight.SemiBold,
@@ -548,7 +657,14 @@ private fun ModeChangeFailureDialog(
                         ),
                     ),
                 )
-                if (state.runtimePermissionManaged) {
+                if (temporaryMismatch) {
+                    Text(
+                        text = stringResource(
+                            R.string.temporary_allow_verify_mismatch,
+                            modeLabel(requireNotNull(state.result.observedMode)),
+                        ),
+                    )
+                } else if (state.runtimePermissionManaged) {
                     Text(
                         text = stringResource(
                             R.string.app_detail_mode_runtime_managed_hint,
@@ -586,7 +702,7 @@ private fun ModeChangeFailureDialog(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
-                state.result.observedMode?.let { observedMode ->
+                state.result.observedMode?.takeUnless { temporaryMismatch }?.let { observedMode ->
                     Text(
                         text = stringResource(
                             R.string.app_detail_mode_observed,

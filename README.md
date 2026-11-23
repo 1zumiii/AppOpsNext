@@ -180,14 +180,28 @@ screen identifies those packages. Automatic scope fallback is constrained to
 avoid silently extending a change to other apps. Batch results report each
 target separately.
 
+### Allow an operation temporarily
+
+When changing a single operation to **Allow**, select **Allow temporarily** in
+the confirmation. If the app is not already open, open it within 2 minutes.
+AppOpsNext restores the previous mode about 15 seconds after it detects that
+the app has left the screen or the screen is locked. Returning during that
+interval keeps the allowance active. The mode is also restored if the app is
+not opened in time.
+
+The app details show the temporary allowance and the mode it will return to.
+Select **Revoke now** to end it early. The notification names the app and
+operation and opens the app details. Temporary allowances work with Setting
+guard turned off.
+
 ## Permissions and network use
 
 | Permission | Why it is needed |
 | --- | --- |
 | `QUERY_ALL_PACKAGES` | An AppOps manager has to discover packages that are not known at build time. |
 | `INTERNET` | Only to check quietly whether a newer release exists. |
-| `POST_NOTIFICATIONS` | Results of automatic template application, access reports from the experimental monitor, and Setting guard alerts. |
-| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE` | Keeps the callbacks of the experimental access monitor and of realtime Setting guard reachable while they are switched on. |
+| `POST_NOTIFICATIONS` | Automatic template results, access reports from the experimental monitor, Setting guard alerts, and active temporary allowances. |
+| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE` | Keeps access monitoring, realtime Setting guard, and checks for ending temporary allowances running in the background. |
 
 Records stay on the device. Only the update check uses the network: it reads
 public release information from GitHub and lists an available version in the

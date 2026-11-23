@@ -16,11 +16,13 @@ import dev.izumi.appopsnext.appops.model.PackageOpsLoadResult
 import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.guard.GuardWriteTarget
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
+import dev.izumi.appopsnext.temporary.TemporaryAllowResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -31,7 +33,8 @@ class AppDetailViewModel(
         getApplication<AppOpsNextApplication>().privilegedServiceClient
     private val userSettingsRepository =
         getApplication<AppOpsNextApplication>().userSettingsRepository
-    private val repository = getApplication<AppOpsNextApplication>().appOpsRepository
+    private val appContext = getApplication<AppOpsNextApplication>()
+    private val repository = appContext.appOpsRepository
     private val adaptiveScopeExecutor =
         AdaptiveScopeModeChangeExecutor(
             writeMemory = getApplication<AppOpsNextApplication>().revokedCompatWriteMemory,
@@ -58,7 +61,8 @@ class AppDetailViewModel(
             }
         }
         viewModelScope.launch {
-            getApplication<AppOpsNextApplication>().guardController.restores.collect { refreshIfReady() }
+            merge(appContext.guardController.restores, appContext.temporaryAllowController.restores)
+                .collect { refreshIfReady() }
         }
     }
 
@@ -103,6 +107,7 @@ class AppDetailViewModel(
             mutableModeChangeState.value = AppOpModeChangeUiState.Confirming(
                 AppOpModeChangeRequest(
                     packageName = app.packageName,
+                    appLabel = app.label,
                     operationName = operationName,
                     scope = scope,
                     originalMode = originalMode,
@@ -143,18 +148,26 @@ class AppDetailViewModel(
         mutableSearchQuery.value = query
     }
 
-    fun confirmModeChange(guard: Boolean = false) {
+    fun confirmModeChange(guard: Boolean = false, temporary: Boolean = false) {
         val request =
             (mutableModeChangeState.value as? AppOpModeChangeUiState.Confirming)
                 ?.request
                 ?: return
         if (selectedApp.value?.packageName != request.packageName) return
+        if (temporary && !request.canAllowTemporarily) return
 
         mutableModeChangeState.value = AppOpModeChangeUiState.Applying(request)
         modeChangeJob = viewModelScope.launch {
             val app = selectedApp.value
                 ?.takeIf { it.packageName == request.packageName }
                 ?: return@launch
+            val writeTarget = GuardWriteTarget(request.packageName, app.uid, request.operationName)
+            if (temporary) {
+                val result = appContext.temporaryAllowController.allow(writeTarget, request.scope, request.originalMode)
+                if (result is TemporaryAllowResult.Write) updateDisplayedMode(request.copy(scope = result.scope), result.result)
+                mutableModeChangeState.value = result.temporaryAllowUiState(request)
+                return@launch
+            }
             val operation = AppOpIdentifier(
                 stableName = request.operationName,
                 shellName = request.operationName,
@@ -162,9 +175,8 @@ class AppDetailViewModel(
             var appliedScope = request.scope
             var permissionFlagApplied = false
             var restrictionBlocked = false
-            val guardController = getApplication<AppOpsNextApplication>().guardController
-            val guardTarget = GuardWriteTarget(request.packageName, app.uid, request.operationName)
-                .takeIf { app.userId == null }
+            val guardController = appContext.guardController
+            val guardTarget = writeTarget.takeIf { app.userId == null }
             val outcome = guardController.withUserWrites(listOfNotNull(guardTarget)) {
                 repository.withWriteTransaction { transaction ->
                     DenyFallbackModeChangeExecutor {

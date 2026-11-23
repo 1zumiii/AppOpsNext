@@ -6,8 +6,19 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-internal data class GuardWriteTarget(val packageName: String, val uid: Int, val operationName: String) {
-    val stableOperationName: String = AppOpNames.stableName(operationName)
+@ConsistentCopyVisibility
+internal data class GuardWriteTarget private constructor(
+    val packageName: String,
+    val uid: Int,
+    val stableOperationName: String,
+) {
+    fun matches(rule: GuardRule): Boolean = stableOperationName == rule.stableOperationName &&
+        (packageName == rule.packageName || uid == rule.uid)
+
+    companion object {
+        operator fun invoke(packageName: String, uid: Int, operationName: String): GuardWriteTarget =
+            GuardWriteTarget(packageName, uid, AppOpNames.stableName(operationName))
+    }
 }
 
 /** Keeps a guard check from acting on a mode while its user write is in progress. */
@@ -42,9 +53,7 @@ internal class GuardUserWrites(private val checkMutex: Mutex) {
 
     /** Called under [checkMutex]. Either side can fall back to writing the shared UID. */
     fun shouldSkip(rule: GuardRule): Boolean {
-        val writing = active[rule.stableOperationName].orEmpty().any {
-            it.packageName == rule.packageName || it.uid == rule.uid
-        }
+        val writing = active[rule.stableOperationName].orEmpty().any { it.matches(rule) }
         if (writing) skipped += rule.stableOperationName
         return writing
     }

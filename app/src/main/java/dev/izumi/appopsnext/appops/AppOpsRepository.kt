@@ -301,11 +301,13 @@ class AppOpsRepository(
             expectedOriginalMode: AppOpMode,
             requestedMode: AppOpMode,
             userId: Int? = null,
+            requireExactOriginalMode: Boolean = false,
+            acceptUidDefaultForAllow: Boolean = false,
         ): AppOpModeChangeResult = operationMutex.withLock {
             check(active) { "Write transaction has finished" }
             changeModeInTransaction(
                 packageName, operation, scope, expectedOriginalMode, requestedMode,
-                userId,
+                userId, requireExactOriginalMode, acceptUidDefaultForAllow,
             ).also { reportFailure(it, packageName, userId, operation, scope, requestedMode) }
         }
 
@@ -389,6 +391,8 @@ class AppOpsRepository(
         expectedOriginalMode: AppOpMode,
         requestedMode: AppOpMode,
         userId: Int?,
+        requireExactOriginalMode: Boolean,
+        acceptUidDefaultForAllow: Boolean,
     ): AppOpModeChangeResult {
         val originalMode = readMode(packageName, operation, scope, userId)
             ?: return AppOpModeChangeResult.Failure(
@@ -399,7 +403,7 @@ class AppOpsRepository(
             )
 
         if (originalMode != expectedOriginalMode &&
-            !isSameEffectiveMode(operation, expectedOriginalMode, originalMode)
+            (requireExactOriginalMode || !isSameEffectiveMode(operation, expectedOriginalMode, originalMode))
         ) {
             return AppOpModeChangeResult.Failure(
                 phase = AppOpModeChangePhase.CHECK_ORIGINAL,
@@ -416,6 +420,7 @@ class AppOpsRepository(
             originalMode = originalMode,
             requestedMode = requestedMode,
             userId = userId,
+            acceptUidDefaultForAllow = acceptUidDefaultForAllow,
         )
     }
 
@@ -450,6 +455,7 @@ class AppOpsRepository(
         originalMode: AppOpMode,
         requestedMode: AppOpMode,
         userId: Int?,
+        acceptUidDefaultForAllow: Boolean = false,
     ): AppOpModeChangeResult {
         if (originalMode == requestedMode) {
             return AppOpModeChangeResult.Success(
@@ -476,7 +482,10 @@ class AppOpsRepository(
 
             failurePhase = AppOpModeChangePhase.VERIFY_REQUESTED
             val observedMode = readMode(packageName, operation, scope, userId)
-            if (observedMode != requestedMode) {
+            val usesPackageAllow = acceptUidDefaultForAllow && scope == AppOpScope.UID &&
+                requestedMode == AppOpMode.ALLOW && observedMode == AppOpMode.DEFAULT &&
+                readMode(packageName, operation, AppOpScope.PACKAGE, userId) == AppOpMode.ALLOW
+            if (observedMode == null || (observedMode != requestedMode && !usesPackageAllow)) {
                 return restoreAfterFailedChange(
                     packageName = packageName,
                     operation = operation,

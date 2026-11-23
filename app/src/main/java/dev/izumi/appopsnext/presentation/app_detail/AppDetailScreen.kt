@@ -97,7 +97,7 @@ fun AppDetailScreen(
         AppOpMode,
         AppOpMode,
     ) -> Unit,
-    onModeChangeConfirmed: (guard: Boolean) -> Unit,
+    onModeChangeConfirmed: (guard: Boolean, temporary: Boolean) -> Unit,
     onModeChangeDismissed: () -> Unit,
     onDenyFallbackNoticeDismissed: (Boolean) -> Unit,
     onPermissionFlagNoticeDismissed: (Boolean) -> Unit,
@@ -342,6 +342,14 @@ private fun ReadyContent(
     }
     val entries = state.snapshot.entries
     val application = context.applicationContext as AppOpsNextApplication
+    val temporaryAllowController = application.temporaryAllowController
+    val temporaryAllows by temporaryAllowController.active.collectAsStateWithLifecycle(emptyList())
+    val appTemporaryAllows = remember(temporaryAllows, state.app) {
+        temporaryAllows.filter {
+            state.app.userId == null && it.target.packageName == state.app.packageName &&
+                it.target.uid == state.app.uid
+        }.associateBy { it.target.stableOperationName }
+    }
     val changeLog = application.appOpChangeLog
     val changes by changeLog.records.collectAsStateWithLifecycle(emptyList())
     val changeScope = rememberCoroutineScope()
@@ -398,6 +406,7 @@ private fun ReadyContent(
         }
     }
     val operationRow: @Composable (AppOpDisplayItem) -> Unit = { item ->
+        val temporaryAllow = appTemporaryAllows[AppOpNames.stableName(item.operationName)]
         FavoriteOperationRow(
             operationName = item.operationName,
             state = favorites,
@@ -433,6 +442,10 @@ private fun ReadyContent(
                     packageRecords = packageChanges,
                     operationName = item.operationName,
                 ) { scope -> entries.modeAt(item.operationName, scope) },
+                temporaryAllow = temporaryAllow,
+                onRevokeTemporaryAllow = {
+                    if (temporaryAllow != null) temporaryAllowController.revoke(temporaryAllow)
+                },
                 onRestoreChange = { status ->
                     status.currentMode?.let { current ->
                         onModeChangeRequested(

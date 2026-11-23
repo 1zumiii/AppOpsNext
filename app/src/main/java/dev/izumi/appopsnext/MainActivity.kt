@@ -1,6 +1,8 @@
 package dev.izumi.appopsnext
 
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import dev.izumi.appopsnext.apps.model.InstalledApp
 import dev.izumi.appopsnext.guard.GuardNotifier
 import dev.izumi.appopsnext.presentation.experimental.GuardViewModel
 import android.content.res.Configuration
@@ -30,6 +32,7 @@ import dev.izumi.appopsnext.presentation.history.HistoryViewModel
 import dev.izumi.appopsnext.presentation.permissions.PermissionBrowserViewModel
 import dev.izumi.appopsnext.presentation.settings.SettingsViewModel
 import dev.izumi.appopsnext.presentation.templates.TemplatesViewModel
+import dev.izumi.appopsnext.temporary.TemporaryAllowService
 import dev.izumi.appopsnext.ui.theme.AppOpsNextTheme
 
 class MainActivity : ComponentActivity() {
@@ -48,6 +51,7 @@ class MainActivity : ComponentActivity() {
     private val monitorTemplatesViewModel: MonitorTemplatesViewModel by viewModels()
     /** Bumped by a guard notification so the root screen opens the guard page. */
     private val openGuardRequests = mutableIntStateOf(0)
+    private val openTemporaryAllowApp = mutableStateOf<InstalledApp?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +60,7 @@ class MainActivity : ComponentActivity() {
         restoreBackgroundMonitor()
         showNewAppResult(intent)
         showGuard(intent)
+        showTemporaryAllowApp(intent)
 
         setContent {
             val diagnosticsUiState =
@@ -119,6 +124,8 @@ class MainActivity : ComponentActivity() {
                     guardViewModel = guardViewModel,
                     monitorTemplatesViewModel = monitorTemplatesViewModel,
                     openGuardRequest = openGuardRequests.intValue,
+                    openTemporaryAllowApp = openTemporaryAllowApp.value,
+                    onTemporaryAllowAppOpened = { openTemporaryAllowApp.value = null },
                     onMonitorEnabledChange =
                         experimentalViewModel::setMonitorEnabled,
                     onStopBackgroundWork =
@@ -248,12 +255,22 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         showNewAppResult(intent)
         showGuard(intent)
+        showTemporaryAllowApp(intent)
     }
 
     private fun showGuard(intent: Intent) {
         if (!intent.getBooleanExtra(GuardNotifier.EXTRA_OPEN_GUARD, false)) return
         intent.removeExtra(GuardNotifier.EXTRA_OPEN_GUARD)
         openGuardRequests.intValue++
+    }
+
+    private fun showTemporaryAllowApp(intent: Intent) {
+        val packageName = intent.getStringExtra(TemporaryAllowService.EXTRA_OPEN_APP) ?: return
+        intent.removeExtra(TemporaryAllowService.EXTRA_OPEN_APP)
+        lifecycleScope.launch {
+            val repository = (application as AppOpsNextApplication).installedAppsRepository
+            openTemporaryAllowApp.value = repository.loadInstalledApp(packageName)
+        }
     }
 
     /**
@@ -314,6 +331,7 @@ class MainActivity : ComponentActivity() {
         (application as AppOpsNextApplication).apply {
             newAppPolicyCoordinator.onAppForeground()
             guardController.onAppForeground()
+            temporaryAllowController.onAppForeground()
             historyArchiveRecorder.onAppForeground()
             appOpChangeDriftMonitor.refresh()
         }

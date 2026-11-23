@@ -19,12 +19,14 @@ import dev.izumi.appopsnext.presentation.app_detail.AppOpModeChangeRequest
 import dev.izumi.appopsnext.presentation.app_detail.AppOpModeChangeUiState
 import dev.izumi.appopsnext.presentation.app_detail.DenyFallbackModeChangeExecutor
 import dev.izumi.appopsnext.presentation.app_detail.ModeChangeAlternativePolicy
+import dev.izumi.appopsnext.presentation.app_detail.temporaryAllowUiState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -47,7 +49,7 @@ class PermissionBrowserViewModel(
 
     init {
         viewModelScope.launch {
-            app.guardController.restores.collect { refresh() }
+            merge(app.guardController.restores, app.temporaryAllowController.restores).collect { refresh() }
         }
     }
 
@@ -106,6 +108,7 @@ class PermissionBrowserViewModel(
         mutableChange.value = AppOpModeChangeUiState.Confirming(
             AppOpModeChangeRequest(
                 packageName = appRow.packageName,
+                appLabel = appRow.label,
                 operationName = operation,
                 scope = effective.scope,
                 originalMode = originalMode,
@@ -118,13 +121,21 @@ class PermissionBrowserViewModel(
         )
     }
 
-    fun confirm(guard: Boolean = false) {
+    fun confirm(guard: Boolean = false, temporary: Boolean = false) {
         val request =
             (mutableChange.value as? AppOpModeChangeUiState.Confirming)?.request
                 ?: return
         val target = pendingApp ?: return
+        if (temporary && !request.canAllowTemporarily) return
         mutableChange.value = AppOpModeChangeUiState.Applying(request)
         viewModelScope.launch {
+            val writeTarget = GuardWriteTarget(request.packageName, target.uid, request.operationName)
+            if (temporary) {
+                val result = app.temporaryAllowController.allow(writeTarget, request.scope, request.originalMode)
+                mutableChange.value = result.temporaryAllowUiState(request)
+                refresh()
+                return@launch
+            }
             val operation = AppOpIdentifier(
                 stableName = request.operationName,
                 shellName = request.operationName,
@@ -133,8 +144,7 @@ class PermissionBrowserViewModel(
             var permissionFlagApplied = false
             var restrictionBlocked = false
             val guardController = app.guardController
-            val guardTarget = GuardWriteTarget(request.packageName, target.uid, request.operationName)
-                .takeIf { target.userId == null }
+            val guardTarget = writeTarget.takeIf { target.userId == null }
             val outcome = guardController.withUserWrites(listOfNotNull(guardTarget)) {
                 repository.withWriteTransaction { transaction ->
                     DenyFallbackModeChangeExecutor { mode ->

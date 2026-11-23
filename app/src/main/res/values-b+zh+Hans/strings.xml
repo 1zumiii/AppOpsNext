@@ -484,8 +484,8 @@
     <string name="miui_op_label_auto_start_switch">自启动开关</string>
     <string name="miui_op_label_fallback">MIUI 私有权限 %1$d</string>
     <string name="app_op_usage_separator">" · "</string>
-    <string name="app_op_usage_less_than_minute">少于 1 分钟</string>
-    <string name="app_op_usage_ago">%1$s前</string>
+    <string name="app_op_usage_less_than_minute">上次访问 · 不到 1 分钟前</string>
+    <string name="app_op_usage_ago">上次访问 · %1$s前</string>
     <string name="app_op_usage_duration">持续 %1$s</string>
     <string name="app_op_usage_duration_less_than_second">持续不足 1 秒</string>
     <string name="app_op_usage_rejected_less_than_minute">少于 1 分钟前被拒绝</string>
@@ -791,6 +791,19 @@
     <string name="guard_channel_status">实时守护</string>
     <string name="guard_service_title">实时守护已开启</string>
     <string name="guard_confirm_option">守护此设置</string>
+    <string name="temporary_allow_option">临时允许</string>
+    <string name="temporary_allow_summary">应用修改后，若 2 分钟内未使用 %1$s，或离开应用、锁屏约 %3$s，恢复为“%2$s”。</string>
+    <string name="temporary_allow_notification_item">临时允许 · %1$s · %2$s</string>
+    <string name="temporary_allow_status_waiting">超时未使用则恢复为“%1$s”</string>
+    <string name="temporary_allow_status_leaving">离开或锁屏后恢复为“%1$s”</string>
+    <string name="temporary_allow_status_restoring">等待收回 · 将恢复为“%1$s”</string>
+    <string name="temporary_allow_revoke">立即收回</string>
+    <string name="temporary_allow_unavailable">无法临时允许</string>
+    <string name="temporary_allow_already_active">这项设置已在临时允许中。可先在应用详情中收回。</string>
+    <string name="temporary_allow_disconnected">请连接 Shizuku 后重试。</string>
+    <string name="temporary_allow_scope_changed">应用已不可用，或修改会影响共享 UID 的其他应用。</string>
+    <string name="temporary_allow_monitor_unavailable">无法启动恢复设置所需的检查。请重试。</string>
+    <string name="temporary_allow_verify_mismatch">应写入“允许”，实际读到“%1$s”。</string>
     <plurals name="guard_service_text">
         <item quantity="other">正在守护 %d 项设置</item>
     </plurals>

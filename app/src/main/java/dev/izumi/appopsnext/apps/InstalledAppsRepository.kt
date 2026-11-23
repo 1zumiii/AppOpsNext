@@ -22,6 +22,14 @@ class InstalledAppsRepository(
     private var cachedLocale: Locale? = null
     private var cachedAtNanos = 0L
 
+    suspend fun loadInstalledApp(packageName: String): InstalledApp? = withContext(Dispatchers.IO) {
+        try {
+            toInstalledApp(packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0)))
+        } catch (_: PackageManager.NameNotFoundException) {
+            null
+        }
+    }
+
     suspend fun loadInstalledApps(forceRefresh: Boolean = false): List<InstalledApp> =
         withContext(Dispatchers.IO) {
             cacheMutex.withLock {

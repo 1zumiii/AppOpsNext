@@ -21,6 +21,8 @@ import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
 import dev.izumi.appopsnext.monitor.ForegroundStateProbe
 import dev.izumi.appopsnext.shizuku.PrivilegedServiceClient
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
+import dev.izumi.appopsnext.temporary.TemporaryAllowRepository
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CancellationException
@@ -49,7 +51,7 @@ import kotlinx.coroutines.withContext
  * same pipeline as automatic new-app rules and need the privileged backend, which
  * a background check connects on demand.
  */
-class GuardController(
+class GuardController internal constructor(
     private val context: Context,
     private val repository: GuardRepository,
     private val appOpsRepository: AppOpsRepository,
@@ -57,6 +59,7 @@ class GuardController(
     private val diagnosticLog: DiagnosticLogRepository,
     private val scope: CoroutineScope,
     writeMemory: RevokedCompatWriteMemory,
+    private val temporaryAllows: TemporaryAllowRepository,
     private val notifier: GuardNotifier = GuardNotifier(context),
 ) {
     private val checkMutex = Mutex()
@@ -119,7 +122,17 @@ class GuardController(
     /** [operations] limits the check to rules of these `android:` names, as a mode callback does. */
     suspend fun runCheck(trigger: String, operations: Set<String>? = null): GuardChecker.Result? =
         checkMutex.withLock {
-            val allRules = repository.rules.first()
+            val storedRules = repository.rules.first()
+            if (storedRules.isEmpty()) return@withLock null
+            val temporaryTargets = try {
+                temporaryAllows.entries().map { it.target }.groupBy { it.stableOperationName }
+            } catch (error: IOException) {
+                diagnosticLog.error(LOG_SOURCE, "Could not check for temporary permissions. trigger=$trigger", error)
+                return@withLock null
+            }
+            val allRules = storedRules.filterNot { rule ->
+                temporaryTargets[rule.stableOperationName].orEmpty().any { it.matches(rule) }
+            }
             val rules = allRules.filter {
                 (operations == null || it.stableOperationName in operations) && !userWrites.shouldSkip(it)
             }
@@ -174,6 +187,7 @@ class GuardController(
         guard: Boolean,
     ) = withContext(NonCancellable) {
         val stableName = AppOpNames.stableName(operationName)
+        temporaryAllows.supersede(setOf(GuardWriteTarget(packageName, uid, stableName) to scope))
         repository.replaceSetting(packageName, stableName) { existing ->
             if (!guard) {
                 null
@@ -187,6 +201,17 @@ class GuardController(
                     autoRestore = false,
                 ).keepingRestoreOf(existing)
             }
+        }
+        Unit
+    }
+
+    internal suspend fun onBatchUserChanges(changed: List<GuardRule>, guardNew: Boolean) {
+        if (changed.isEmpty()) return
+        withContext(NonCancellable) {
+            temporaryAllows.supersede(changed.mapTo(mutableSetOf()) {
+                GuardWriteTarget(it.packageName, it.uid, it.stableOperationName) to it.scope
+            })
+            repository.applyBatch(changed, guardNew)
         }
     }
 

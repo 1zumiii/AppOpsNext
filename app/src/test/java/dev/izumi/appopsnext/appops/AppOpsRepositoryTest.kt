@@ -284,6 +284,34 @@ class AppOpsRepositoryTest {
         }
 
     @Test
+    fun `exact restoration preserves a newer default with the same effective mode`() =
+        runBlocking {
+            val gateway = FakeGateway(
+                getResults = ArrayDeque(listOf(success("RUN_IN_BACKGROUND: default\n"))),
+                setResults = ArrayDeque(),
+            )
+            val repository = AppOpsRepository(
+                privilegedGateway = gateway,
+                defaultModeOf = { AppOpMode.ALLOW },
+            )
+
+            val result = repository.withWriteTransaction { transaction ->
+                transaction.changeMode(
+                    packageName = TEST_PACKAGE,
+                    operation = runInBackground,
+                    scope = AppOpScope.PACKAGE,
+                    expectedOriginalMode = AppOpMode.ALLOW,
+                    requestedMode = AppOpMode.IGNORE,
+                    requireExactOriginalMode = true,
+                )
+            } as AppOpModeChangeResult.Failure
+
+            assertEquals(AppOpModeChangePhase.CHECK_ORIGINAL, result.phase)
+            assertEquals(AppOpMode.DEFAULT, result.observedMode)
+            assertTrue(gateway.requestedModes.isEmpty())
+        }
+
+    @Test
     fun `package mode change read failure performs no write`() =
         runBlocking {
             val gateway = FakeGateway(

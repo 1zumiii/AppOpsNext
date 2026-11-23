@@ -21,6 +21,8 @@ import dev.izumi.appopsnext.diagnostics.DiagnosticLogTier
 import dev.izumi.appopsnext.guard.GuardController
 import dev.izumi.appopsnext.guard.GuardNotifier
 import dev.izumi.appopsnext.guard.GuardRepository
+import dev.izumi.appopsnext.temporary.TemporaryAllowController
+import dev.izumi.appopsnext.temporary.TemporaryAllowRepository
 import dev.izumi.appopsnext.settings.UserSettingsRepository
 import dev.izumi.appopsnext.shizuku.PrivilegedServiceClient
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
@@ -170,6 +172,8 @@ class AppOpsNextApplication : Application() {
 
     val guardNotifier: GuardNotifier by lazy { GuardNotifier(this) }
 
+    private val temporaryAllowRepository by lazy { TemporaryAllowRepository(this) }
+
     val guardController: GuardController by lazy {
         GuardController(
             context = this,
@@ -179,7 +183,15 @@ class AppOpsNextApplication : Application() {
             diagnosticLog = diagnosticLogRepository,
             scope = applicationScope,
             writeMemory = revokedCompatWriteMemory,
+            temporaryAllows = temporaryAllowRepository,
             notifier = guardNotifier,
+        )
+    }
+
+    internal val temporaryAllowController by lazy {
+        TemporaryAllowController(
+            this, temporaryAllowRepository, appOpsRepository, guardController,
+            privilegedServiceClient, diagnosticLogRepository, applicationScope,
         )
     }
 
@@ -316,6 +328,7 @@ class AppOpsNextApplication : Application() {
         favoriteOperationsState
         historyArchiveRecorder.start()
         guardController.start()
+        temporaryAllowController.start()
         applicationScope.launch {
             privilegedServiceClient.state
                 .filterIsInstance<PrivilegedServiceState.Connected>()

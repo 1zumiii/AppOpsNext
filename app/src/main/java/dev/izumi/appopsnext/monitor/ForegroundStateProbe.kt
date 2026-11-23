@@ -3,6 +3,7 @@ package dev.izumi.appopsnext.monitor
 import android.os.SystemClock
 import dev.izumi.appopsnext.appops.PrivilegedAppOpsGateway
 import dev.izumi.appopsnext.appops.parser.UidStateParser
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -29,10 +30,11 @@ internal class ForegroundStateProbe(
     private val cache = mutableMapOf<String, Entry>()
 
     /** @return true only when the platform says this UID is the top application. */
-    suspend fun isOnScreen(uid: Int, packageName: String): Boolean {
-        val states = statesOf(packageName) ?: return false
-        return states[uid] == UidStateParser.STATE_TOP
-    }
+    suspend fun isOnScreen(uid: Int, packageName: String): Boolean = onScreenState(uid, packageName) == true
+
+    /** Null means the platform state could not be read. */
+    suspend fun onScreenState(uid: Int, packageName: String): Boolean? =
+        statesOf(packageName)?.let { it[uid] == UidStateParser.STATE_TOP }
 
     private suspend fun statesOf(packageName: String): Map<Int, String>? = lock.withLock {
         val now = nowMillis()
@@ -42,10 +44,14 @@ internal class ForegroundStateProbe(
         if (cached != null && now - cached.readAt in 0 until cacheMillis) {
             return@withLock cached.states
         }
-        val states = runCatching {
+        val states = try {
             val result = gateway.getUidStates(packageName)
             if (result.exitCode != 0) null else UidStateParser.parse(result.stdout)
-        }.getOrNull()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            null
+        }
         if (states != null) {
             cache[packageName] = Entry(now, states)
             if (cache.size > MAX_CACHED_PACKAGES) evictOldest(now)

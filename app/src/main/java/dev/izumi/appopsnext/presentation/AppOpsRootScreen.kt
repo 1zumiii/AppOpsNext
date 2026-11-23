@@ -94,7 +94,7 @@ fun AppOpsRootScreen(
     onPermissionSelected: (String?) -> Unit,
     onRefreshPermission: () -> Unit,
     onPermissionModeChangeRequested: (InstalledApp, AppOpMode) -> Unit,
-    onPermissionModeChangeConfirmed: (guard: Boolean) -> Unit,
+    onPermissionModeChangeConfirmed: (guard: Boolean, temporary: Boolean) -> Unit,
     onPermissionModeChangeDismissed: () -> Unit,
     onPermissionDenyNoticeDismissed: (Boolean) -> Unit,
     onPermissionFlagNoticeDismissedForBrowser: (Boolean) -> Unit,
@@ -123,7 +123,7 @@ fun AppOpsRootScreen(
         AppOpMode,
         AppOpMode,
     ) -> Unit,
-    onAppOpModeChangeConfirmed: (guard: Boolean) -> Unit,
+    onAppOpModeChangeConfirmed: (guard: Boolean, temporary: Boolean) -> Unit,
     onAppOpModeChangeDismissed: () -> Unit,
     onDenyFallbackNoticeDismissed: (Boolean) -> Unit,
     onPermissionFlagNoticeDismissed: (Boolean) -> Unit,
@@ -145,6 +145,8 @@ fun AppOpsRootScreen(
     guardViewModel: GuardViewModel,
     monitorTemplatesViewModel: MonitorTemplatesViewModel,
     openGuardRequest: Int,
+    openTemporaryAllowApp: InstalledApp?,
+    onTemporaryAllowAppOpened: () -> Unit,
     onMonitorEnabledChange: (Boolean) -> Unit,
     onStopBackgroundWork: () -> Unit,
     onEnableUnconfirmedMonitor: () -> Unit,
@@ -243,6 +245,17 @@ fun AppOpsRootScreen(
     // restored selection is re-applied once. Later selections notify it directly.
     LaunchedEffect(Unit) {
         selectedApp?.let(onAppSelected)
+    }
+    LaunchedEffect(openTemporaryAllowApp) {
+        val app = openTemporaryAllowApp ?: return@LaunchedEffect
+        selectedDestination = MainDestination.APPS
+        showPermissionInfo = false
+        onPermissionModeChangeDismissed()
+        appOverPermission = permissionBrowserState.operation != null
+        selectedApp = app
+        onAppSelected(app)
+        onAppOpSearchQueryChange("")
+        onTemporaryAllowAppOpened()
     }
     val historyVisible = selectedDestination == MainDestination.HISTORY && selectedApp == null
     DisposableEffect(historyVisible) {

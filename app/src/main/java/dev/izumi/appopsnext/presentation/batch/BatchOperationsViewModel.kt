@@ -22,13 +22,11 @@ import dev.izumi.appopsnext.guard.GuardRule
 import dev.izumi.appopsnext.guard.GuardWriteTarget
 import dev.izumi.appopsnext.templates.model.PermissionTemplate
 import dev.izumi.appopsnext.templates.NewAppPolicyTemplate
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class BatchOperationsViewModel(
     application: Application,
@@ -274,9 +272,7 @@ class BatchOperationsViewModel(
                 }
             } finally {
                 // Save completed writes even if the batch was cancelled partway through.
-                if (changed.isNotEmpty()) {
-                    withContext(NonCancellable) { guardRepository.applyBatch(changed, guardNew = guard) }
-                }
+                guardController.onBatchUserChanges(changed, guardNew = guard)
             }
         }
     }
