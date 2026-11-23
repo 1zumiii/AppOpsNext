@@ -68,6 +68,7 @@ class AppBackupCodecTest {
                 GuardRule("dev.izumi.one", 10_123, "android:camera", AppOpScope.PACKAGE, AppOpMode.IGNORE, true),
                 GuardRule("dev.izumi.two", 10_124, "android:coarse_location", AppOpScope.UID, AppOpMode.DENY, false),
                 GuardRule("dev.izumi.three", 10_125, "android:camera", AppOpScope.PACKAGE, AppOpMode.ALLOW, true, 30),
+                GuardRule("dev.izumi.four", 10_126, "android:camera", AppOpScope.PACKAGE, AppOpMode.IGNORE, true, 0, true),
             ),
             restoreLimit = 7,
         ),

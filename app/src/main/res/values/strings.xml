@@ -187,7 +187,7 @@
     <string name="settings_records_automation">Records and automation</string>
     <string name="settings_data_support">Data and support</string>
     <string name="settings_about_app">About AppOpsNext</string>
-    <string name="settings_experimental_summary">Access monitoring and setting guard</string>
+    <string name="settings_experimental_summary">Advanced and experimental features</string>
     <string name="settings_hide_system_apps">Hide system apps</string>
     <string name="settings_hide_system_apps_detail">Only user apps in lists and history</string>
     <string name="settings_language">App language</string>
@@ -276,7 +276,7 @@
     <string name="settings_saved_history_empty">No saved records</string>
     <string name="settings_saved_history_entry">History persistence</string>
     <string name="settings_saved_history_status_on">On · %1$d saved</string>
-    <string name="settings_saved_history_status_off">Off</string>
+    <string name="settings_saved_history_status_off">Off · The system keeps individual records for 7 days</string>
     <string name="settings_saved_history_status_off_kept">Off · %1$d still saved</string>
     <string name="settings_saved_history_status_unreadable">Unreadable · saving paused</string>
     <string name="settings_saved_history_status_write_failed">Not written · retried at the next history read</string>
@@ -506,6 +506,8 @@
     <string name="monitor_summary">Records the permission accesses that the system reports, and notifies you as configured.</string>
     <string name="monitor_notification_required">Notification permission must be enabled to receive monitoring alerts. Keep the monitoring notification channels enabled too.</string>
     <string name="monitor_notification_summary">Allow notifications and keep the monitoring channel enabled to receive alerts.</string>
+    <string name="monitor_state_on">On · %1$s</string>
+    <string name="monitor_state_off">Off · %1$s</string>
     <string name="monitor_about_title">About access monitoring</string>
     <string name="experimental_monitor_section">Monitoring</string>
     <string name="experimental_diagnostics_section">Diagnostics</string>
@@ -573,8 +575,8 @@
     <string name="monitor_access_refused">Denied %1$s</string>
     <string name="monitor_recent_title">Recent accesses</string>
     <string name="monitor_recent_empty">No accesses reported yet.</string>
-    <string name="experimental_title">Experimental features</string>
-    <string name="experimental_caption">Features whose compatibility has not been verified. They may not work on every device.</string>
+    <string name="experimental_title">Advanced features</string>
+    <string name="experimental_caption">Experimental features are not verified on every device.</string>
     <string name="monitor_targets_title">Watched apps</string>
     <plurals name="monitor_targets_summary">
         <item quantity="one">%1$d app selected</item>
@@ -744,12 +746,7 @@
     <string name="guard_entry_summary">Notify when a chosen setting changes</string>
     <string name="guard_caption">Notifies you when a guarded setting changes, and can restore it.</string>
     <string name="guard_details_title">About setting guard</string>
-    <string name="guard_details">AppOpsNext compares the target mode of each guarded setting with the actual mode and notifies you when it changes. With Restore automatically on, it tries to restore the target mode.
-
-Each rule has a limit on restores in 24 hours. The default is 3, and you can change it under Restore limit.
-
-Tap a rule to set a restore delay, for apps that check a permission when they start. The delay counts from when the change is found, so with hourly checks the restore can come later than set.</string>
-    <string name="guard_rule_remove_message">After you stop guarding it, changes to this setting are not reported or restored.</string>
+    <string name="guard_details">AppOpsNext compares the target mode of each guarded setting with the actual mode and notifies you when it changes. With Restore automatically on, it tries to restore the target mode.\n\nEach rule has a limit on restore attempts in 24 hours. The default is 3, and you can change it under Restore limit.\n\nTap a rule to set when it is restored, for apps that check a permission when they start. A restore delay counts from when the change is found. With Restore after leaving the app on, a change is not restored while the app is on screen, and it is checked again about every 30 seconds. With hourly checks, the restore can come later than set.</string>
     <string name="guard_mode_section">Check mode</string>
     <string name="guard_mode_off">Off</string>
     <string name="guard_mode_off_summary">Settings are not checked</string>
@@ -760,20 +757,30 @@ Tap a rule to set a restore delay, for apps that check a permission when they st
     <string name="guard_rules_section">Guarded settings</string>
     <string name="guard_check_now">Check now</string>
     <string name="guard_checking">Checking</string>
-    <string name="guard_rules_empty">No guarded settings yet. Select “Guard this setting” when changing a permission.</string>
+    <string name="guard_rules_empty">Choose an app, change a permission, and select “Guard this setting”.</string>
+    <string name="guard_rules_empty_title">No guarded settings yet</string>
+    <string name="guard_rules_empty_mode_off">Choose a check mode below first. Then choose an app, change a permission, and select “Guard this setting”.</string>
+    <string name="guard_choose_app">Choose an app</string>
     <string name="guard_rule_expected">Target mode: %1$s</string>
     <string name="guard_rule_expected_uid">Target mode: %1$s (whole UID)</string>
     <string name="guard_rule_auto_restore">Restore automatically</string>
+    <string name="guard_rule_auto_restore_summary">When off, changes are only reported</string>
+    <string name="guard_rule_notify_only">Notify only</string>
+    <string name="guard_rule_restore_at_once">Restores at once</string>
     <string name="guard_rule_remove">Stop guarding</string>
     <string name="guard_restore_section">Automatic restore</string>
     <string name="guard_restore_limit_title">Restore limit</string>
-    <string name="guard_restore_limit_message">Each rule gets at most this many restore attempts in 24 hours. After that, changes are only reported until the earliest attempt is more than 24 hours old.</string>
-    <string name="guard_restore_limit_label">Attempts</string>
+    <string name="guard_restore_limit_message">Every restore counts as an attempt, also a failed one. After the limit, changes are still reported but not restored, until the earliest attempt is more than 24 hours old.</string>
+    <string name="guard_restore_limit_label">Attempts per rule in 24 hours</string>
     <string name="guard_restore_limit_placeholder">Default %1$d, up to %2$d</string>
     <string name="guard_rule_delay_label">Restore delay (minutes)</string>
     <string name="guard_rule_delay_placeholder">Default 0, up to %1$d</string>
-    <string name="guard_rule_delay_message">Waits this long after a change is found before restoring. 0 restores at once. Applies when Restore automatically is on.</string>
+    <string name="guard_rule_delay_message">Waits this long after a change is found before restoring. 0 restores at once.</string>
     <string name="guard_rule_delay_summary">Restores after %1$d min</string>
+    <string name="guard_rule_leave_title">Restore after leaving the app</string>
+    <string name="guard_rule_leave_summary">Not restored while the app is on screen</string>
+    <string name="guard_rule_leave_timing">Restores after you leave the app</string>
+    <string name="guard_rule_delay_leave_timing">Restores after you leave the app and %1$d min pass</string>
     <string name="guard_number_out_of_range">Enter a number from %1$d to %2$d</string>
     <string name="guard_save">Save</string>
     <string name="guard_events_section">Recent changes</string>
@@ -783,13 +790,13 @@ Tap a rule to set a restore delay, for apps that check a permission when they st
     <string name="guard_event_restored">%1$s · %2$s changed to “%3$s” and was restored to “%4$s”</string>
     <string name="guard_event_restore_failed">%1$s · %2$s changed to “%3$s”. Restoring “%4$s” failed.</string>
     <string name="guard_event_restore_limit">%1$s · %2$s changed to “%3$s”. The automatic restore limit is reached, so it is not restored for now.</string>
-    <string name="guard_event_restore_pending">%1$s · %2$s changed to “%3$s”. It is restored to “%4$s” after the delay.</string>
-    <string name="guard_event_change">Changed to “%1$s”</string>
-    <string name="guard_event_outcome_restored">Restored</string>
-    <string name="guard_event_outcome_drift">Notified only</string>
-    <string name="guard_event_outcome_failed">Restore failed</string>
-    <string name="guard_event_outcome_limit">Restore limit reached</string>
-    <string name="guard_event_outcome_pending">Restore pending</string>
+    <string name="guard_event_restore_pending">%1$s · %2$s changed to “%3$s”. It is restored to “%4$s” later.</string>
+    <string name="guard_event_headline_restored">Restored to “%1$s”</string>
+    <string name="guard_event_headline_drift">Notified only · Target “%1$s”</string>
+    <string name="guard_event_headline_failed">Could not restore “%1$s”</string>
+    <string name="guard_event_headline_limit">Not restored · Restore limit reached</string>
+    <string name="guard_event_headline_pending">Waiting to restore “%1$s”</string>
+    <string name="guard_event_detected">Detected: %1$s</string>
     <string name="guard_channel_events">Guard alerts</string>
     <string name="guard_channel_status">Realtime guard</string>
     <string name="guard_service_title">Realtime guard is on</string>
@@ -803,8 +810,8 @@ Tap a rule to set a restore delay, for apps that check a permission when they st
         <item quantity="other">%d guarded settings changed</item>
     </plurals>
     <plurals name="guard_restore_limit_summary">
-        <item quantity="one">At most %d restore per rule in 24 hours</item>
-        <item quantity="other">At most %d restores per rule in 24 hours</item>
+        <item quantity="one">At most %d restore attempt per rule in 24 hours</item>
+        <item quantity="other">At most %d restore attempts per rule in 24 hours</item>
     </plurals>
 
     <!-- Backup -->

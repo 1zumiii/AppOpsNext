@@ -25,16 +25,27 @@ class GuardCodecTest {
         assertTrue(GuardCodec.encodeRule(delayed).startsWith("R2\t"))
         assertEquals(delayed, GuardCodec.decodeRule(GuardCodec.encodeRule(delayed)))
         assertNull(GuardCodec.decodeRule("R2\tcom.example\t1\tandroid:camera\tPACKAGE\tIGNORE\ttrue\t1441"))
+        val leaving = rule.copy(restoreAfterLeaving = true)
+        assertTrue(GuardCodec.encodeRule(leaving).startsWith("R2\t"))
+        assertEquals(leaving, GuardCodec.decodeRule(GuardCodec.encodeRule(leaving)))
+        // Written by builds after 1.6.8-beta1, before the app could be waited for.
+        assertEquals(delayed, GuardCodec.decodeRule("R2\tcom.example\t10123\tandroid:camera\tPACKAGE\tIGNORE\ttrue\t15"))
+        assertNull(GuardCodec.decodeRule("R2\tcom.example\t1\tandroid:camera\tPACKAGE\tIGNORE\ttrue\t15\tmaybe"))
     }
 
     @Test fun `states keep when a change was first seen and older states still read`() {
-        val state = GuardRuleState(AppOpMode.ALLOW, listOf(5, 6), driftSince = 4)
-        assertEquals("id" to state, GuardCodec.decodeState(GuardCodec.encodeState("id", state)))
+        for (state in listOf(
+            GuardRuleState(AppOpMode.ALLOW, listOf(5, 6), driftSince = 4),
+            GuardRuleState(AppOpMode.ALLOW, listOf(5), driftSince = 4, heldOnScreen = true),
+        )) {
+            assertEquals("id" to state, GuardCodec.decodeState(GuardCodec.encodeState("id", state)))
+        }
         assertEquals(
             "id" to GuardRuleState(AppOpMode.ALLOW, listOf(5, 6)),
             GuardCodec.decodeState("S1\tid\tALLOW\t5\t6"),
         )
-        assertNull(GuardCodec.decodeState("S2\tid\tALLOW\tsoon"))
+        assertNull(GuardCodec.decodeState("S2\tid\tALLOW\tsoon\t-"))
+        assertNull(GuardCodec.decodeState("S2\tid\tALLOW\t4\t5"))
     }
 
     @Test fun `malformed records are dropped`() {

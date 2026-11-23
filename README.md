@@ -39,7 +39,8 @@ Official APKs are published **ONLY** on GitHub Releases. No guarantee is made fo
 - **Permission change listeners (experimental).** See which processes are
   registered to watch for permission-setting changes.
 - **Setting guard (experimental).** Get a notification when the system, a vendor
-  policy, or another app changes a guarded setting, and optionally restore it.
+  policy, or another app changes a guarded setting, and optionally restore it,
+  at once, after a delay, or after you leave the app.
 
 ## What you can do
 
@@ -53,7 +54,7 @@ Official APKs are published **ONLY** on GitHub Releases. No guarantee is made fo
 | History | Explore permission distribution, app statistics, and timelines by day range and app; choose and reorder the operations you follow. Optionally keep individual records past the seven days Android retains. |
 | Settings and diagnostics | Switch between English, Simplified Chinese, or the system language. Choose a theme: follow system, light, or dark. Inspect connection status and diagnostic reports. When a newer release is available, a yellow dot appears next to the version on About AppOpsNext. |
 | Backup and migration | Export templates, preferences, the access monitor selection, your own monitor templates, and Setting guard rules to a file. An import shows a preview of the changes and applies them only after you confirm. |
-| Experimental | Watch chosen operations for chosen apps, with per-point reporting intervals, outcome filters and off-screen-only reporting. Notification permission is required for alerts. A registry check reports confirmed or unconfirmed coverage. A monitor log keeps every reported access, allowed or refused, whatever the notification settings. A monitor template holds a set of permissions with their monitor settings, and you can apply it to several apps at one time. On MIUI and HyperOS, the monitor can try to watch the private permissions of the system, which is not verified. Setting guard checks guarded settings hourly or in real time, and each rule can restore its target mode automatically, at most 3 attempts in 24 hours. Stop background work turns off the access monitor and stops the install watcher in one step. Also inspect a snapshot of processes registered for permission mode changes. |
+| Advanced features | Watch chosen operations for chosen apps, with per-point reporting intervals, outcome filters and off-screen-only reporting. Notification permission is required for alerts. A registry check reports confirmed or unconfirmed coverage. A monitor log keeps every reported access, allowed or refused, whatever the notification settings. A monitor template holds a set of permissions with their monitor settings, and you can apply it to several apps at one time. On MIUI and HyperOS, the monitor can try to watch the private permissions of the system, which is not verified. Setting guard checks guarded settings hourly or in real time, and each rule can restore its target mode automatically, after an optional delay or after you leave the app. Each rule has a limit on restore attempts in 24 hours, 3 by default, which you can change. Stop background work turns off the access monitor and stops the install watcher in one step. Also inspect a snapshot of processes registered for permission mode changes. |
 
 ## Install and get started
 
@@ -222,7 +223,7 @@ entirely your decision.
 - **A busy permission fills the notification:** an operation such as location is
   reported once per delivered fix, so watching one without an interval produces
   a report per second. Give that monitoring point a reporting interval in
-  Settings, Experimental, Monitor settings, Monitoring points.
+  Settings, Advanced features, Monitor settings, Monitoring points.
 - **"Only when off screen" still reports what you can see:** the monitor reads
   the process state AppOps keeps for the app, and treats anything other than
   the app being on screen as off screen — including a foreground service. If

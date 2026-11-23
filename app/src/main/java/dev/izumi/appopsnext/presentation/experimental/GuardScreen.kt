@@ -6,13 +6,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.clickable
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.Surface
+import androidx.compose.ui.graphics.Color
+import dev.izumi.appopsnext.presentation.components.AppBottomSheet
+import dev.izumi.appopsnext.presentation.components.CompactTextField
+import dev.izumi.appopsnext.presentation.components.MainPageChevron
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -81,15 +86,13 @@ class GuardViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { repository.setMode(mode) }
     }
 
-    fun setAutoRestore(rule: GuardRule, enabled: Boolean) {
-        viewModelScope.launch { repository.upsert(rule.copy(autoRestore = enabled)) }
-    }
-
-    /** Checks at once, so a restore already waiting follows the new delay rather than the old one. */
-    fun setRestoreDelay(rule: GuardRule, minutes: Int) {
+    /** Checks at once, so a restore already waiting follows the new timing rather than the old one. */
+    fun saveRestore(rule: GuardRule, autoRestore: Boolean, minutes: Int, afterLeaving: Boolean) {
         viewModelScope.launch {
-            repository.upsert(rule.copy(restoreDelayMinutes = minutes))
-            app.guardController.runCheckIfEnabled("delay_changed")
+            repository.upsert(
+                rule.copy(autoRestore = autoRestore, restoreDelayMinutes = minutes, restoreAfterLeaving = afterLeaving),
+            )
+            app.guardController.runCheckIfEnabled("timing_changed")
         }
     }
 
@@ -127,6 +130,7 @@ class GuardViewModel(application: Application) : AndroidViewModel(application) {
 fun GuardScreen(
     viewModel: GuardViewModel,
     onBack: () -> Unit,
+    onChooseApp: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -172,6 +176,38 @@ fun GuardScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            // What is guarded, or how to guard something, comes before how it is checked.
+            item {
+                Row(
+                    modifier = Modifier.padding(start = 24.dp, top = 8.dp, end = 16.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.guard_rules_section),
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (rules.isNotEmpty()) {
+                        OutlinedButton(onClick = viewModel::checkNow, enabled = !checking) {
+                            Text(stringResource(if (checking) R.string.guard_checking else R.string.guard_check_now))
+                        }
+                    }
+                }
+            }
+            if (rules.isEmpty()) {
+                item { GuardEmptyCard(modeOff = mode == GuardMode.OFF, onChooseApp = onChooseApp) }
+            } else {
+                item {
+                    ExperimentalGroup {
+                        rules.forEachIndexed { index, rule ->
+                            if (index > 0) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            GuardRuleRow(rule = rule, onOpen = { title -> openRule = rule to title })
+                        }
+                    }
+                }
+            }
             item {
                 ExperimentalSectionTitle(stringResource(R.string.guard_mode_section))
                 ExperimentalGroup {
@@ -199,50 +235,8 @@ fun GuardScreen(
                         supportingContent = {
                             Text(pluralStringResource(R.plurals.guard_restore_limit_summary, restoreLimit, restoreLimit))
                         },
+                        trailingContent = { MainPageChevron() },
                     )
-                }
-            }
-            item {
-                Row(
-                    modifier = Modifier.padding(start = 24.dp, top = 20.dp, end = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = stringResource(R.string.guard_rules_section),
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    OutlinedButton(
-                        onClick = viewModel::checkNow,
-                        enabled = !checking && rules.isNotEmpty(),
-                    ) {
-                        Text(stringResource(if (checking) R.string.guard_checking else R.string.guard_check_now))
-                    }
-                }
-            }
-            if (rules.isEmpty()) {
-                item {
-                    Text(
-                        text = stringResource(R.string.guard_rules_empty),
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            } else {
-                item {
-                    ExperimentalGroup(modifier = Modifier.padding(top = 8.dp)) {
-                        rules.forEachIndexed { index, rule ->
-                            if (index > 0) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                            GuardRuleRow(
-                                rule = rule,
-                                onAutoRestoreChange = { viewModel.setAutoRestore(rule, it) },
-                                onOpen = { title -> openRule = rule to title },
-                            )
-                        }
-                    }
                 }
             }
             item {
@@ -285,17 +279,17 @@ fun GuardScreen(
     }
 
     if (showDetails) {
-        AlertDialog(
+        AppBottomSheet(
             onDismissRequest = { showDetails = false },
             title = { Text(stringResource(R.string.guard_details_title)) },
             text = { Text(stringResource(R.string.guard_details)) },
             confirmButton = {
-                TextButton(onClick = { showDetails = false }) { Text(stringResource(R.string.action_dismiss)) }
+                Button(onClick = { showDetails = false }) { Text(stringResource(R.string.action_dismiss)) }
             },
         )
     }
     if (showLimit) {
-        NumberDialog(
+        NumberSheet(
             title = stringResource(R.string.guard_restore_limit_title),
             message = stringResource(R.string.guard_restore_limit_message),
             initial = restoreLimit,
@@ -317,7 +311,9 @@ fun GuardScreen(
     openRule?.let { (opened, title) ->
         // The rule as stored now, so a switch flipped meanwhile is not undone by a save.
         val rule = rules.firstOrNull { it.id == opened.id } ?: opened
-        NumberDialog(
+        var autoRestore by rememberSaveable(opened.id) { mutableStateOf(rule.autoRestore) }
+        var afterLeaving by rememberSaveable(opened.id) { mutableStateOf(rule.restoreAfterLeaving) }
+        NumberSheet(
             title = title,
             message = stringResource(R.string.guard_rule_delay_message),
             initial = rule.restoreDelayMinutes,
@@ -328,19 +324,35 @@ fun GuardScreen(
             onDismiss = { openRule = null },
             onSave = { minutes ->
                 openRule = null
-                if (minutes != rule.restoreDelayMinutes) viewModel.setRestoreDelay(rule, minutes)
-            },
-            extraAction = {
-                TextButton(
-                    onClick = {
-                        openRule = null
-                        viewModel.remove(rule)
-                    },
+                if (autoRestore != rule.autoRestore || minutes != rule.restoreDelayMinutes ||
+                    afterLeaving != rule.restoreAfterLeaving
                 ) {
-                    Text(stringResource(R.string.guard_rule_remove), color = MaterialTheme.colorScheme.error)
+                    viewModel.saveRestore(rule, autoRestore, minutes, afterLeaving)
                 }
             },
-            footnote = stringResource(R.string.guard_rule_remove_message),
+            // When to restore matters only while restoring is on, so it shows only then.
+            fieldVisible = autoRestore,
+            leadingContent = {
+                SheetSwitchRow(
+                    title = stringResource(R.string.guard_rule_auto_restore),
+                    summary = stringResource(R.string.guard_rule_auto_restore_summary),
+                    checked = autoRestore,
+                    onCheckedChange = { autoRestore = it },
+                )
+            },
+            extraContent = {
+                SheetSwitchRow(
+                    title = stringResource(R.string.guard_rule_leave_title),
+                    summary = stringResource(R.string.guard_rule_leave_summary),
+                    checked = afterLeaving,
+                    onCheckedChange = { afterLeaving = it },
+                )
+            },
+            removeLabel = stringResource(R.string.guard_rule_remove),
+            onRemove = {
+                openRule = null
+                viewModel.remove(rule)
+            },
         )
     }
 }
@@ -348,9 +360,10 @@ fun GuardScreen(
 /**
  * A whole number in [range]. An empty field takes the default, which the
  * placeholder names. A value outside the range disables saving and says why.
+ * A rule's sheet also offers to stop guarding it, as the leading action.
  */
 @Composable
-private fun NumberDialog(
+private fun NumberSheet(
     title: String,
     message: String,
     initial: Int,
@@ -360,57 +373,134 @@ private fun NumberDialog(
     placeholder: String,
     onDismiss: () -> Unit,
     onSave: (Int) -> Unit,
-    extraAction: (@Composable () -> Unit)? = null,
-    footnote: String? = null,
+    leadingContent: (@Composable () -> Unit)? = null,
+    extraContent: (@Composable () -> Unit)? = null,
+    fieldVisible: Boolean = true,
+    removeLabel: String? = null,
+    onRemove: (() -> Unit)? = null,
 ) {
     var text by rememberSaveable { mutableStateOf(initial.toString()) }
     val value = text.toIntOrNull()
-    val valid = text.isEmpty() || (value != null && value in range)
-    AlertDialog(
+    val valid = !fieldVisible || text.isEmpty() || (value != null && value in range)
+    AppBottomSheet(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(message)
-                OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = intervalFieldDigits(it) },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(label) },
-                    placeholder = { Text(placeholder) },
-                    singleLine = true,
-                    isError = !valid,
-                    supportingText = if (valid) {
-                        null
-                    } else {
-                        { Text(stringResource(R.string.guard_number_out_of_range, range.first, range.last)) }
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                )
-                if (extraAction != null) {
-                    footnote?.let {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                leadingContent?.invoke()
+                if (fieldVisible) {
+                    Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    extraContent?.invoke()
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodySmall,
+                            text = label,
+                            style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        CompactTextField(
+                            value = text,
+                            onValueChange = { text = intervalFieldDigits(it) },
+                            label = placeholder,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            isError = !valid,
+                        )
+                        if (!valid) {
+                            Text(
+                                text = stringResource(R.string.guard_number_out_of_range, range.first, range.last),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
                     }
-                    extraAction()
                 }
             }
         },
+        leadingButton = if (onRemove != null && removeLabel != null) {
+            {
+                TextButton(onClick = onRemove) {
+                    Text(removeLabel, color = MaterialTheme.colorScheme.error)
+                }
+            }
+        } else {
+            null
+        },
         confirmButton = {
-            TextButton(
-                onClick = { onSave(value ?: default) },
-                enabled = valid,
-            ) { Text(stringResource(R.string.guard_save)) }
+            Button(onClick = { onSave(if (fieldVisible) value ?: default else initial) }, enabled = valid) {
+                Text(stringResource(R.string.guard_save))
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+            OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
     )
 }
 
+@Composable
+private fun SheetSwitchRow(
+    title: String,
+    summary: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier.clickable { onCheckedChange(!checked) },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title)
+            Text(
+                text = summary,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        CompactSwitch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+/** No rule yet: what adding one takes, and the way to the app list where it is done. */
+@Composable
+private fun GuardEmptyCard(modeOff: Boolean, onChooseApp: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_ph_shield),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = stringResource(R.string.guard_rules_empty_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                // The option to guard a setting is offered only while a check mode is chosen.
+                text = stringResource(if (modeOff) R.string.guard_rules_empty_mode_off else R.string.guard_rules_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Button(
+                onClick = onChooseApp,
+                enabled = !modeOff,
+                modifier = Modifier.padding(top = 4.dp),
+            ) { Text(stringResource(R.string.guard_choose_app)) }
+        }
+    }
+}
+
+/**
+ * The outcome comes first with the mode it was meant to be, so rows that share an
+ * app and a permission still read apart. What was found goes underneath.
+ */
 @Composable
 internal fun GuardEventRow(event: GuardEvent, notifier: GuardNotifier) {
     val title = remember(event.packageName, event.stableOperationName) {
@@ -420,26 +510,31 @@ internal fun GuardEventRow(event: GuardEvent, notifier: GuardNotifier) {
         GuardEventKind.RESTORED -> R.drawable.ic_ph_check_circle to MaterialTheme.colorScheme.primary
         GuardEventKind.DRIFT -> R.drawable.ic_ph_warning_circle to MaterialTheme.colorScheme.tertiary
         GuardEventKind.RESTORE_FAILED -> R.drawable.ic_ph_x to MaterialTheme.colorScheme.error
-        GuardEventKind.RESTORE_LIMIT -> R.drawable.ic_ph_clock_counter_clockwise to MaterialTheme.colorScheme.error
+        GuardEventKind.RESTORE_LIMIT -> R.drawable.ic_ph_warning_circle to MaterialTheme.colorScheme.error
         GuardEventKind.RESTORE_PENDING -> R.drawable.ic_ph_clock_counter_clockwise to MaterialTheme.colorScheme.onSurfaceVariant
     }
-    val outcome = stringResource(
-        when (event.kind) {
-            GuardEventKind.RESTORED -> R.string.guard_event_outcome_restored
-            GuardEventKind.DRIFT -> R.string.guard_event_outcome_drift
-            GuardEventKind.RESTORE_FAILED -> R.string.guard_event_outcome_failed
-            GuardEventKind.RESTORE_LIMIT -> R.string.guard_event_outcome_limit
-            GuardEventKind.RESTORE_PENDING -> R.string.guard_event_outcome_pending
-        },
-    )
-    val change = stringResource(
-        R.string.guard_event_change,
+    val expected = stringResource(GuardNotifier.modeLabelRes(event.expectedMode))
+    val headline = when (event.kind) {
+        GuardEventKind.RESTORED -> stringResource(R.string.guard_event_headline_restored, expected)
+        GuardEventKind.DRIFT -> stringResource(R.string.guard_event_headline_drift, expected)
+        GuardEventKind.RESTORE_FAILED -> stringResource(R.string.guard_event_headline_failed, expected)
+        GuardEventKind.RESTORE_LIMIT -> stringResource(R.string.guard_event_headline_limit)
+        GuardEventKind.RESTORE_PENDING -> stringResource(R.string.guard_event_headline_pending, expected)
+    }
+    val needsAttention = event.kind == GuardEventKind.RESTORE_FAILED || event.kind == GuardEventKind.RESTORE_LIMIT
+    val detected = stringResource(
+        R.string.guard_event_detected,
         stringResource(GuardNotifier.modeLabelRes(event.observedMode)),
     )
     ExperimentalGroupRow(
         leadingContent = { Icon(painter = painterResource(iconRes), contentDescription = null, tint = tint) },
-        headlineContent = { Text(title) },
-        supportingContent = { Text("$change · $outcome") },
+        headlineContent = {
+            Text(
+                text = headline,
+                color = if (needsAttention) MaterialTheme.colorScheme.error else Color.Unspecified,
+            )
+        },
+        supportingContent = { Text("$title\n$detected") },
         trailingContent = {
             Text(
                 text = DateUtils.getRelativeTimeSpanString(
@@ -458,7 +553,6 @@ internal fun GuardEventRow(event: GuardEvent, notifier: GuardNotifier) {
 @Composable
 private fun GuardRuleRow(
     rule: GuardRule,
-    onAutoRestoreChange: (Boolean) -> Unit,
     onOpen: (title: String) -> Unit,
 ) {
     val context = LocalContext.current
@@ -474,39 +568,24 @@ private fun GuardRuleRow(
     val shellName = AppOpNames.shellName(rule.stableOperationName)
     val operationLabel = AppOpDisplayCatalog.labelResOf(shellName)?.let { stringResource(it) } ?: shellName
     val title = "$appLabel · $operationLabel"
-    // The delay and removing sit behind a tap on the row, away from the switch beside it.
+    val expected = stringResource(
+        if (rule.scope == AppOpScope.UID) R.string.guard_rule_expected_uid else R.string.guard_rule_expected,
+        stringResource(GuardNotifier.modeLabelRes(rule.expectedMode)),
+    )
+    val delay = rule.restoreDelayMinutes
+    val restore = when {
+        !rule.autoRestore -> stringResource(R.string.guard_rule_notify_only)
+        rule.restoreAfterLeaving && delay > 0 -> stringResource(R.string.guard_rule_delay_leave_timing, delay)
+        rule.restoreAfterLeaving -> stringResource(R.string.guard_rule_leave_timing)
+        delay > 0 -> stringResource(R.string.guard_rule_delay_summary, delay)
+        else -> stringResource(R.string.guard_rule_restore_at_once)
+    }
+    // Everything about the rule sits behind a tap on the row, so the row keeps its width for text.
     ExperimentalGroupRow(
         modifier = Modifier.clickable { onOpen(title) },
         headlineContent = { Text(title) },
-        supportingContent = {
-            val expected = stringResource(
-                if (rule.scope == AppOpScope.UID) R.string.guard_rule_expected_uid else R.string.guard_rule_expected,
-                stringResource(GuardNotifier.modeLabelRes(rule.expectedMode)),
-            )
-            Text(
-                if (rule.autoRestore && rule.restoreDelayMinutes > 0) {
-                    "$expected · " + stringResource(R.string.guard_rule_delay_summary, rule.restoreDelayMinutes)
-                } else {
-                    expected
-                },
-            )
-        },
-        trailingContent = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.guard_rule_auto_restore),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                CompactSwitch(
-                    checked = rule.autoRestore,
-                    onCheckedChange = onAutoRestoreChange,
-                )
-            }
-        },
+        supportingContent = { Text("$expected\n$restore") },
+        trailingContent = { MainPageChevron() },
     )
 }
 

@@ -18,21 +18,31 @@ internal object GuardRestorePolicy {
 
     fun allows(times: List<Long>, now: Long, limit: Int): Boolean = recent(times, now).size < limit
 
+    /** How often a change the app holds on screen is checked again. */
+    const val ON_SCREEN_RECHECK_MILLIS = 30_000L
+
     fun delayMillis(rule: GuardRule): Long = rule.restoreDelayMinutes.coerceIn(DELAY_RANGE) * 60_000L
 
     /**
-     * When the earliest delayed restore falls due, among rules still waiting on their
-     * delay. A rule already past it is left to the next regular check, so a failed
-     * restore is not retried at once and does not spend the attempts in a loop.
+     * When the next check is due for a restore that waits: the end of a rule's
+     * delay, or a short while after a check found the app on screen. A rule
+     * already past its delay and not held on screen is left to the next regular
+     * check, so a failed restore is not retried at once and does not spend the
+     * attempts in a loop.
      */
     fun nextDue(rules: List<GuardRule>, states: Map<String, GuardRuleState>, now: Long, limit: Int): Long? =
         rules.mapNotNull { rule ->
             val state = states[rule.id] ?: return@mapNotNull null
             val since = state.driftSince ?: return@mapNotNull null
-            if (!rule.autoRestore || rule.restoreDelayMinutes <= 0) return@mapNotNull null
+            if (!rule.autoRestore) return@mapNotNull null
             if (state.lastObserved == null || state.lastObserved == rule.expectedMode) return@mapNotNull null
             if (!allows(state.restoreTimes, now, limit)) return@mapNotNull null
-            (since + delayMillis(rule)).takeIf { it > now }
+            val delayEnd = since + delayMillis(rule)
+            when {
+                delayEnd > now -> delayEnd
+                state.heldOnScreen -> now + ON_SCREEN_RECHECK_MILLIS
+                else -> null
+            }
         }.minOrNull()
 }
 
@@ -42,11 +52,14 @@ internal object GuardRestorePolicy {
  * A drift is reported once per observed mode, not on every check that still
  * finds it. A rule with automatic restore writes the expected mode back while
  * [GuardRestorePolicy] allows it, then reports the limit once. A rule with a
- * restore delay waits until the change has been seen for that long.
+ * restore delay waits until the change has been seen for that long. One that
+ * restores after the app leaves waits while [isOnScreen] says the app is shown.
  */
 class GuardChecker(
     private val readMode: suspend (GuardRule) -> AppOpMode?,
     private val restore: suspend (GuardRule) -> Boolean,
+    /** Asked only when a rule waits for its app to leave; false when it cannot tell. */
+    private val isOnScreen: suspend (GuardRule) -> Boolean = { false },
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     data class Result(
@@ -73,7 +86,10 @@ class GuardChecker(
                 readFailures++
                 continue
             }
-            var state = previous.copy(restoreTimes = GuardRestorePolicy.recent(previous.restoreTimes, now))
+            var state = previous.copy(
+                restoreTimes = GuardRestorePolicy.recent(previous.restoreTimes, now),
+                heldOnScreen = false,
+            )
             if (observed == rule.expectedMode) {
                 updated[rule.id] = state.copy(lastObserved = observed, driftSince = null)
                 continue
@@ -102,6 +118,10 @@ class GuardChecker(
                 rule.autoRestore && waiting -> {
                     if (isNew) events += event(GuardEventKind.RESTORE_PENDING)
                     state = state.copy(lastObserved = observed)
+                }
+                rule.autoRestore && rule.restoreAfterLeaving && isOnScreen(rule) -> {
+                    if (isNew) events += event(GuardEventKind.RESTORE_PENDING)
+                    state = state.copy(lastObserved = observed, heldOnScreen = true)
                 }
                 rule.autoRestore -> {
                     val restored = restore(rule)

@@ -58,6 +58,7 @@ fun CompactTextField(
     modifier: Modifier = Modifier,
     leadingSearchIcon: Boolean = false,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    isError: Boolean = false,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -65,7 +66,11 @@ fun CompactTextField(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = if (focused) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
+        border = when {
+            isError -> BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+            focused -> BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+            else -> null
+        },
     ) {
         BasicTextField(
             value = value,

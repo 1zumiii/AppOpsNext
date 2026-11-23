@@ -159,12 +159,14 @@ class GuardRepository(context: Context) {
 
 /**
  * This rule with the automatic restore of the rules it replaces: on when any of
- * them had it, with the longest delay among those.
+ * them had it, with the longest delay among those, waiting for the app to leave
+ * when any of those did.
  */
 internal fun GuardRule.keepingRestoreOf(existing: List<GuardRule>): GuardRule {
     val restoring = existing.filter { it.autoRestore }
     return copy(
         autoRestore = restoring.isNotEmpty(),
         restoreDelayMinutes = restoring.maxOfOrNull { it.restoreDelayMinutes } ?: 0,
+        restoreAfterLeaving = restoring.any { it.restoreAfterLeaving },
     )
 }

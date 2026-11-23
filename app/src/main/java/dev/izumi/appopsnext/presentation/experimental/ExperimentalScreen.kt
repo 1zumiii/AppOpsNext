@@ -194,6 +194,12 @@ fun ExperimentalScreen(
                         },
                         trailingContent = { MainPageChevron() },
                     )
+                    HorizontalDivider(modifier = Modifier.padding(start = 56.dp, end = 16.dp))
+                    ExperimentalGroupRow(
+                        modifier = Modifier.clickable { showAbout = true },
+                        leadingContent = { ExperimentalRowIcon(R.drawable.ic_ph_info) },
+                        headlineContent = { Text(stringResource(R.string.monitor_about_title)) },
+                    )
                 }
             }
             item {
@@ -206,19 +212,6 @@ fun ExperimentalScreen(
                         supportingContent = { Text(stringResource(R.string.guard_entry_summary)) },
                         trailingContent = { MainPageChevron() },
                     )
-                }
-            }
-            item {
-                TextButton(
-                    onClick = { showAbout = true },
-                    modifier = Modifier.padding(start = 16.dp, top = 8.dp),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_ph_info),
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                    )
-                    Text(text = stringResource(R.string.monitor_about_title))
                 }
             }
             item {
@@ -268,6 +261,7 @@ fun ExperimentalScreen(
             title = { Text(stringResource(R.string.monitor_about_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(stringResource(R.string.monitor_summary))
                     Text(stringResource(R.string.monitor_notification_required))
                     Text(stringResource(R.string.monitor_explainer))
                     Text(stringResource(R.string.monitor_event_count_note))
@@ -303,7 +297,20 @@ private fun MonitorFeature(
             ListItem(
                 leadingContent = { MainPageEntryIcon(R.drawable.ic_ph_eye) },
                 headlineContent = { Text(text = stringResource(R.string.monitor_title)) },
-                supportingContent = { Text(text = stringResource(R.string.monitor_summary)) },
+                supportingContent = {
+                    // Whether it runs, and the selection that stays while it does not.
+                    val targets = if (uiState.targetCount == 0) {
+                        stringResource(R.string.monitor_targets_empty)
+                    } else {
+                        pluralStringResource(R.plurals.monitor_targets_summary, uiState.targetCount, uiState.targetCount)
+                    }
+                    Text(
+                        text = stringResource(
+                            if (uiState.monitorEnabled) R.string.monitor_state_on else R.string.monitor_state_off,
+                            targets,
+                        ),
+                    )
+                },
                 trailingContent = {
                     CompactSwitch(
                         checked = uiState.monitorEnabled,
@@ -314,14 +321,14 @@ private fun MonitorFeature(
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
             )
         }
-        Text(
-            text = stringResource(R.string.monitor_notification_summary),
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.bodySmall,
-            color = if (notificationsEnabled) MaterialTheme.colorScheme.onSurfaceVariant
-                else MaterialTheme.colorScheme.error,
-        )
+        // The requirement itself is in About. Here it shows only when it is not met.
         if (!notificationsEnabled) {
+            Text(
+                text = stringResource(R.string.monitor_notification_summary),
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
             TextButton(onClick = onOpenNotificationSettings, modifier = Modifier.padding(horizontal = 8.dp)) {
                 Text(stringResource(R.string.monitor_open_notification_settings))
             }

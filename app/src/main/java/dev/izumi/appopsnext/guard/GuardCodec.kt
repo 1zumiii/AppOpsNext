@@ -13,13 +13,17 @@ import dev.izumi.appopsnext.appops.model.AppOpScope
  * whole list.
  */
 internal object GuardCodec {
-    /** A rule without a delay is written as `R1`, so older versions still read it from a backup. */
+    /**
+     * A rule that restores at once is written as `R1`, so older versions still read
+     * it from a backup. `R2` adds the delay and whether to wait for the app to leave.
+     */
     fun encodeRule(rule: GuardRule): String {
+        val plain = rule.restoreDelayMinutes == 0 && !rule.restoreAfterLeaving
         val fields = listOf(
-            if (rule.restoreDelayMinutes > 0) RULE_V2 else RULE_V1, rule.packageName, rule.uid,
+            if (plain) RULE_V1 else RULE_V2, rule.packageName, rule.uid,
             rule.stableOperationName, rule.scope.name, rule.expectedMode.name, rule.autoRestore,
         )
-        return (if (rule.restoreDelayMinutes > 0) fields + rule.restoreDelayMinutes else fields)
+        return (if (plain) fields else fields + rule.restoreDelayMinutes + rule.restoreAfterLeaving)
             .joinToString(SEPARATOR)
     }
 
@@ -27,10 +31,12 @@ internal object GuardCodec {
         val fields = value.split(SEPARATOR)
         val delay = when {
             fields.size == 7 && fields[0] == RULE_V1 -> 0
-            fields.size == 8 && fields[0] == RULE_V2 ->
+            // Builds between 1.6.8-beta1 and the next release wrote `R2` without the last field.
+            fields.size in 8..9 && fields[0] == RULE_V2 ->
                 fields[7].toIntOrNull()?.takeIf { it in GuardRestorePolicy.DELAY_RANGE } ?: return null
             else -> return null
         }
+        val afterLeaving = if (fields.size == 9) fields[8].toBooleanStrictOrNull() ?: return null else false
         return GuardRule(
             packageName = fields[1].takeIf(PackageNameValidator::isValid) ?: return null,
             uid = fields[2].toIntOrNull() ?: return null,
@@ -41,6 +47,7 @@ internal object GuardCodec {
             expectedMode = enumOrNull<AppOpMode>(fields[5]) ?: return null,
             autoRestore = fields[6].toBooleanStrictOrNull() ?: return null,
             restoreDelayMinutes = delay,
+            restoreAfterLeaving = afterLeaving,
         )
     }
 
@@ -65,18 +72,22 @@ internal object GuardCodec {
 
     /**
      * The rule id first, then the last mode seen (or `-`), then restore times. `S2`
-     * puts when the current change was first seen (or `-`) before the times.
+     * puts when the current change was first seen (or `-`) and whether the app held
+     * it on screen (`H` or `-`) before the times.
      */
     fun encodeState(ruleId: String, state: GuardRuleState): String =
-        (listOf(STATE_V2, ruleId, state.lastObserved?.name ?: NONE, state.driftSince?.toString() ?: NONE) +
-            state.restoreTimes)
-            .joinToString(SEPARATOR)
+        (
+            listOf(
+                STATE_V2, ruleId, state.lastObserved?.name ?: NONE,
+                state.driftSince?.toString() ?: NONE, if (state.heldOnScreen) HELD else NONE,
+            ) + state.restoreTimes
+        ).joinToString(SEPARATOR)
 
     fun decodeState(value: String): Pair<String, GuardRuleState>? {
         val fields = value.split(SEPARATOR)
         val timesFrom = when (fields.firstOrNull()) {
             STATE_V1 -> 3
-            STATE_V2 -> 4
+            STATE_V2 -> 5
             else -> return null
         }
         if (fields.size < timesFrom) return null
@@ -85,8 +96,13 @@ internal object GuardCodec {
             timesFrom == 3 || fields[3] == NONE -> null
             else -> fields[3].toLongOrNull() ?: return null
         }
+        val heldOnScreen = when {
+            timesFrom == 3 || fields[4] == NONE -> false
+            fields[4] == HELD -> true
+            else -> return null
+        }
         val times = fields.drop(timesFrom).map { it.toLongOrNull() ?: return null }
-        return fields[1] to GuardRuleState(lastObserved, times, driftSince)
+        return fields[1] to GuardRuleState(lastObserved, times, driftSince, heldOnScreen)
     }
 
     private inline fun <reified T : Enum<T>> enumOrNull(name: String): T? =
@@ -99,4 +115,5 @@ internal object GuardCodec {
     private const val STATE_V1 = "S1"
     private const val STATE_V2 = "S2"
     private const val NONE = "-"
+    private const val HELD = "H"
 }

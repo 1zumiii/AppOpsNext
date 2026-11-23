@@ -25,6 +25,8 @@ data class GuardRule(
     val autoRestore: Boolean,
     /** With [autoRestore], how long a change is left before it is restored; 0 restores at once. */
     val restoreDelayMinutes: Int = 0,
+    /** With [autoRestore], a change is not restored while the app is on screen. */
+    val restoreAfterLeaving: Boolean = false,
 ) {
     val id: String get() = ruleId(packageName, stableOperationName, scope)
 
@@ -49,7 +51,7 @@ enum class GuardEventKind {
     /** Changed again after the daily number of restores; restoring stops until the window passes. */
     RESTORE_LIMIT,
 
-    /** Changed, and restored once the rule's delay has passed. Shown in the app, not posted. */
+    /** Changed, and restored once the rule's delay has passed or the app has left the screen. Shown in the app, not posted. */
     RESTORE_PENDING,
 }
 
@@ -71,4 +73,6 @@ data class GuardRuleState(
     val restoreTimes: List<Long> = emptyList(),
     /** When a check first saw the current change, for a delayed restore; null while the mode is expected. */
     val driftSince: Long? = null,
+    /** The last check left the change in place because the app was on screen, so it checks again soon. */
+    val heldOnScreen: Boolean = false,
 )

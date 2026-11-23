@@ -4,7 +4,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -221,12 +220,12 @@ fun MonitorLogScreen(
         )
     }
     if (showDetails) {
-        AlertDialog(
+        AppBottomSheet(
             onDismissRequest = { showDetails = false },
             title = { Text(stringResource(R.string.monitor_log_details_title)) },
             text = { Text(stringResource(R.string.monitor_log_details)) },
             confirmButton = {
-                TextButton(onClick = { showDetails = false }) { Text(stringResource(R.string.action_dismiss)) }
+                Button(onClick = { showDetails = false }) { Text(stringResource(R.string.action_dismiss)) }
             },
         )
     }

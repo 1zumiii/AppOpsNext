@@ -185,7 +185,7 @@
     <string name="settings_records_automation">记录与自动化</string>
     <string name="settings_data_support">数据与支持</string>
     <string name="settings_about_app">关于 AppOpsNext</string>
-    <string name="settings_experimental_summary">访问监控与设置守护</string>
+    <string name="settings_experimental_summary">高级与实验性功能</string>
     <string name="settings_hide_system_apps">隐藏系统应用</string>
     <string name="settings_hide_system_apps_detail">应用列表与历史仅显示用户应用</string>
     <string name="settings_language">应用语言</string>
@@ -271,7 +271,7 @@
     <string name="settings_saved_history_empty">暂无已保存的记录</string>
     <string name="settings_saved_history_entry">历史记录持久化</string>
     <string name="settings_saved_history_status_on">已开启 · 已保存 %1$d 条</string>
-    <string name="settings_saved_history_status_off">已关闭</string>
+    <string name="settings_saved_history_status_off">已关闭 · 系统只保留 7 天的单条记录</string>
     <string name="settings_saved_history_status_off_kept">已关闭 · 仍保留 %1$d 条</string>
     <string name="settings_saved_history_status_unreadable">无法读取 · 已暂停保存</string>
     <string name="settings_saved_history_status_write_failed">未能写入 · 下次读取历史时重试</string>
@@ -501,6 +501,8 @@
     <string name="monitor_summary">记录系统上报的权限访问，并按设置发出通知。</string>
     <string name="monitor_notification_required">此功能的访问提醒需要开启通知权限才能生效。请同时保持监测相关通知类别开启。</string>
     <string name="monitor_notification_summary">访问提醒需要通知权限，并保持监测通知类别开启。</string>
+    <string name="monitor_state_on">已开启 · %1$s</string>
+    <string name="monitor_state_off">已关闭 · %1$s</string>
     <string name="monitor_about_title">关于访问监测</string>
     <string name="experimental_monitor_section">监测</string>
     <string name="experimental_diagnostics_section">诊断</string>
@@ -566,8 +568,8 @@
     <string name="monitor_access_refused">被拒绝使用%1$s</string>
     <string name="monitor_recent_title">最近的访问</string>
     <string name="monitor_recent_empty">尚未收到访问记录。</string>
-    <string name="experimental_title">实验性功能</string>
-    <string name="experimental_caption">兼容性尚未验证的功能，在部分设备上可能无法正常工作。</string>
+    <string name="experimental_title">高级功能</string>
+    <string name="experimental_caption">实验性功能尚未在所有设备上验证。</string>
     <string name="monitor_targets_title">监测的应用</string>
     <plurals name="monitor_targets_summary">
         <item quantity="other">已选 %1$d 个应用</item>
@@ -734,12 +736,7 @@
     <string name="guard_entry_summary">所选设置发生改动时发出提醒</string>
     <string name="guard_caption">所选设置被改动时发出提醒，并可自动恢复。</string>
     <string name="guard_details_title">守护说明</string>
-    <string name="guard_details">AppOpsNext 会比对受守护设置的目标模式和实际模式，发现改动时发出提醒。开启“自动恢复”后，会尝试恢复目标模式。
-
-每条规则在 24 小时内的恢复次数有上限，默认 3 次，可在“恢复次数上限”中修改。
-
-点按规则可以设置恢复延迟，适合启动时检查权限的应用。延迟从发现改动时算起，每小时检查模式下可能晚于设置的时间。</string>
-    <string name="guard_rule_remove_message">取消守护后，这项设置被改动时不再提醒，也不会自动恢复。</string>
+    <string name="guard_details">AppOpsNext 会比对受守护设置的目标模式和实际模式，发现改动时发出提醒。开启“自动恢复”后，会尝试恢复目标模式。\n\n每条规则在 24 小时内尝试恢复的次数有上限，默认 3 次，可在“恢复次数上限”中修改。\n\n点按规则可以设置恢复时机，适合启动时检查权限的应用。恢复延迟从发现改动时算起。开启“离开应用后再恢复”后，应用显示在屏幕上时先不恢复，约每 30 秒复查一次。每小时检查模式下，实际恢复可能晚于设置的时间。</string>
     <string name="guard_mode_section">检查方式</string>
     <string name="guard_mode_off">关闭</string>
     <string name="guard_mode_off_summary">不检查设置</string>
@@ -750,20 +747,30 @@
     <string name="guard_rules_section">受守护的设置</string>
     <string name="guard_check_now">立即检查</string>
     <string name="guard_checking">正在检查</string>
-    <string name="guard_rules_empty">还没有受守护的设置。修改权限时勾选“守护此设置”即可添加。</string>
+    <string name="guard_rules_empty">选择应用并修改权限时，勾选“守护此设置”即可添加。</string>
+    <string name="guard_rules_empty_title">还没有受守护的设置</string>
+    <string name="guard_rules_empty_mode_off">须先在下方选择检查方式。之后选择应用并修改权限时，勾选“守护此设置”即可添加。</string>
+    <string name="guard_choose_app">选择应用</string>
     <string name="guard_rule_expected">目标模式：%1$s</string>
     <string name="guard_rule_expected_uid">目标模式：%1$s（整个 UID）</string>
     <string name="guard_rule_auto_restore">自动恢复</string>
+    <string name="guard_rule_auto_restore_summary">关闭时只发出提醒</string>
+    <string name="guard_rule_notify_only">仅提醒</string>
+    <string name="guard_rule_restore_at_once">立即恢复</string>
     <string name="guard_rule_remove">取消守护</string>
     <string name="guard_restore_section">自动恢复</string>
     <string name="guard_restore_limit_title">恢复次数上限</string>
-    <string name="guard_restore_limit_message">每条规则在 24 小时内最多尝试恢复这么多次。达到上限后只发出提醒，直到最早的一次恢复超过 24 小时。</string>
-    <string name="guard_restore_limit_label">次数</string>
+    <string name="guard_restore_limit_message">每次尝试恢复都计入次数，包括失败的尝试。达到上限后仍会提醒改动，但不再恢复，直到最早的一次尝试已超过 24 小时。</string>
+    <string name="guard_restore_limit_label">每条规则 24 小时内的尝试次数</string>
     <string name="guard_restore_limit_placeholder">默认 %1$d，最多 %2$d</string>
     <string name="guard_rule_delay_label">恢复延迟（分钟）</string>
     <string name="guard_rule_delay_placeholder">默认 0，最长 %1$d</string>
-    <string name="guard_rule_delay_message">发现改动后先等待这段时间再恢复，0 表示立即恢复。开启“自动恢复”后生效。</string>
+    <string name="guard_rule_delay_message">发现改动后先等待这段时间再恢复，0 表示立即恢复。</string>
     <string name="guard_rule_delay_summary">延迟 %1$d 分钟恢复</string>
+    <string name="guard_rule_leave_title">离开应用后再恢复</string>
+    <string name="guard_rule_leave_summary">应用显示在屏幕上时先不恢复</string>
+    <string name="guard_rule_leave_timing">离开应用后恢复</string>
+    <string name="guard_rule_delay_leave_timing">离开应用且满 %1$d 分钟后恢复</string>
     <string name="guard_number_out_of_range">范围为 %1$d 到 %2$d</string>
     <string name="guard_save">保存</string>
     <string name="guard_events_section">最近的改动</string>
@@ -773,13 +780,13 @@
     <string name="guard_event_restored">%1$s · %2$s 被改为“%3$s”，已恢复为“%4$s”</string>
     <string name="guard_event_restore_failed">%1$s · %2$s 被改为“%3$s”，恢复为“%4$s”失败</string>
     <string name="guard_event_restore_limit">%1$s · %2$s 被改为“%3$s”，已达到自动恢复次数上限，暂不恢复。</string>
-    <string name="guard_event_restore_pending">%1$s · %2$s 被改为“%3$s”，延迟结束后恢复为“%4$s”</string>
-    <string name="guard_event_change">被改为“%1$s”</string>
-    <string name="guard_event_outcome_restored">已恢复</string>
-    <string name="guard_event_outcome_drift">仅提醒</string>
-    <string name="guard_event_outcome_failed">恢复失败</string>
-    <string name="guard_event_outcome_limit">已达恢复次数上限</string>
-    <string name="guard_event_outcome_pending">等待恢复</string>
+    <string name="guard_event_restore_pending">%1$s · %2$s 被改为“%3$s”，稍后恢复为“%4$s”</string>
+    <string name="guard_event_headline_restored">已恢复为“%1$s”</string>
+    <string name="guard_event_headline_drift">仅提醒 · 目标为“%1$s”</string>
+    <string name="guard_event_headline_failed">未能恢复为“%1$s”</string>
+    <string name="guard_event_headline_limit">未恢复 · 已达恢复次数上限</string>
+    <string name="guard_event_headline_pending">等待恢复为“%1$s”</string>
+    <string name="guard_event_detected">检测到：%1$s</string>
     <string name="guard_channel_events">守护提醒</string>
     <string name="guard_channel_status">实时守护</string>
     <string name="guard_service_title">实时守护已开启</string>
@@ -791,7 +798,7 @@
         <item quantity="other">%d 项受守护的设置被改动</item>
     </plurals>
     <plurals name="guard_restore_limit_summary">
-        <item quantity="other">每条规则 24 小时内最多恢复 %d 次</item>
+        <item quantity="other">每条规则 24 小时内最多尝试恢复 %d 次</item>
     </plurals>
 
     <!-- Backup -->

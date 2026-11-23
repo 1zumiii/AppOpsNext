@@ -15,6 +15,8 @@ class GuardCheckerTest {
     private val device = mutableMapOf<String, AppOpMode?>()
     private val restores = mutableListOf<String>()
     private var restoreSucceeds = true
+    private var onScreen = false
+    private val screenQueries = mutableListOf<String>()
 
     private val checker = GuardChecker(
         readMode = { device[it.id] },
@@ -22,6 +24,10 @@ class GuardCheckerTest {
             restores += rule.id
             if (restoreSucceeds) device[rule.id] = rule.expectedMode
             restoreSucceeds
+        },
+        isOnScreen = { rule ->
+            screenQueries += rule.id
+            onScreen
         },
         clock = { now },
     )
@@ -159,6 +165,65 @@ class GuardCheckerTest {
         assertEquals(null, GuardRestorePolicy.nextDue(listOf(delayed), mapOf(delayed.id to limited), now, 1))
         val notifying = delayed.copy(autoRestore = false)
         assertEquals(null, GuardRestorePolicy.nextDue(listOf(notifying), mapOf(delayed.id to waiting), now, 3))
+    }
+
+    @Test fun `a rule that waits for the app to leave holds while it is on screen`() = runBlocking {
+        val rule = camera.copy(autoRestore = true, restoreAfterLeaving = true)
+        onScreen = true
+        device[rule.id] = AppOpMode.ALLOW
+        val first = checker.check(listOf(rule), emptyMap())
+        assertEquals(listOf(GuardEventKind.RESTORE_PENDING), first.events.map { it.kind })
+        assertTrue(first.states.getValue(rule.id).heldOnScreen)
+        assertEquals(
+            now + GuardRestorePolicy.ON_SCREEN_RECHECK_MILLIS,
+            GuardRestorePolicy.nextDue(listOf(rule), first.states, now, 3),
+        )
+
+        now += GuardRestorePolicy.ON_SCREEN_RECHECK_MILLIS
+        val second = checker.check(listOf(rule), first.states)
+        assertTrue(second.events.isEmpty())
+        assertTrue(restores.isEmpty())
+
+        onScreen = false
+        now += GuardRestorePolicy.ON_SCREEN_RECHECK_MILLIS
+        val third = checker.check(listOf(rule), second.states)
+        assertEquals(listOf(GuardEventKind.RESTORED), third.events.map { it.kind })
+        assertFalse(third.states.getValue(rule.id).heldOnScreen)
+        assertEquals(null, GuardRestorePolicy.nextDue(listOf(rule), third.states, now, 3))
+    }
+
+    @Test fun `a change made while the app is away is restored at once`() = runBlocking {
+        val rule = camera.copy(autoRestore = true, restoreAfterLeaving = true)
+        device[rule.id] = AppOpMode.ALLOW
+        assertEquals(listOf(GuardEventKind.RESTORED), checker.check(listOf(rule), emptyMap()).events.map { it.kind })
+    }
+
+    @Test fun `with a delay too, the screen is asked only once the delay has passed`() = runBlocking {
+        val rule = camera.copy(autoRestore = true, restoreDelayMinutes = 1, restoreAfterLeaving = true)
+        onScreen = true
+        device[rule.id] = AppOpMode.ALLOW
+        val first = checker.check(listOf(rule), emptyMap())
+        assertEquals(listOf(GuardEventKind.RESTORE_PENDING), first.events.map { it.kind })
+        assertTrue(screenQueries.isEmpty())
+        assertFalse(first.states.getValue(rule.id).heldOnScreen)
+
+        now += 60_000
+        val second = checker.check(listOf(rule), first.states)
+        assertTrue(second.events.isEmpty())
+        assertEquals(listOf(rule.id), screenQueries)
+        assertTrue(second.states.getValue(rule.id).heldOnScreen)
+
+        onScreen = false
+        now += GuardRestorePolicy.ON_SCREEN_RECHECK_MILLIS
+        assertEquals(listOf(GuardEventKind.RESTORED), checker.check(listOf(rule), second.states).events.map { it.kind })
+    }
+
+    @Test fun `the screen is not asked for a rule that does not wait for the app`() = runBlocking {
+        onScreen = true
+        device[camera.id] = AppOpMode.ALLOW
+        checker.check(listOf(camera.copy(autoRestore = true)), emptyMap())
+        checker.check(listOf(camera.copy(restoreAfterLeaving = true)), emptyMap())
+        assertTrue(screenQueries.isEmpty())
     }
 
     @Test fun `a delay of zero restores at once`() = runBlocking {

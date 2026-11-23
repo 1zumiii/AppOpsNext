@@ -18,6 +18,7 @@ import dev.izumi.appopsnext.appops.model.AppOpModeChangeResult
 import dev.izumi.appopsnext.appops.model.AppOpNames
 import dev.izumi.appopsnext.appops.model.AppOpScope
 import dev.izumi.appopsnext.diagnostics.DiagnosticLogRepository
+import dev.izumi.appopsnext.monitor.ForegroundStateProbe
 import dev.izumi.appopsnext.shizuku.PrivilegedServiceClient
 import dev.izumi.appopsnext.shizuku.model.PrivilegedServiceState
 import java.util.concurrent.TimeUnit
@@ -60,7 +61,8 @@ class GuardController(
     private val adaptiveScopeExecutor = AdaptiveScopeModeChangeExecutor(writeMemory) { uid ->
         context.packageManager.getPackagesForUid(uid)?.toList().orEmpty()
     }
-    private val checker = GuardChecker(readMode = ::readMode, restore = ::restore)
+    private val foregroundStates = ForegroundStateProbe(privilegedServiceClient)
+    private val checker = GuardChecker(readMode = ::readMode, restore = ::restore, isOnScreen = ::isOnScreen)
     private val mutableRestores = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     /** Emits after a check wrote a guarded mode back, so open pages can reload what they show. */
@@ -180,7 +182,7 @@ class GuardController(
     private var delayedRestoreJob: Job? = null
 
     /**
-     * Checks again when a delayed restore falls due. The timer covers a running
+     * Checks again when a waiting restore falls due. The timer covers a running
      * process, which the realtime service keeps. The one-time work covers a process
      * that was stopped meanwhile and may run later than due. Each check replaces both.
      */
@@ -247,6 +249,12 @@ class GuardController(
     private suspend fun readMode(rule: GuardRule): AppOpMode? =
         appOpsRepository.readMode(rule.packageName, rule.identifier, rule.scope)
             ?: if (privilegedServiceClient.ensureConnected()) appOpsRepository.readMode(rule.packageName, rule.identifier, rule.scope) else null
+
+    /** Not on screen when the backend cannot be reached or the state cannot be read, so the restore goes ahead. */
+    private suspend fun isOnScreen(rule: GuardRule): Boolean {
+        if (!privilegedServiceClient.ensureConnected()) return false
+        return foregroundStates.isOnScreen(rule.uid, rule.packageName)
+    }
 
     private suspend fun restore(rule: GuardRule): Boolean {
         if (!privilegedServiceClient.ensureConnected()) return false

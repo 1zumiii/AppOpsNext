@@ -497,6 +497,12 @@ fun AppOpsRootScreen(
                 experimentalRoute == ROUTE_GUARD -> GuardScreen(
                     viewModel = guardViewModel,
                     onBack = { experimentalRoute = ROUTE_EXPERIMENTAL },
+                    // A setting is guarded from the confirmation of a change, which starts in the app list.
+                    onChooseApp = {
+                        experimentalRoute = null
+                        onUserSelected(null)
+                        selectedDestination = MainDestination.APPS
+                    },
                 )
 
                 experimentalRoute == ROUTE_WATCHERS -> WatchersScreen(
