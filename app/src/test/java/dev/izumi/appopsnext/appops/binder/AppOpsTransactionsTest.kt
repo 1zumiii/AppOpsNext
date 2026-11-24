@@ -4,8 +4,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class AppOpsTransactionsTest {
-    @Test fun `API 35 and 36 use the original positions`() {
-        for (sdk in listOf(35, 36)) {
+    @Test fun `API 34, 35 and 36 use the original positions`() {
+        for (sdk in listOf(34, 35, 36)) {
             assertEquals(18, AppOpsTransactions.fallbackCode("getPackagesForOps", sdk))
             assertEquals(19, AppOpsTransactions.fallbackCode("getOpsForPackage", sdk))
             assertEquals(29, AppOpsTransactions.fallbackCode("getUidOps", sdk))
@@ -25,9 +25,21 @@ class AppOpsTransactionsTest {
     }
 
     @Test fun `mode watch methods sit before the shifted range`() {
-        for (sdk in listOf(35, 36, 37)) {
+        for (sdk in listOf(33, 34, 35, 36, 37)) {
             assertEquals(5, AppOpsTransactions.fallbackCode("startWatchingMode", sdk))
             assertEquals(6, AppOpsTransactions.fallbackCode("stopWatchingMode", sdk))
         }
+    }
+
+    @Test fun `API 33 uses its own positions from the Android 13 sources`() {
+        assertEquals(17, AppOpsTransactions.fallbackCode("getPackagesForOps", 33))
+        assertEquals(18, AppOpsTransactions.fallbackCode("getOpsForPackage", 33))
+        assertEquals(28, AppOpsTransactions.fallbackCode("getUidOps", 33))
+        assertEquals(36, AppOpsTransactions.fallbackCode("startWatchingActive", 33))
+        assertEquals(37, AppOpsTransactions.fallbackCode("stopWatchingActive", 33))
+        assertEquals(40, AppOpsTransactions.fallbackCode("startWatchingStarted", 33))
+        assertEquals(41, AppOpsTransactions.fallbackCode("stopWatchingStarted", 33))
+        assertEquals(43, AppOpsTransactions.fallbackCode("startWatchingNoted", 33))
+        assertEquals(44, AppOpsTransactions.fallbackCode("stopWatchingNoted", 33))
     }
 }

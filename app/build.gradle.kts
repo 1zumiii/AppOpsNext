@@ -23,7 +23,7 @@ android {
 
     defaultConfig {
         applicationId = "dev.izumi.appopsnext"
-        minSdk = 35
+        minSdk = 33
         targetSdk = 35
         versionCode = 49
         versionName = "1.6.8-beta2"

@@ -60,7 +60,8 @@ Official APKs are published **ONLY** on GitHub Releases. No guarantee is made fo
 
 ### Requirements
 
-- **Android 15 or later** (API 35+).
+- **Android 15 or later** (API 35+). Android 13 and 14 (API 33 and 34) should
+  work, but few devices have been tested.
 - **Shizuku 13 or later**, running and authorized for AppOpsNext.
 - The bundled native backend targets **ARM64**. Other CPU architectures have
   not been verified.
@@ -92,6 +93,7 @@ remains viewable without that connection.
 | ASUS AI2302 | Android 15 / API 35 | Primary development and physical-device test environment. |
 | Xiaomi 24117RN76G | HyperOS 3 / Android 16 / API 36 | Independent user verification of the native backend, reads/writes, history, and camera enforcement. |
 | realme RMX3370 | Android 16 / API 36 | Independent user verification that Ignore takes effect through the compatibility revocation flag. |
+| Redmi K70 | HyperOS / Android 14 / API 34 | Independent user verification of the native backend, permission changes, and history (#34). |
 
 See [backend compatibility notes](docs/PRIVILEGED_BACKENDS.md) for the
 evidence and known limitations.

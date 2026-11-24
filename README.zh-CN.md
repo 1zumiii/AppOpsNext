@@ -47,7 +47,7 @@ AppOpsNext 借助 [Shizuku](https://shizuku.rikka.app/) 管理应用的 AppOps �
 
 ### 运行要求
 
-- **Android 15 及以上**（API 35+）。
+- **Android 15 及以上**（API 35+）。Android 13 和 14（API 33、34）理论上支持，但测试样本较少。
 - **Shizuku 13 及以上**，已启动并授权给 AppOpsNext。
 - 内置的原生后端仅支持 ARM64，其他 CPU 架构尚未验证。
 
@@ -69,6 +69,7 @@ AppOpsNext 借助 [Shizuku](https://shizuku.rikka.app/) 管理应用的 AppOps �
 | ASUS AI2302 | Android 15 / API 35 | 主要的开发和真机测试设备。 |
 | Xiaomi 24117RN76G | HyperOS 3 / Android 16 / API 36 | 由用户独立验证了原生后端、读取与写入、权限历史和相机权限限制。 |
 | realme RMX3370 | Android 16 / API 36 | 由用户独立验证：兼容撤销标记可使“忽略”生效。 |
+| Redmi K70 | HyperOS / Android 14 / API 34 | 由用户独立验证了原生后端、权限修改和权限历史（#34）。 |
 
 具体依据和已知限制见[后端兼容性说明](docs/PRIVILEGED_BACKENDS.md)。
 

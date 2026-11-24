@@ -13,6 +13,8 @@ import android.os.Build
  * 2. Fall back to the position the method holds in the platform sources for
  *    this API level. Android 17 moved `checkOperationForDevice` from the end of
  *    the interface to position 12, which shifted positions 12 to 54 by one.
+ *    Android 13 has its own table: Android 14 both inserted and removed a
+ *    method among the ones used here, so no single shift describes it.
  *    A vendor image that reorders the interface still defeats this route.
  *
  * Which route answered is recorded so a failure can be attributed instead of
@@ -45,6 +47,9 @@ internal object AppOpsTransactions {
 
     /** The source position of [methodName] on [sdkInt], counted from 1 like transaction codes. */
     fun fallbackCode(methodName: String, sdkInt: Int): Int {
+        if (sdkInt <= API_33) {
+            return checkNotNull(API_33_POSITIONS[methodName]) { "Unknown method $methodName" }
+        }
         val position = checkNotNull(API_36_POSITIONS[methodName]) { "Unknown method $methodName" }
         return if (sdkInt >= API_37 && position in SHIFTED_IN_API_37) position + 1 else position
     }
@@ -64,7 +69,7 @@ internal object AppOpsTransactions {
         }
     }
 
-    /** Identical in API 35 and 36, including 36 QPR2. */
+    /** Identical in API 34, 35 and 36, including 36 QPR2. */
     private val API_36_POSITIONS = mapOf(
         "startWatchingMode" to 5,
         "stopWatchingMode" to 6,
@@ -78,6 +83,21 @@ internal object AppOpsTransactions {
         "startWatchingNoted" to 43,
         "stopWatchingNoted" to 44,
     )
+    /** From the android-13.0.0_r1 sources of `IAppOpsService.aidl`. */
+    private val API_33_POSITIONS = mapOf(
+        "startWatchingMode" to 5,
+        "stopWatchingMode" to 6,
+        "getPackagesForOps" to 17,
+        "getOpsForPackage" to 18,
+        "getUidOps" to 28,
+        "startWatchingActive" to 36,
+        "stopWatchingActive" to 37,
+        "startWatchingStarted" to 40,
+        "stopWatchingStarted" to 41,
+        "startWatchingNoted" to 43,
+        "stopWatchingNoted" to 44,
+    )
+    private const val API_33 = 33
     private val SHIFTED_IN_API_37 = 12..54
     private const val API_37 = 37
 

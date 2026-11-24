@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.temporary
 
+import dev.izumi.appopsnext.startSpecialUseForeground
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -8,7 +9,6 @@ import android.app.Service
 import android.Manifest
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ServiceInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.IBinder
@@ -46,9 +46,8 @@ internal class TemporaryAllowService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         latestStartId = startId
-        startForeground(
+        startSpecialUseForeground(
             NOTIFICATION_ID, currentNotification ?: notification().build(),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
         )
         if (status?.isActive != true) {
             status = scope.launch {
@@ -108,7 +107,7 @@ internal class TemporaryAllowService : Service() {
             summary.setContentTitle(first.label)
         }
         val updated = summary.build()
-        startForeground(NOTIFICATION_ID, updated, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        startSpecialUseForeground(NOTIFICATION_ID, updated)
         currentNotification = updated
 
         clearItemsExcept(if (showGroup) items.mapTo(mutableSetOf()) { it.tag } else emptySet())

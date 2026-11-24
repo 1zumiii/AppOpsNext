@@ -148,6 +148,12 @@ has_access() {
     ' "$out/history-camera.txt"
 }
 
+# On the API 36.1 and 37.0 images a system_server restart can still drop the
+# records after every attempt. That is recorded so the parser test can skip,
+# while a missing access without a restart stays a failure.
+system_server_pid() { adb shell pidof system_server | tr -d '\r'; }
+history_start_pid=$(system_server_pid)
+history_found=0
 for attempt in 1 2 3; do
     setup monkey -p "$package" -c android.intent.category.LAUNCHER 1
     sleep 3
@@ -158,16 +164,34 @@ for attempt in 1 2 3; do
     setup cmd appops stop --user "$USER_ID" "$package" "$HISTORY_OP"
     # GET_HISTORY
     if capture_once history-camera "${history_command[@]}" && has_access; then
+        history_found=1
         break
     fi
     log "history-camera: no access recorded on attempt $attempt"
     wait_for_system
 done
 record history-camera "${history_command[@]}"
+history_lost=false
+if [[ $history_found == 0 && $(system_server_pid) != "$history_start_pid" ]]; then
+    history_lost=true
+    log "history-camera: system_server restarted ($history_start_pid -> $(system_server_pid)), records lost"
+fi
 
 setup cmd appops set "$package" "$PACKAGE_OP" ignore
 setup cmd appops set --uid "$package" "$UID_OP" ignore
 setup cmd package set-permission-flags --user "$USER_ID" "$package" "$PERMISSION" revoked-compat
+# The flag makes the system rewrite the UID CAMERA mode asynchronously. On the
+# API 34 emulator that took long enough for the package read and the UID read
+# below to land on either side of it, so wait until the mode has settled.
+settled=0
+for _ in $(seq 1 20); do
+    if adb shell cmd appops get --uid "$package" CAMERA | tr -d '\r' | grep -q "CAMERA: ignore"; then
+        settled=1
+        break
+    fi
+    sleep 0.5
+done
+[[ $settled == 1 ]] || log "uid CAMERA mode did not settle to ignore within 10 s"
 
 # GET_PACKAGE_OPS, GET_PACKAGE_OP, GET_UID_OPS
 capture package-ops cmd appops get "$package"
@@ -190,6 +214,7 @@ capture package-permissions dumpsys package "$package"
     echo "uid=$uid"
     echo "user=$USER_ID"
     echo "permission=$PERMISSION"
+    echo "historyLost=$history_lost"
     echo "packageOp=$PACKAGE_OP"
     echo "uidOp=$UID_OP"
     echo "historyOp=$HISTORY_OP"

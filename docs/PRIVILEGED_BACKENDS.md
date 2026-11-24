@@ -117,6 +117,7 @@ that reorders the interface; the probe catches that for reads.
 | ASUS AI2302 | Android 15 / API 35 | Project reference device; native connection, reads, writes, history, templates, and permission enforcement manually tested. |
 | Xiaomi 24117RN76G | HyperOS 3 / Android 16 / API 36 | Independent issue reporter confirmed a shell-UID native connection, successful self-check, app listing, permission history, AppOps reads and writes, and camera enforcement. |
 | realme RMX3370 | Android 16 QPR2 / API 36 | Independent issue reporter confirmed that this build blocks runtime-permission AppOps writes. Ignore takes effect through the `REVOKED_COMPAT` permission flag. |
+| Redmi K70 | HyperOS China ROM / Android 14 / API 34 | Independent issue reporter (#34) confirmed a shell-UID native connection, a successful self-check, binder reads for package ops, op states and the op list, AppOps writes, and permission history. |
 
 This evidence establishes working compatibility for the tested devices. It is
 not a general claim for every Android 16 device or OEM ROM.
@@ -126,7 +127,7 @@ not a general claim for every Android 16 device or OEM ROM.
 The `Device output formats` workflow (`.github/workflows/device-formats.yml`)
 catches AOSP changes to the text that the parsers read. It runs weekly, on
 demand, and on pull requests that change the check itself. For each Google
-APIs x86_64 emulator image in its matrix (API 35, 36 and 37.0), it does
+APIs x86_64 emulator image in its matrix (API 33, 34, 35, 36 and 37.0), it does
 these steps:
 
 1. `scripts/capture-device-dumps.sh` connects through `adb shell`, which has

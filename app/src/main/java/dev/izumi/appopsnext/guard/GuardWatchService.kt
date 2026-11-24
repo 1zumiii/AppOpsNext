@@ -1,9 +1,9 @@
 package dev.izumi.appopsnext.guard
 
+import dev.izumi.appopsnext.startSpecialUseForeground
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ServiceInfo
 import android.os.IBinder
 import dev.izumi.appopsnext.AppOpsNextApplication
 import dev.izumi.appopsnext.monitor.AppOpCodes
@@ -46,10 +46,9 @@ class GuardWatchService : Service() {
                 .distinctUntilChanged()
                 .collect { rules ->
                     ruleCount = rules.size
-                    startForeground(
+                    startSpecialUseForeground(
                         GuardNotifier.NOTIFICATION_STATUS,
                         app.guardNotifier.watchingNotification(ruleCount),
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
                     )
                     register(
                         rules.mapNotNullTo(mutableSetOf()) { AppOpCodes.codeOf(it.stableOperationName) },
@@ -62,10 +61,9 @@ class GuardWatchService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // The five-second foreground deadline cannot wait for the rules to load.
-        startForeground(
+        startSpecialUseForeground(
             GuardNotifier.NOTIFICATION_STATUS,
             app.guardNotifier.watchingNotification(ruleCount),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
         )
         return START_STICKY
     }

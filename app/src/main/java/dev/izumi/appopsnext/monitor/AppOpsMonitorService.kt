@@ -1,9 +1,9 @@
 package dev.izumi.appopsnext.monitor
 
+import dev.izumi.appopsnext.startSpecialUseForeground
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ServiceInfo
 import android.content.res.Configuration
 import android.os.IBinder
 import dev.izumi.appopsnext.AppOpsNextApplication
@@ -102,14 +102,13 @@ class AppOpsMonitorService : Service() {
         // Before a session has started there is no point count to show, and
         // starting one checks the registration, so it is shown as a check.
         val points = if (checking) null else controller.watchedPointCount
-        startForeground(
+        startSpecialUseForeground(
             MonitorNotifier.ONGOING_NOTIFICATION_ID,
             MonitorNotifier(this).ongoingNotification(
                 checking = points == null,
                 useAlertChannel = headsUp,
                 watchedPoints = points ?: 0,
             ),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
         )
     }
 

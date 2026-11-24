@@ -10,6 +10,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeFalse
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
@@ -106,6 +107,12 @@ class DeviceDumpCompatibilityTest {
 
     @Test
     fun `history finds the started access`() {
+        // The capture script sets this only when no attempt recorded the access
+        // and system_server restarted meanwhile, which drops the records.
+        assumeFalse(
+            "system_server restarted during the history capture",
+            capture.getProperty("historyLost") == "true",
+        )
         val raw = dump("history-camera")
         // Both privileged backends compact the output before the parsers see it.
         val output = AppOpsHistoryOutputExtractor.extract(raw, historyOp)
