@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation.experimental
 
+import dev.izumi.appopsnext.presentation.components.PageListBottomPadding
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Column
@@ -118,7 +119,10 @@ fun MonitorLogScreen(
             )
         },
     ) { padding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = PageListBottomPadding,
+        ) {
             item {
                 Text(
                     text = stringResource(R.string.monitor_log_hint),

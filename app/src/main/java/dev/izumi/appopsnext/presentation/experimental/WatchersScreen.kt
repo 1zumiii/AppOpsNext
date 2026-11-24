@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation.experimental
 
+import dev.izumi.appopsnext.presentation.components.PageListBottomPadding
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
@@ -73,7 +74,7 @@ fun WatchersScreen(uiState: WatchersUiState, onRefresh: () -> Unit, onBack: () -
             onRefresh = { if (!uiState.loading) onRefresh() },
             modifier = Modifier.fillMaxSize().padding(padding),
         ) {
-            LazyColumn(Modifier.fillMaxSize()) {
+            LazyColumn(Modifier.fillMaxSize(), contentPadding = PageListBottomPadding) {
                 item {
                     Text(stringResource(R.string.watchers_summary), Modifier.padding(16.dp),
                         style = MaterialTheme.typography.bodyMedium)

@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation.settings
 
+import dev.izumi.appopsnext.presentation.components.PageListBottomPadding
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -141,7 +142,10 @@ fun SavedHistoryScreen(
             )
         },
     ) { padding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentPadding = PageListBottomPadding,
+        ) {
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),

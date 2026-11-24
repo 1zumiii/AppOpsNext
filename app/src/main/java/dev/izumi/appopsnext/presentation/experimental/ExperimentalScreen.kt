@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation.experimental
 
+import dev.izumi.appopsnext.presentation.components.PageListBottomPadding
 import android.app.NotificationManager
 import android.content.Intent
 import android.provider.Settings
@@ -7,7 +8,6 @@ import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -115,8 +115,7 @@ fun ExperimentalScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(contentPadding),
-            // Keeps the last group clear of the bottom edge once scrolled to the end.
-            contentPadding = PaddingValues(bottom = 24.dp),
+            contentPadding = PageListBottomPadding,
         ) {
             item {
                 Text(

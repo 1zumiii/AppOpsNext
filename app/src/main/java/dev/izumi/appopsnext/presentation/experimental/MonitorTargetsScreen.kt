@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation.experimental
 
+import dev.izumi.appopsnext.presentation.components.PageListBottomPadding
 import dev.izumi.appopsnext.presentation.components.EmptyStateIcons
 import dev.izumi.appopsnext.presentation.components.EmptyStateContent
 import dev.izumi.appopsnext.presentation.components.topFadingEdge
@@ -155,6 +156,7 @@ fun MonitorTargetsScreen(
                 .padding(contentPadding)
                 .topFadingEdge(listState),
             state = listState,
+            contentPadding = PageListBottomPadding,
         ) {
             item {
                 Text(

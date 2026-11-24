@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation.experimental
 
+import dev.izumi.appopsnext.presentation.components.PageListBottomPadding
 import android.app.Application
 import android.text.format.DateUtils
 import androidx.compose.runtime.setValue
@@ -167,7 +168,10 @@ fun GuardScreen(
             )
         },
     ) { contentPadding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(contentPadding),
+            contentPadding = PageListBottomPadding,
+        ) {
             item {
                 Text(
                     text = stringResource(R.string.guard_caption),

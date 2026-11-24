@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation.experimental
 
+import dev.izumi.appopsnext.presentation.components.PageListBottomPadding
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -82,6 +83,7 @@ fun MonitorPointsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(contentPadding),
+            contentPadding = PageListBottomPadding,
         ) {
             item {
                 Text(

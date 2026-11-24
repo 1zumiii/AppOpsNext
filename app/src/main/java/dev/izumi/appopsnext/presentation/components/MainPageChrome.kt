@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation.components
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -57,6 +58,14 @@ fun MainPageEntryIcon(
         }
     }
 }
+
+/**
+ * Bottom padding for the scrolling list of a full page, so the last group does not
+ * sit on the bottom edge once scrolled to the end. Every full-page LazyColumn
+ * passes it as its contentPadding. Pages that missed it lost their bottom margin,
+ * one at a time, which is why it lives here rather than in each page.
+ */
+val PageListBottomPadding = PaddingValues(bottom = 24.dp)
 
 @Composable
 fun MainPageChevron() {

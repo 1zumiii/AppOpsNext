@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation.notifications
 
+import dev.izumi.appopsnext.presentation.components.PageListBottomPadding
 import android.content.Intent
 import android.net.Uri
 import android.text.format.DateUtils
@@ -7,7 +8,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -114,7 +114,7 @@ fun NotificationsScreen(
     ) { contentPadding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(contentPadding),
-            contentPadding = PaddingValues(bottom = 24.dp),
+            contentPadding = PageListBottomPadding,
         ) {
             val update = updateNotice
             if (update == null && drifts.isEmpty() && guardEvents.isEmpty() && newAppResults.isEmpty()) {

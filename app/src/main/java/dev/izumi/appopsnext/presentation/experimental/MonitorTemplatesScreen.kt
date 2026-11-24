@@ -1,5 +1,6 @@
 package dev.izumi.appopsnext.presentation.experimental
 
+import dev.izumi.appopsnext.presentation.components.PageListBottomPadding
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -338,7 +339,7 @@ private fun MonitorTemplateList(
     ) { contentPadding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(contentPadding),
-            contentPadding = PaddingValues(bottom = 24.dp),
+            contentPadding = PageListBottomPadding,
         ) {
             item {
                 Text(
