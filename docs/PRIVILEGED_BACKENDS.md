@@ -126,7 +126,7 @@ not a general claim for every Android 16 device or OEM ROM.
 The `Device output formats` workflow (`.github/workflows/device-formats.yml`)
 catches AOSP changes to the text that the parsers read. It runs weekly, on
 demand, and on pull requests that change the check itself. For each Google
-APIs x86_64 emulator image in its matrix (API 35, 36, 36.1 and 37.0), it does
+APIs x86_64 emulator image in its matrix (API 35, 36 and 37.0), it does
 these steps:
 
 1. `scripts/capture-device-dumps.sh` connects through `adb shell`, which has

@@ -29,10 +29,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 36.1 is Android 16 QPR2, the first build without the `Current `
-        # header prefix (issue #13). 37.0 is the newest google_apis x86_64
-        # image; later 37.x builds ship only as 16 KB page-size images.
-        api-level: ["35", "36", "36.1", "37.0"]
+        # 37.0 covers the header without the `Current ` prefix (issue #13) and
+        # is the newest google_apis x86_64 image; later 37.x builds ship only
+        # as 16 KB page-size images. 36.1 was dropped: its emulator failed the
+        # history check every week for reasons outside the parsers.
+        api-level: ["35", "36", "37.0"]
     env:
       APPOPSNEXT_DEVICE_DUMPS: ${{ github.workspace }}/build/device-dumps/api-${{ matrix.api-level }}
 
